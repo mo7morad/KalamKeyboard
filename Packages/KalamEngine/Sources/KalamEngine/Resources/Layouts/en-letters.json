@@ -1,0 +1,46 @@
+{
+ "id": "en-letters",
+ "lang": "en",
+ "rows": [
+  [
+   {"id": "q", "label": "q"},
+   {"id": "w", "label": "w"},
+   {"id": "e", "label": "e"},
+   {"id": "r", "label": "r"},
+   {"id": "t", "label": "t"},
+   {"id": "y", "label": "y"},
+   {"id": "u", "label": "u"},
+   {"id": "i", "label": "i"},
+   {"id": "o", "label": "o"},
+   {"id": "p", "label": "p"}
+  ],
+  [
+   {"id": "a", "label": "a"},
+   {"id": "s", "label": "s"},
+   {"id": "d", "label": "d"},
+   {"id": "f", "label": "f"},
+   {"id": "g", "label": "g"},
+   {"id": "h", "label": "h"},
+   {"id": "j", "label": "j"},
+   {"id": "k", "label": "k"},
+   {"id": "l", "label": "l"}
+  ],
+  [
+   {"id": "shift", "label": "⇧", "kind": "shift", "width": 1.5},
+   {"id": "z", "label": "z"},
+   {"id": "x", "label": "x"},
+   {"id": "c", "label": "c"},
+   {"id": "v", "label": "v"},
+   {"id": "b", "label": "b"},
+   {"id": "n", "label": "n"},
+   {"id": "m", "label": "m"},
+   {"id": "backspace", "label": "⌫", "kind": "backspace", "width": 1.5}
+  ],
+  [
+   {"id": "numbers", "label": "123", "kind": "page", "width": 1.25},
+   {"id": "lang", "label": "EN", "kind": "lang", "width": 1.25},
+   {"id": "space", "label": "space", "output": " ", "kind": "space", "width": 5},
+   {"id": "return", "label": "return", "output": "\n", "kind": "return", "width": 2.5}
+  ]
+ ]
+}
