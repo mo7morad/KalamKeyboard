@@ -1,0 +1,65 @@
+# Source of truth for Kalam.xcodeproj. Edit this, then run `xcodegen generate`.
+name: Kalam
+options:
+  bundleIdPrefix: com.morad
+  deploymentTarget:
+    iOS: "18.0"
+settings:
+  base:
+    DEVELOPMENT_TEAM: BD8SA4X398
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+packages:
+  KalamEngine:
+    path: Packages/KalamEngine
+targets:
+  Kalam:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+        type: syncedFolder
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.morad.kalam
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Kalam
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+    entitlements:
+      path: Config/Kalam.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.morad.kalam]
+    dependencies:
+      - target: KalamKeyboard
+      - package: KalamEngine
+  KalamKeyboard:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: KeyboardExtension
+        type: syncedFolder
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.morad.kalam.keyboard
+    info:
+      path: Config/KalamKeyboard-Info.plist
+      properties:
+        CFBundleDisplayName: Kalam
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.keyboard-service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController
+          NSExtensionAttributes:
+            RequestsOpenAccess: true
+            PrimaryLanguage: mul
+            IsASCIICapable: true
+    entitlements:
+      path: Config/KalamKeyboard.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.morad.kalam]
+    dependencies:
+      - package: KalamEngine

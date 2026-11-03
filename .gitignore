@@ -1,0 +1,10 @@
+.DS_Store
+xcuserdata/
+*.xcuserstate
+DerivedData/
+.build/
+.swiftpm/
+__pycache__/
+.pytest_cache/
+.venv/
+Tools/lexicon-builder/corpora/

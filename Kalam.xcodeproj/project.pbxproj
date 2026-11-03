@@ -1,0 +1,503 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		388C964BF613C8555B3FDF08 /* KalamKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4DC591D16F78C2F279A204C6 /* KalamKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C1AFA6781DB883F520E9672A /* KalamEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 59A33A7B1CD1273C2332D3CD /* KalamEngine */; };
+		FCE8AC080F973325EBFDDE3F /* KalamEngine in Frameworks */ = {isa = PBXBuildFile; productRef = E8D99235A271AA6B9CE517AB /* KalamEngine */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		E34CD6F67C00885F4D37A7D8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BA9171FD730D98E732923218 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2956039F071E1F5128591C73;
+			remoteInfo = KalamKeyboard;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		2EBF8525D5ACFC886E6627C7 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				388C964BF613C8555B3FDF08 /* KalamKeyboard.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		4DC591D16F78C2F279A204C6 /* KalamKeyboard.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = KalamKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A60F2B51822AF8FA7D6205A /* KalamEngine */ = {isa = PBXFileReference; lastKnownFileType = folder; name = KalamEngine; path = Packages/KalamEngine; sourceTree = SOURCE_ROOT; };
+		FD77E0B2DEA305AE2FE65B5A /* Kalam.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Kalam.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		B9A8564A481E4A8D9E5DC2EF /* KeyboardExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = KeyboardExtension;
+			sourceTree = "<group>";
+		};
+		E58AC250C710BE32D6BC8D9F /* App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AE8331596D066C9E707E1799 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FCE8AC080F973325EBFDDE3F /* KalamEngine in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FAAAAC12C70E5E66905EA699 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1AFA6781DB883F520E9672A /* KalamEngine in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		56E38F9ACD5224F1F60C1F1F /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				8A60F2B51822AF8FA7D6205A /* KalamEngine */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		7824F145CF4C6D713061B0A3 = {
+			isa = PBXGroup;
+			children = (
+				E58AC250C710BE32D6BC8D9F /* App */,
+				B9A8564A481E4A8D9E5DC2EF /* KeyboardExtension */,
+				56E38F9ACD5224F1F60C1F1F /* Packages */,
+				854E311C955FD1110910A5E4 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		854E311C955FD1110910A5E4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FD77E0B2DEA305AE2FE65B5A /* Kalam.app */,
+				4DC591D16F78C2F279A204C6 /* KalamKeyboard.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2956039F071E1F5128591C73 /* KalamKeyboard */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B4C4DB8C9224888218279B50 /* Build configuration list for PBXNativeTarget "KalamKeyboard" */;
+			buildPhases = (
+				5429F4DEA1751A64DD03EC1B /* Sources */,
+				7041598E3A51D38EA8B3E6B9 /* Resources */,
+				AE8331596D066C9E707E1799 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				B9A8564A481E4A8D9E5DC2EF /* KeyboardExtension */,
+			);
+			name = KalamKeyboard;
+			packageProductDependencies = (
+				E8D99235A271AA6B9CE517AB /* KalamEngine */,
+			);
+			productName = KalamKeyboard;
+			productReference = 4DC591D16F78C2F279A204C6 /* KalamKeyboard.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		79548AAFE58E1B8F27D4DC76 /* Kalam */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B5DA1FEE622C73CC41687CB6 /* Build configuration list for PBXNativeTarget "Kalam" */;
+			buildPhases = (
+				3ED8348AC2C6A70E9B75AD6C /* Sources */,
+				45CF1AD1FFBBEC87FB6B9A06 /* Resources */,
+				FAAAAC12C70E5E66905EA699 /* Frameworks */,
+				2EBF8525D5ACFC886E6627C7 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				03E5E455DE9B3AF384625823 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				E58AC250C710BE32D6BC8D9F /* App */,
+			);
+			name = Kalam;
+			packageProductDependencies = (
+				59A33A7B1CD1273C2332D3CD /* KalamEngine */,
+			);
+			productName = Kalam;
+			productReference = FD77E0B2DEA305AE2FE65B5A /* Kalam.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BA9171FD730D98E732923218 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					2956039F071E1F5128591C73 = {
+						DevelopmentTeam = BD8SA4X398;
+						ProvisioningStyle = Automatic;
+					};
+					79548AAFE58E1B8F27D4DC76 = {
+						DevelopmentTeam = BD8SA4X398;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 8143C834D069BC12E70BB407 /* Build configuration list for PBXProject "Kalam" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 7824F145CF4C6D713061B0A3;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				B0B57EB4E46DD2F13D885040 /* XCLocalSwiftPackageReference "Packages/KalamEngine" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 854E311C955FD1110910A5E4 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				79548AAFE58E1B8F27D4DC76 /* Kalam */,
+				2956039F071E1F5128591C73 /* KalamKeyboard */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		45CF1AD1FFBBEC87FB6B9A06 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7041598E3A51D38EA8B3E6B9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3ED8348AC2C6A70E9B75AD6C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5429F4DEA1751A64DD03EC1B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		03E5E455DE9B3AF384625823 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2956039F071E1F5128591C73 /* KalamKeyboard */;
+			targetProxy = E34CD6F67C00885F4D37A7D8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		65C5D5DC5F7B2BE9D40EACFA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Config/Kalam.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Kalam;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.morad.kalam;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A6172FEDAC1A4E2C9AD005CC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Config/KalamKeyboard.entitlements;
+				INFOPLIST_FILE = "Config/KalamKeyboard-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.morad.kalam.keyboard;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B6F08E466EF771C2F98BA4AD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Config/Kalam.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Kalam;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.morad.kalam;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B88E1D622F6B4CC41E787710 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Config/KalamKeyboard.entitlements;
+				INFOPLIST_FILE = "Config/KalamKeyboard-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.morad.kalam.keyboard;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		C212D11B272DCA2024EC7F50 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = BD8SA4X398;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		D307FB478AC6D53A64E2BC31 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = BD8SA4X398;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		8143C834D069BC12E70BB407 /* Build configuration list for PBXProject "Kalam" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C212D11B272DCA2024EC7F50 /* Debug */,
+				D307FB478AC6D53A64E2BC31 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B4C4DB8C9224888218279B50 /* Build configuration list for PBXNativeTarget "KalamKeyboard" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A6172FEDAC1A4E2C9AD005CC /* Debug */,
+				B88E1D622F6B4CC41E787710 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B5DA1FEE622C73CC41687CB6 /* Build configuration list for PBXNativeTarget "Kalam" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B6F08E466EF771C2F98BA4AD /* Debug */,
+				65C5D5DC5F7B2BE9D40EACFA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		B0B57EB4E46DD2F13D885040 /* XCLocalSwiftPackageReference "Packages/KalamEngine" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/KalamEngine;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		59A33A7B1CD1273C2332D3CD /* KalamEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = KalamEngine;
+		};
+		E8D99235A271AA6B9CE517AB /* KalamEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = KalamEngine;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = BA9171FD730D98E732923218 /* Project object */;
+}

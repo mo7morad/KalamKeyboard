@@ -1,0 +1,272 @@
+{
+ "version": 1,
+ "note": "Shared by Python lexicon builder and Swift engine. Both implementations must produce 'expected' exactly.",
+ "cases": [
+  {
+   "lang": "ar",
+   "input": "أنا",
+   "expected": "انا",
+   "expected_scalars": [
+    "U+0627",
+    "U+0646",
+    "U+0627"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "إلى",
+   "expected": "الي",
+   "expected_scalars": [
+    "U+0627",
+    "U+0644",
+    "U+064A"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "آخر",
+   "expected": "اخر",
+   "expected_scalars": [
+    "U+0627",
+    "U+062E",
+    "U+0631"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "ٱلله",
+   "expected": "الله",
+   "expected_scalars": [
+    "U+0627",
+    "U+0644",
+    "U+0644",
+    "U+0647"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "مدرسة",
+   "expected": "مدرسه",
+   "expected_scalars": [
+    "U+0645",
+    "U+062F",
+    "U+0631",
+    "U+0633",
+    "U+0647"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "على",
+   "expected": "علي",
+   "expected_scalars": [
+    "U+0639",
+    "U+0644",
+    "U+064A"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "علي",
+   "expected": "علي",
+   "expected_scalars": [
+    "U+0639",
+    "U+0644",
+    "U+064A"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "مسؤول",
+   "expected": "مسوول",
+   "expected_scalars": [
+    "U+0645",
+    "U+0633",
+    "U+0648",
+    "U+0648",
+    "U+0644"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "شئ",
+   "expected": "شي",
+   "expected_scalars": [
+    "U+0634",
+    "U+064A"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "شيء",
+   "expected": "شيء",
+   "expected_scalars": [
+    "U+0634",
+    "U+064A",
+    "U+0621"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "هيئة",
+   "expected": "هييه",
+   "expected_scalars": [
+    "U+0647",
+    "U+064A",
+    "U+064A",
+    "U+0647"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "مُحَمَّد",
+   "expected": "محمد",
+   "expected_scalars": [
+    "U+0645",
+    "U+062D",
+    "U+0645",
+    "U+062F"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "ســلام",
+   "expected": "سلام",
+   "expected_scalars": [
+    "U+0633",
+    "U+0644",
+    "U+0627",
+    "U+0645"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "إزيك",
+   "expected": "ازيك",
+   "expected_scalars": [
+    "U+0627",
+    "U+0632",
+    "U+064A",
+    "U+0643"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "عايزة",
+   "expected": "عايزه",
+   "expected_scalars": [
+    "U+0639",
+    "U+0627",
+    "U+064A",
+    "U+0632",
+    "U+0647"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "ده",
+   "expected": "ده",
+   "expected_scalars": [
+    "U+062F",
+    "U+0647"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "كتاب‌ي",
+   "expected": "كتابي",
+   "expected_scalars": [
+    "U+0643",
+    "U+062A",
+    "U+0627",
+    "U+0628",
+    "U+064A"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "ک",
+   "expected": "ك",
+   "expected_scalars": [
+    "U+0643"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "ی",
+   "expected": "ي",
+   "expected_scalars": [
+    "U+064A"
+   ]
+  },
+  {
+   "lang": "ar",
+   "input": "السَّلَامُ عَلَيْكُمْ",
+   "expected": "السلام عليكم",
+   "expected_scalars": [
+    "U+0627",
+    "U+0644",
+    "U+0633",
+    "U+0644",
+    "U+0627",
+    "U+0645",
+    "U+0020",
+    "U+0639",
+    "U+0644",
+    "U+064A",
+    "U+0643",
+    "U+0645"
+   ]
+  },
+  {
+   "lang": "en",
+   "input": "Don't",
+   "expected": "dont"
+  },
+  {
+   "lang": "en",
+   "input": "don’t",
+   "expected": "dont"
+  },
+  {
+   "lang": "en",
+   "input": "I'm",
+   "expected": "im"
+  },
+  {
+   "lang": "en",
+   "input": "Café",
+   "expected": "cafe"
+  },
+  {
+   "lang": "en",
+   "input": "NAÏVE",
+   "expected": "naive"
+  },
+  {
+   "lang": "en",
+   "input": "iPhone",
+   "expected": "iphone"
+  },
+  {
+   "lang": "en",
+   "input": "o’clock",
+   "expected": "oclock"
+  },
+  {
+   "lang": "en",
+   "input": "e-mail",
+   "expected": "e-mail"
+  },
+  {
+   "lang": "en",
+   "input": "3ashan",
+   "expected": "3ashan"
+  },
+  {
+   "lang": "en",
+   "input": "ME",
+   "expected": "me"
+  }
+ ]
+}
