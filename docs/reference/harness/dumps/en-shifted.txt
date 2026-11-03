@@ -1,0 +1,101 @@
+Optional(Attributes: Application, 0x104a1aa80, pid: 37245, label: 'RefHarness'
+Element subtree:
+ →Application, 0x104a1aa80, pid: 37245, label: 'RefHarness'
+    Window (Main), 0x104a1b200, {{0.0, 0.0}, {402.0, 874.0}}
+      Other, 0x104a1af80, {{0.0, 0.0}, {402.0, 874.0}}
+        Other, 0x104a1b340, {{0.0, 0.0}, {402.0, 874.0}}
+          Other, 0x104a1b5c0, {{0.0, 0.0}, {402.0, 874.0}}
+            Other, 0x104a1b700, {{0.0, 0.0}, {402.0, 874.0}}
+              TextView, 0x104a1b840, {{0.0, 122.0}, {402.0, 424.0}}, identifier: 'field', Keyboard Focused
+                Other, 0x104a1bac0, {{0.0, 122.0}, {0.0, 0.0}}, identifier: '_UITextSelectionRangeAdjustmentContainerView'
+                  Other, 0x104a1bc00, {{0.0, 122.0}, {0.0, 0.0}}, identifier: 'com.apple.text.grabber.leading'
+                    Other, 0x104a1b980, {{-7.2, 108.5}, {16.5, 16.5}}
+                    Other, 0x104a19400, {{0.0, 122.0}, {2.0, 0.0}}
+                  Other, 0x104a192c0, {{0.0, 122.0}, {0.0, 0.0}}, identifier: 'com.apple.text.grabber.leading'
+                    Other, 0x107864f00, {{-7.2, 108.5}, {16.5, 16.5}}
+                    Other, 0x107865900, {{0.0, 122.0}, {2.0, 0.0}}
+                Other, 0x1078652c0, {{369.0, 122.0}, {30.0, 424.0}}, label: 'Vertical scroll bar, 1 page', value: 0%
+                  Other, 0x107865040, {{396.0, 802.0}, {3.0, 7.0}}
+                Other, 0x107865680, {{0.0, 513.0}, {402.0, 30.0}}, label: 'Horizontal scroll bar, 1 page', value: 0%
+                  Other, 0x107865400, {{31.0, 540.0}, {340.0, 3.0}}
+    Window, 0x1078657c0, {{0.0, 0.0}, {402.0, 874.0}}
+      Other, 0x107865a40, {{0.0, 0.0}, {402.0, 874.0}}
+        Other, 0x107865b80, {{0.0, 0.0}, {402.0, 874.0}}
+        Other, 0x107865cc0, {{0.0, 546.0}, {402.0, 328.0}}
+          Other, 0x107865e00, {{0.0, 546.0}, {402.0, 328.0}}, identifier: 'inputView'
+    Window, 0x1078661c0, {{0.0, 0.0}, {402.0, 874.0}}
+      Other, 0x107865f40, {{0.0, 0.0}, {402.0, 874.0}}
+        Other, 0x107866300, {{0.0, 546.0}, {402.0, 328.0}}
+          Other, 0x107866440, {{0.0, 546.0}, {402.0, 44.0}}, identifier: 'SystemInputAssistantView'
+            Other, 0x1078666c0, {{0.0, 546.0}, {402.0, 44.0}}
+              Other, 0x107866080, {{0.0, 546.0}, {402.0, 44.0}}, identifier: 'CenterPageView'
+                Other, 0x107866800, {{0.0, -54.0}, {402.0, 1244.0}}
+                  ScrollView, 0x107866940, {{0.0, 546.0}, {402.0, 44.0}}
+                Other, 0x107866bc0, {{0.0, 546.0}, {402.0, 44.0}}
+                  Other, 0x107866a80, {{0.0, 546.0}, {402.0, 44.0}}
+                    Other, 0x107866d00, {{0.0, 546.0}, {402.0, 44.0}}, label: 'Typing Predictions'
+                      Other, 0x107866e40, {{0.0, 546.0}, {402.0, 44.0}}
+                        Other, 0x1078670c0, {{0.0, 546.0}, {402.0, 44.0}}
+                          Button, 0x107866f80, {{0.0, 546.0}, {134.0, 44.0}}, label: 'I'
+                          Button, 0x107867200, {{134.0, 546.0}, {134.0, 44.0}}, label: 'The'
+                          Button, 0x107867480, {{268.0, 546.0}, {134.0, 44.0}}, label: 'I’m'
+          Other, 0x1078675c0, {{0.0, 546.0}, {402.0, 329.0}}
+            Other, 0x107867340, {{0.0, 546.0}, {402.0, 329.0}}
+              Other, 0x107867700, {{0.0, 546.0}, {402.0, 329.0}}
+          Other, 0x107867980, {{0.0, 590.0}, {402.0, 226.0}}
+            Keyboard, 0x107867ac0, {{0.0, 590.0}, {402.0, 226.0}}
+              Other, 0x107867840, {{0.0, 590.0}, {402.0, 226.0}}
+                Other, 0x107867d40, {{0.0, 590.0}, {402.0, 226.0}}, identifier: 'UIKeyboardLayoutStar Preview'
+                  Key, 0x107867e80, {{0.0, 590.0}, {0.0, 0.0}}, label: 'Padding-Left'
+                  Key, 0x107864640, {{0.0, 590.0}, {0.0, 0.0}}, label: 'Padding-Right'
+                  Key, 0x107864500, {{0.0, 590.0}, {0.0, 0.0}}, label: 'Padding-Left'
+                  Key, 0x108174000, {{0.0, 590.0}, {0.0, 0.0}}, label: 'Padding-Right'
+                  Key, 0x108174140, {{0.0, 590.0}, {0.0, 0.0}}, label: 'Padding-Left'
+                  Key, 0x108174280, {{0.0, 590.0}, {0.0, 0.0}}, label: 'Padding-Right'
+                  Key, 0x1081743c0, {{4.7, 597.0}, {39.3, 54.0}}, label: 'Q'
+                  Key, 0x108174500, {{44.0, 597.0}, {39.7, 54.0}}, label: 'W'
+                  Key, 0x108174640, {{83.7, 597.0}, {39.3, 54.0}}, label: 'E'
+                  Key, 0x108174780, {{123.0, 597.0}, {39.7, 54.0}}, label: 'R'
+                  Key, 0x1081748c0, {{162.7, 597.0}, {39.3, 54.0}}, label: 'T'
+                  Key, 0x108174a00, {{202.0, 597.0}, {39.7, 54.0}}, label: 'Y'
+                  Key, 0x108174b40, {{241.7, 597.0}, {39.3, 54.0}}, label: 'U'
+                  Key, 0x108174c80, {{281.0, 597.0}, {39.7, 54.0}}, label: 'I'
+                  Key, 0x108174dc0, {{320.7, 597.0}, {39.3, 54.0}}, label: 'O'
+                  Key, 0x108174f00, {{360.0, 597.0}, {39.7, 54.0}}, label: 'P'
+                  Key, 0x108175040, {{24.3, 651.0}, {39.3, 54.0}}, label: 'A'
+                  Key, 0x108175180, {{63.7, 651.0}, {39.7, 54.0}}, label: 'S'
+                  Key, 0x1081752c0, {{103.3, 651.0}, {39.3, 54.0}}, label: 'D'
+                  Key, 0x108175400, {{142.7, 651.0}, {39.7, 54.0}}, label: 'F'
+                  Key, 0x108175540, {{182.3, 651.0}, {39.3, 54.0}}, label: 'G'
+                  Key, 0x108175680, {{221.7, 651.0}, {39.7, 54.0}}, label: 'H'
+                  Key, 0x1081757c0, {{261.3, 651.0}, {39.3, 54.0}}, label: 'J'
+                  Key, 0x108175900, {{300.7, 651.0}, {39.7, 54.0}}, label: 'K'
+                  Key, 0x108175a40, {{340.3, 651.0}, {39.3, 54.0}}, label: 'L'
+                  Button, 0x108175b80, {{4.7, 705.0}, {51.3, 54.0}}, identifier: 'shift', label: 'shift', Selected
+                  Key, 0x108175cc0, {{63.7, 705.0}, {39.7, 54.0}}, label: 'Z'
+                  Key, 0x108175e00, {{103.3, 705.0}, {39.3, 54.0}}, label: 'X'
+                  Key, 0x108175f40, {{142.7, 705.0}, {39.7, 54.0}}, label: 'C'
+                  Key, 0x108176080, {{182.3, 705.0}, {39.3, 54.0}}, label: 'V'
+                  Key, 0x1081761c0, {{221.7, 705.0}, {39.7, 54.0}}, label: 'B'
+                  Key, 0x108176300, {{261.3, 705.0}, {39.3, 54.0}}, label: 'N'
+                  Key, 0x108176440, {{300.7, 705.0}, {39.7, 54.0}}, label: 'M'
+                  Key, 0x108176580, {{348.0, 705.0}, {51.7, 54.0}}, identifier: 'delete', label: 'delete'
+                  Key, 0x1081766c0, {{4.7, 759.0}, {49.3, 54.0}}, identifier: 'more', label: 'numbers'
+                  Button, 0x108176800, {{54.0, 759.0}, {49.3, 54.0}}, identifier: 'emoji', label: 'Emoji'
+                  Key, 0x108176940, {{103.3, 759.0}, {197.3, 54.0}}, identifier: 'space', label: 'space'
+                  Button, 0x108176a80, {{300.7, 759.0}, {99.0, 54.0}}, identifier: 'Return', label: 'return'
+          Other, 0x108176bc0, {{0.0, 590.0}, {402.0, 284.0}}
+            Button, 0x108176d00, {{8.5, 805.7}, {68.1, 68.7}}, label: 'Next keyboard', value: العربية
+              StaticText, 0x108176e40, {{8.5, 805.7}, {0.0, 0.0}}
+            Button, 0x108176f80, {{325.4, 805.4}, {68.1, 68.7}}, identifier: 'dictation', label: 'Dictate'
+              StaticText, 0x1081770c0, {{325.4, 805.4}, {0.0, 0.0}}
+            Button, 0x108177200, {{325.4, 805.4}, {68.1, 68.7}}, identifier: 'dictation', label: 'Dictate'
+              StaticText, 0x108177340, {{325.4, 805.4}, {0.0, 0.0}}
+Path to element:
+ →Application, 0x104a1aa80, pid: 37245, label: 'RefHarness'
+Query chain:
+ →Find: Target Application 'dev.kalamref.harness'
+  Output: {
+    Application, 0x108177480, pid: 37245, label: 'RefHarness'
+  }
+)

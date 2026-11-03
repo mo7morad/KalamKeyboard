@@ -1,0 +1,25 @@
+name: RefHarness
+options:
+  bundleIdPrefix: dev.kalamref
+  deploymentTarget:
+    iOS: "26.0"
+settings:
+  CODE_SIGNING_ALLOWED: NO
+  GENERATE_INFOPLIST_FILE: YES
+targets:
+  RefHarness:
+    type: application
+    platform: iOS
+    sources: [App]
+    settings:
+      INFOPLIST_KEY_UILaunchScreen_Generation: YES
+      PRODUCT_BUNDLE_IDENTIFIER: dev.kalamref.harness
+  RefHarnessUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies: [{target: RefHarness}]
+schemes:
+  RefHarness:
+    build: {targets: {RefHarness: all, RefHarnessUITests: [test]}}
+    test: {targets: [RefHarnessUITests]}
