@@ -9,3 +9,4 @@ __pycache__/
 .venv/
 Tools/lexicon-builder/corpora/
 Tools/data/
+KeyboardExtension/Resources/*.klex
