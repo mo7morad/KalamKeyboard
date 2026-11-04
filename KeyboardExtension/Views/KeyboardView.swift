@@ -94,6 +94,24 @@ final class KeyboardView: UIView {
         if bounds.width != builtWidth { rebuild() }
     }
 
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        stopDelayingTouches()
+    }
+
+    /// A gesture recognizer above the keys that delays touchesBegan holds each touch back until it
+    /// fails, and a touch it claims never reaches the keys: no haptic, no letter (device rounds 1
+    /// and 3). The keyboard window's system recognizers do this. In case iOS adds or resets one
+    /// after the keyboard appears, every touch-down checks again; it is a few property reads.
+    func stopDelayingTouches() {
+        for view in sequence(first: self as UIView, next: \.superview) {
+            for recognizer in view.gestureRecognizers ?? [] where recognizer.delaysTouchesBegan {
+                trace("gesture \(type(of: view)) \(type(of: recognizer)) delayed touches, now off")
+                recognizer.delaysTouchesBegan = false
+            }
+        }
+    }
+
     // MARK: Drawing
 
     private func rebuild() {
@@ -265,6 +283,7 @@ final class KeyboardView: UIView {
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        stopDelayingTouches()
         for touch in touches.sorted(by: { $0.timestamp < $1.timestamp }) {
             // SPEC 5.2 rollover: a new touch releases any letter, space or return still waiting for
             // its touch-up, so two thumbs keep their order ("hi there", not "hit here").
@@ -465,8 +484,9 @@ final class KeyboardView: UIView {
     private func traceTouch(_ phase: String, _ touch: UITouch, key: Layout.Key) {
         trace({
             let units = geometry?.keyUnits(touch.location(in: self)) ?? Point(x: -1, y: -1)
-            return String(format: "touch %@ %@ at %.2f,%.2f lag %.1f ms", phase, key.id, units.x, units.y,
-                          (CACurrentMediaTime() - touch.timestamp) * 1000)
+            // The id matches the touch's "spy" lines (Debug/TouchSpy); kalam-cli tapmap reads only up to the point.
+            return String(format: "touch %@ %@ at %.2f,%.2f lag %.1f ms id %@", phase, key.id, units.x, units.y,
+                          (CACurrentMediaTime() - touch.timestamp) * 1000, "\(Unmanaged.passUnretained(touch).toOpaque())")
         }())
     }
 

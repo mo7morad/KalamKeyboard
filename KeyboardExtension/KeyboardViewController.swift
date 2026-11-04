@@ -17,6 +17,8 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     private let emojiPanel = EmojiPanel()
     private let globeButton = UIButton(type: .custom)
     private var heightConstraint: NSLayoutConstraint?
+    /// The appearance the views were last painted in (nil: not yet).
+    private var paintedDark: Bool?
 
     private var lang = lastLanguage
     private var page = "letters"
@@ -138,23 +140,26 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         captureClip()
-        stopDelayingTouches()
         #if DEBUG
+        traceViewChain()
+        TouchSpy.attach(to: view.window)
         MemoryProbe.logFootprint()
         #endif
+        keyboardView.stopDelayingTouches()
     }
 
-    /// The system gesture gate on the keyboard's window delays touchesBegan near the screen edges,
-    /// which can hold back and reorder fast edge keys (device round 1).
-    private func stopDelayingTouches() {
+    #if DEBUG
+    /// The view chain up to the window, with each gesture recognizer as iOS set it up (device rounds).
+    private func traceViewChain() {
         for view in sequence(first: view as UIView, next: \.superview) {
             trace("frame \(type(of: view)) \(view.frame) in window \(view.convert(view.bounds, to: nil))")
             for recognizer in view.gestureRecognizers ?? [] {
-                trace("gesture \(type(of: view)) \(type(of: recognizer)) delaysTouchesBegan \(recognizer.delaysTouchesBegan)")
-                recognizer.delaysTouchesBegan = false
+                trace("gesture \(type(of: view)) \(type(of: recognizer)) delaysTouchesBegan \(recognizer.delaysTouchesBegan) "
+                      + "delaysTouchesEnded \(recognizer.delaysTouchesEnded) cancelsTouchesInView \(recognizer.cancelsTouchesInView)")
             }
         }
     }
+    #endif
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
@@ -263,9 +268,13 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         return FieldTraits(autocorrection: proxy.autocorrectionType != .no && hasFullAccess, keyboardType: keyboardType, contentType: contentType)
     }
 
+    /// Runs on every text change, so it repaints only when light or dark actually changes: a repaint
+    /// redraws every key and reloads both panels' grids.
     private func refreshAppearance() {
         let appearance = textDocumentProxy.keyboardAppearance ?? .default
         let dark = appearance == .dark || (appearance != .light && traitCollection.userInterfaceStyle == .dark)
+        guard dark != paintedDark else { return }
+        paintedDark = dark
         let palette = dark ? Palette.dark : Palette.light
         keyboardView.palette = palette
         bar.palette = palette
