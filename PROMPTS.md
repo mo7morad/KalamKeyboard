@@ -189,3 +189,20 @@ Scope:
 - Suggestions: when the current word matches an emoji keyword (EN or AR), the bar offers the emoji; a tap replaces the word with it.
 Update SPEC §5.4 and a new §5.6. Done when: builds, tests pass, and you give a device checklist.
 ```
+
+---
+
+## Phase 10: lost keystrokes and silent wrong output (docs/rd-plan.md)
+
+```
+Phase 10. Read CLAUDE.md, SPEC §2, §3, §5.2, §8.5, §8.7, docs/rd-plan.md (Phase 10) and docs/research/05-code-audit.md.
+Re-check each bug against the current code first; skip and report any that is already fixed.
+Scope (logic in KeyBehavior / TextContext with tests, the extension only calls it):
+- A slow press on a top-row key preselects the digit only when its hint is drawn (EN with hints on). Otherwise the letter is in the strip and preselected.
+- A space held into the trackpad that never moved the cursor types a space on release.
+- The top row's 12 pt reach into the bar holds only during a typing burst; after a pause, while the bar shows suggestions, the band is the bar's.
+- A system-cancelled letter press held 30 ms or more commits its letter.
+- The trackpad direction follows the script of the text at the cursor, not the layout.
+- An autocorrect committed by punctuation or return can be undone: backspace removes the punctuation, the next one reverts.
+Update SPEC §5.2 and §8.5. Done when: engine tests pass, and docs/device-checklist.md has a Phase 10 section (fast typing, slow space, low bar taps, Arabic slow presses, cancels, mixed-script trackpad, undo after punctuation).
+```
