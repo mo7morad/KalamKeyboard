@@ -9,7 +9,7 @@ Setup: install a Debug build, then Settings > General > Keyboard > Keyboards > A
 **Look (compare with `docs/reference/kalam/` and Apple's keyboard)**
 
 - [ ] EN letters, 123 and #+= pages line up with Apple's: key sizes, gaps, corner radius, label sizes, light and dark.
-- [ ] Arabic letters match `docs/reference/ar-letters-*.png`: ض at the far left, ج at the far right, the blank before delete in row 3, the tanween key, ١٢٣.
+- [ ] Arabic letters match `docs/reference/apple/ar-letters-*.png`: ض at the far left, ج at the far right, the blank before delete in row 3, the tanween key, ١٢٣.
 - [ ] The whole keyboard sits about 7 pt higher than Apple's, and its panel is about 7 pt taller (iOS gives third-party keyboards a taller globe strip). Say if it bothers you.
 - [ ] The small "A" / "ع" mark on the space bar, and the top-row digit hints, are readable but quiet.
 - [ ] Return key: ⏎ icon in Notes; "search" in Safari's address bar; "send" where an app asks for it; dimmed when the field is empty and the app requires text.

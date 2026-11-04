@@ -19,6 +19,13 @@ Kalam is a personal iOS keyboard (English + Arabic) for a single user, Moe, who 
   - what is still unverified (device-only).
   - Don't use em-dashes.
 
+## File layout
+
+- The file name is its main type. Extensions adding a concern use `Type+Concern.swift`.
+- Engine and extension use the same folder names for the same feature (`Clipboard/`, `Keyboard/`, ...).
+- Tests mirror the source folders: one `XTests.swift` per source file with logic.
+- A new feature gets a folder in each target it touches. Split a file when it holds two concerns, not when it is long.
+
 ## Commands
 
 ```bash

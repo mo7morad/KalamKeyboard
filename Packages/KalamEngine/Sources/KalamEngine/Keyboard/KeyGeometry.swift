@@ -1,7 +1,7 @@
 import CoreGraphics
 
 /// Key frames in points for one page at a given width, from Apple's iPhone 17 metrics
-/// (docs/reference/README.md), tuned so the rendered caps land on Apple's pixels. Hit frames tile
+/// (docs/reference/apple/README.md), tuned so the rendered caps land on Apple's pixels. Hit frames tile
 /// each row with no gaps; caps are the drawn keys.
 public struct KeyGeometry: Sendable {
     public struct Frame: Sendable {

@@ -45,19 +45,6 @@ final class StoreHolder {
     }
 }
 
-struct StoreUnavailable: LocalizedError {
-    var errorDescription: String? { "The shared App Group container isn't available." }
-}
-
-extension StoreError: @retroactive LocalizedError {
-    public var errorDescription: String? { "This file isn't a Kalam backup." }
-}
-
-/// An error as alert text: its localized description if it has one, else its debug description.
-func message(_ error: Error) -> String {
-    (error as? LocalizedError)?.errorDescription ?? String(describing: error)
-}
-
 /// The base lexicons ship inside the keyboard extension. They're build outputs, so a build may lack
 /// them; import then runs without the typo and lazy-spelling rules.
 enum BaseLexicons {
@@ -71,16 +58,5 @@ enum KeyboardStatus {
     /// Whether Kalam is in Settings > Keyboards, from the global AppleKeyboards preference; nil if unreadable.
     static var isAdded: Bool? {
         (UserDefaults.standard.object(forKey: "AppleKeyboards") as? [String])?.contains("com.morad.kalam.keyboard")
-    }
-}
-
-extension View {
-    /// Shows `message` in an alert while it's non-nil.
-    func errorAlert(_ message: Binding<String?>) -> some View {
-        alert("Something Went Wrong", isPresented: Binding(get: { message.wrappedValue != nil }, set: { if !$0 { message.wrappedValue = nil } })) {
-            Button("OK") {}
-        } message: {
-            Text(message.wrappedValue ?? "")
-        }
     }
 }

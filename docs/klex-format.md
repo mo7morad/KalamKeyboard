@@ -1,6 +1,6 @@
 # .klex format (version 1)
 
-One file per language. Written by `Tools/lexicon-builder/klex.py`, read by `KalamEngine/BaseLexicon.swift` (memory-mapped). All integers are little-endian. Records are packed with no alignment padding beyond what is listed.
+One file per language. Written by `Tools/lexicon-builder/klex.py`, read by `KalamEngine/Suggestions/BaseLexicon.swift` (memory-mapped). All integers are little-endian. Records are packed with no alignment padding beyond what is listed.
 
 ## Header (96 bytes)
 

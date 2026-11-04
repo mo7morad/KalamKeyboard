@@ -12,7 +12,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     private var isVisible = false
     private let keyboardView = KeyboardView()
     private let bar = SuggestionBar()
-    private let clipboard = Clipboard()
+    private let clipboard = ClipboardStore()
     private let panel = ClipboardPanel()
     private let globeButton = UIButton(type: .custom)
 

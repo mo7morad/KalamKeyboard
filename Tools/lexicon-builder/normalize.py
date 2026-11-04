@@ -1,4 +1,4 @@
-"""Lookup-key normalization (SPEC 6.1). Mirrors KalamEngine/Normalization.swift."""
+"""Lookup-key normalization (SPEC 6.1). Mirrors KalamEngine/Text/Normalization.swift."""
 import unicodedata
 
 AR_DROP = (

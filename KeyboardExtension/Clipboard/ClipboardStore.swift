@@ -7,7 +7,7 @@ import os
 /// SPEC 5.5 on the keyboard side: captures new pasteboard text or images into the history and keeps
 /// `clipboard.json` and the `Clipboard/` image folder in the App Group container. Everything runs on
 /// main; the file is small and is written only on clipboard actions, never on a keystroke.
-final class Clipboard {
+final class ClipboardStore {
     private(set) var history = ClipboardHistory()
     /// Set when only the chip's dismissal changed, which waits for the next save or `flush`.
     private var dirty = false

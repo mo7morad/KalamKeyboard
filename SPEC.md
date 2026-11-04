@@ -53,7 +53,7 @@ Sources: dev.to "The three hard constraints of an iOS keyboard extension" (TBDS)
   - Bigrams are counted from Leipzig Corpora Collection sentence files.
 - **D4 Personal store** is SQLite (system `SQLite3` with a thin wrapper, no GRDB) in the App Group container, in WAL mode.
 - **D5 Decoder** is a trie beam search with a touch-point (spatial) error model plus an interpolated n-gram language model (personal + base). No neural models in v1, because of the memory limit.
-- **D6 Layouts are JSON data** built from Moe's screenshots of Apple's keyboards (`docs/reference/`). Do not guess the Apple Arabic layout.
+- **D6 Layouts are JSON data** built from Moe's screenshots of Apple's keyboards (`docs/reference/apple/`). Do not guess the Apple Arabic layout.
 - **D7 One extension serves both languages** (`PrimaryLanguage = mul`). A dedicated EN/AR key switches between them internally.
 - **D8 Variant auto-fix defaults.**
   - The Arabic spelling-variant auto-fix (انا→أنا) is **off** by default, but variants still appear as suggestions. In wordfreq, انا (7.9e-4) is as common as أنا (7.8e-4), and dialect الي collides with إلى.
@@ -69,17 +69,23 @@ Sources: dev.to "The three hard constraints of an iOS keyboard extension" (TBDS)
 Kalam/
   Kalam.xcodeproj
   App/                      SwiftUI host app (target: Kalam)
+    Screens/  Store/
   KeyboardExtension/        UIKit keyboard (target: KalamKeyboard)
-    Resources/en.klex, ar.klex
+    KeyboardViewController.swift
+    Input/  Views/  Clipboard/  Feedback/  Debug/
+    Resources/en.klex, ar.klex, *.wav
   Packages/KalamEngine/
     Sources/KalamEngine/    engine (no UIKit)
+      Engine/  Text/  Suggestions/  Personal/  Keyboard/  Clipboard/  Import/
       Resources/Layouts/*.json
     Sources/kalam-cli/      debug + eval CLI
-    Tests/KalamEngineTests/ (+ Fixtures/)
+    Tests/KalamEngineTests/ same folders as Sources (+ Fixtures/)
   Tools/lexicon-builder/    Python builder + pytest
     corpora/                (gitignored raw downloads)
+  Tools/screenshot-harness/ XcodeGen app + UI tests + measuring scripts
   shared-test-vectors/normalization_vectors.json
-  docs/reference/           Moe's screenshots
+  docs/reference/apple/     Moe's screenshots of Apple's keyboard
+  docs/reference/kalam/     Kalam's captures to compare
   docs/klex-format.md, docs/eval-log.md, docs/issues.md
   SPEC.md  CLAUDE.md  PROMPTS.md
 ```
@@ -110,7 +116,7 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
   - `width` is in relative units, where 1.0 = a standard letter key.
   - `kind` ∈ char | shift | backspace | space | return | globe | lang | page.
 - The keyboard computes frames at runtime. The engine gets key centers in **key units** (1.0 = one standard key width or height), never points.
-- Built from the screenshots in `docs/reference/`, then compared side by side with them.
+- Built from the screenshots in `docs/reference/apple/`, then compared side by side with them.
 - Arabic alternates must include at least: ا → أ إ آ ء, ي → ى ئ, و → ؤ, ه → ة. Arabic punctuation: ، ؛ ؟.
 - The AR bottom row is `[١٢٣] [EN] [space] [◌ً] [return]`. Holding the tanween key ◌ً opens Apple's tashkeel strip, visual left to right: ◌ٓ ◌ٰ ـ ◌ْ ◌ِ ◌ُ ◌ّ [◌ً] ◌َ ◌ٍ ◌ٌ (fathatan selected). Marks draw on a dotted circle; the output is the bare mark. English alternates follow Apple's accents.
 - Gboard-style long-press digits on the top row (q→1 … p→0; Arabic top row → digits, Western or Eastern per setting), with small hint labels on the English top row (setting, default on; none on Arabic, like Apple, since they covered the letters' dots). This also helps typing Franco words like "3ashan".
@@ -150,7 +156,7 @@ There is a single `FeedbackPlayer`, called on touch-down for every key.
   - One `UIImpactFeedbackGenerator(style: .rigid)` (stronger and crisper than `.light`, device round 1).
   - Call `prepare()` on keyboard appear and after each fire.
   - `impactOccurred(intensity:)` with the intensity setting (0.3 to 1.0, default 0.7).
-- **Sound:** Apple's key sounds as they are, played by system ID (Moe preferred them to the +7.5 dB copies of device round 1). The "Louder" setting (0 to 1 in steps of 0.01, default 0): 0 plays the system IDs; above 0 the keyboard plays copies from -30 dB up to +7.5 dB, because a registered sound plays much louder than the system keyboard click at the same level (device round 2). It scales the bundled 16-bit WAV copies of `key_press_click`, `key_press_delete` and `key_press_modifier` (`docs/reference/harness/sounds.md`), writes them to its temp folder and registers them with `AudioServicesCreateSystemSoundID`. If one fails to load, its system ID plays instead and the failure is logged.
+- **Sound:** Apple's key sounds as they are, played by system ID (Moe preferred them to the +7.5 dB copies of device round 1). The "Louder" setting (0 to 1 in steps of 0.01, default 0): 0 plays the system IDs; above 0 the keyboard plays copies from -30 dB up to +7.5 dB, because a registered sound plays much louder than the system keyboard click at the same level (device round 2). It scales the bundled 16-bit WAV copies of `key_press_click`, `key_press_delete` and `key_press_modifier` (`Tools/screenshot-harness/sounds.md`), writes them to its temp folder and registers them with `AudioServicesCreateSystemSoundID`. If one fails to load, its system ID plays instead and the failure is logged.
   - Letters, digits and punctuation → click (1104); backspace → delete (1155); shift, 123, EN/AR, globe, return and space → modifier (1156).
   - Verify this mapping by ear against Apple's keyboard on the device and adjust the table if needed.
 - Never use `AVAudioPlayer` or `AVAudioSession` in the extension.
@@ -531,7 +537,7 @@ Settings are stored in App Group `UserDefaults`:
 
 ## 15. Inputs Moe provides
 
-- **`docs/reference/` screenshots** (same iPhone, portrait, light and dark):
+- **`docs/reference/apple/` screenshots** (same iPhone, portrait, light and dark):
   - Apple EN letters, shifted, 123 and #+=.
   - AR letters, 123 and #+=.
   - Long-press popups for ا ي و ه and 2 or 3 English accents.

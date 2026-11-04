@@ -1,9 +1,5 @@
 import Foundation
 
-public enum Lang: String, Codable, Sendable {
-    case en, ar
-}
-
 private let arabicMap: [Unicode.Scalar: Unicode.Scalar] = [
     "\u{0623}": "\u{0627}", "\u{0625}": "\u{0627}", "\u{0622}": "\u{0627}", "\u{0671}": "\u{0627}",
     "\u{0649}": "\u{064A}", "\u{0629}": "\u{0647}", "\u{0624}": "\u{0648}", "\u{0626}": "\u{064A}",

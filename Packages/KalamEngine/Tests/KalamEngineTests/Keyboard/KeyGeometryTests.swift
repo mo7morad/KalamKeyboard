@@ -2,7 +2,7 @@ import CoreGraphics
 import Testing
 @testable import KalamEngine
 
-/// Apple's iPhone 17 cap positions from docs/reference/README.md, within 1 pt.
+/// Apple's iPhone 17 cap positions from docs/reference/apple/README.md, within 1 pt.
 @Test func englishCapsMatchApple() throws {
     let geometry = KeyGeometry(layout: try #require(Layout.bundled("en-letters")), width: 402)
     func cap(_ id: String) throws -> CGRect { try #require(geometry.frames.first { $0.key.id == id }).cap }

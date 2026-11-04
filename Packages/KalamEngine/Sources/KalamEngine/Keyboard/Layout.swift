@@ -1,6 +1,6 @@
 import Foundation
 
-/// A keyboard page (SPEC 5.1), built from docs/reference. Key widths are in key units (1.0 = one
+/// A keyboard page (SPEC 5.1), built from docs/reference/apple. Key widths are in key units (1.0 = one
 /// letter key pitch of this page). Rows are in visual left-to-right order, Arabic included.
 public struct Layout: Codable, Sendable {
     public let id: String

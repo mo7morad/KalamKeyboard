@@ -1,6 +1,6 @@
 import UIKit
 
-/// Colors from docs/reference/README.md (iPhone 17, iOS 27). The panel itself is the system's
+/// Colors from docs/reference/apple/README.md (iPhone 17, iOS 27). The panel itself is the system's
 /// `.keyboard` input view backdrop.
 struct Palette {
     let key: UIColor

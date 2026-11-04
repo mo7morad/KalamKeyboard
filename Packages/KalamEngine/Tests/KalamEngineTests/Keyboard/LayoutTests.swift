@@ -62,3 +62,10 @@ func everyPageLoadsWithUniqueIDsAndFullRows(_ id: String) throws {
     #expect(abs(Layout.width(bottom) - layout.widestRow) < 0.001)
     #expect(layout.withGlobeKey().rows[0].count == layout.rows[0].count)
 }
+
+@Test func arabicDigitsFollowTheSetting() throws {
+    let numbers = try #require(Layout.bundled("ar-numbers"))
+    #expect(numbers.withDigits(eastern: false).rows[0].map(\.output).joined() == "1234567890")
+    let letters = try #require(Layout.bundled("ar-letters"))
+    #expect(letters.withDigits(eastern: true).rows[0].compactMap(\.hint).joined() == "١٢٣٤٥٦٧٨٩٠")
+}

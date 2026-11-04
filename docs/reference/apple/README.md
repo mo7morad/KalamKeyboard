@@ -27,7 +27,7 @@ Every capture has a `-light.png` and a `-dark.png` version.
 | `ar-symbols` | AR #+= page |
 | `ar-letters-nobar` | AR letters with the bar hidden |
 | `popup-e`, `popup-a`, `popup-u`, `popup-n`, `popup-c` | EN long-press alternates |
-| `popup-i`, `popup-o`, `popup-s`, `popup-y`, `popup-z`, `popup-l` | More EN alternates (Phase 5, light only, cropped to the keyboard top; `harness/UITests/Accents.swift`) |
+| `popup-i`, `popup-o`, `popup-s`, `popup-y`, `popup-z`, `popup-l` | More EN alternates (Phase 5, light only, cropped to the keyboard top; `Tools/screenshot-harness/UITests/Accents.swift`) |
 | `popup-alef`, `popup-yeh`, `popup-waw`, `popup-heh` | AR long-press alternates for ا ي و ه |
 | `popup-kaf` | AR ك held down. It turned out to have an alternate (گ). |
 | `popup-tashkeel` | AR tanween key ◌ً held down: the tashkeel strip (device round 1, light only, cropped to the keyboard) |
@@ -43,7 +43,7 @@ Notes on the files:
 - The long-press popups were taken on a field that already held earlier test input. The text in their suggestion bars ("eaunc", "Eauncqbfqbf", and so on) is leftover junk. Ignore it.
 - In `popup-e-dark` the shift key is drawn highlighted, but the letters are lowercase.
 
-`harness/` holds the XcodeGen app, the UI test and the stdlib-Python measuring scripts used here. `harness/dumps/*.txt` are the XCUITest element trees for each page, with exact key hit-frames and accessibility labels. To recapture, set `base` in `harness/UITests/Capture.swift` to a writable folder, run `harness/watcher.sh` from that folder, and run the `Capture` tests once per appearance (`xcrun simctl ui <udid> appearance light|dark`, written into `mode`). On a headless simulator, the app calls the KIF private-API trick (`forceSoftwareKeyboard`). Without it, iOS acts as if a hardware keyboard is attached and hides the on-screen keyboard.
+`Tools/screenshot-harness/` holds the XcodeGen app, the UI test and the stdlib-Python measuring scripts used here. `Tools/screenshot-harness/dumps/*.txt` are the XCUITest element trees for each page, with exact key hit-frames and accessibility labels. To recapture, set `base` in `Tools/screenshot-harness/UITests/Capture.swift` to a writable folder, run `Tools/screenshot-harness/watcher.sh` from that folder, and run the `Capture` tests once per appearance (`xcrun simctl ui <udid> appearance light|dark`, written into `mode`). On a headless simulator, the app calls the KIF private-API trick (`forceSoftwareKeyboard`). Without it, iOS acts as if a hardware keyboard is attached and hides the on-screen keyboard.
 
 ## iOS 27 look (important differences from older iOS)
 
@@ -159,7 +159,7 @@ Notes:
 
 ## Metrics (points, iPhone 17, portrait)
 
-Measured from the PNGs with `harness/scan.py`, `corner.py`, `glyph.py` and `colors.py`, and checked against the XCUITest frames.
+Measured from the PNGs with `Tools/screenshot-harness/scan.py`, `corner.py`, `glyph.py` and `colors.py`, and checked against the XCUITest frames.
 
 **Heights**
 
