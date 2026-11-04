@@ -319,10 +319,14 @@ Replace the literal ℓ with the top candidate c* only if all of the following h
 
 1. Autocorrect is on for this language, `autocorrectionType != .no`, `keyboardType` is not `.URL` or `.emailAddress`, and `textContentType` is not `.password` or `.oneTimeCode`.
 2. ℓ is not known: it's neither a `valid` base variant nor a `known` personal word.
-3. ℓ is not a special token and contains no digits. In EN, it's not all caps with length ≥ 2.
+   - In AR, a known word plus one clitic counts as known too (Egyptian forms the MSA base lacks). Prefixes: و ف ب ل ك ه ح ال لل. Suffixes: ه ها هم ك كم ني نا ي. The stem has at least 2 letters.
+3. ℓ is not a special token and contains no digits. In EN, it has no capital after its first letter (OMG, LLMs, iOS).
 4. There is no recorded rejection of (ℓ → c*).
 5. `score(c*) − score(ℓ) ≥ θ`, where θ is 2.5 for "normal" and 4.0 for "gentle". Also, c*'s softmax share among the candidates must be ≥ 0.5.
    - Defaults: EN normal, AR gentle (dialect words are often missing from the base data).
+6. c* fixes a slip, not a different word:
+   - as a completion, it adds at most 1 letter past the taps (goin → going, never tomo → tomorrow);
+   - in gentle mode, its edit cost (the spatial part aside) is at most 3.0: one omission or swap, no extra tap and no far key.
 
 **Variant fix** (an exception to rule 2) applies when all of these hold:
 
@@ -464,12 +468,14 @@ Settings are stored in App Group `UserDefaults`:
 - **`pytest`** covers the builder: the vectors, the filters and the format writer.
 - **`kalam-cli`:**
   - `suggest --lang en --context "see you" --typed "tomorow"` prints ranked candidates with a score breakdown (LM / spatial / edits / boosts).
-  - `eval --lang en|ar --heldout <file> [--personal <db>]` simulates typing with Gaussian tap noise (σ = 0.35 key units) on the real layout geometry. It reports:
+  - `eval --lang en|ar --heldout <file> [--personal <db>]` simulates typing with Gaussian tap noise (σ = 0.35 key units) on the real layout geometry, plus per-letter omissions (1.5%), extra taps (1.5%) and swaps (0.5%). It reports:
     - autocorrect top-1 accuracy on noisy words;
     - **false-autocorrect rate on clean known words (guard ≤ 0.5%)**;
     - next-word top-3 accuracy;
     - keystroke savings (the simulated user taps the right suggestion as soon as it appears).
   - `eval-personal` trains a personal store on 90% of Moe's own WhatsApp messages and evaluates on the other 10%. It reports the **personalization lift** in top-3 accuracy and keystroke savings versus base-only.
+    - Messages are sorted by time; `--fold k` holds out message i when i % 10 == k.
+    - **Guard:** the wrong autocorrect changes on Moe's Arabic over all 10 folds, each judged by hand, must not grow.
 - **Tuning log:** every tuning change reruns the eval and is logged in `docs/eval-log.md` (date, params, metrics). Guards must never regress.
 - **Device checklists:** Claude Code writes a device checklist for every phase that touches the device; Moe runs it.
 

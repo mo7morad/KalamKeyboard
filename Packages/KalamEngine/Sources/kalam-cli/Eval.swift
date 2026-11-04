@@ -3,7 +3,8 @@ import Foundation
 import KalamEngine
 
 /// kalam-cli eval --lang en|ar --klex <file> --heldout <file> [--personal <db>] [--limit N] [--seed S] [--set name=value]...
-/// Types `limit` seeded-random held-out sentences with Gaussian tap noise on the letters page and
+/// Types `limit` seeded-random held-out sentences with tap noise (Gaussian, plus omissions, extra taps
+/// and swaps; see NoisyTypist) on the letters page and
 /// reports the SPEC 12 metrics plus request latency on this machine.
 func eval(_ args: [String]) -> Int32 {
     let flags = parseFlags(args)
@@ -82,25 +83,59 @@ private struct Metrics {
 /// Taps with Gaussian noise around the key centers of a letters page. A tap types the char key whose
 /// hit rect is nearest to the noisy point (rects tile the rows, as in KeyGeometry); a tap that lands
 /// on a non-char key (shift, backspace, a gap) goes to the nearest char key instead.
-/// Chars with no key on the page (EN apostrophe, AR long-press alternates) are point-less exact taps.
+/// On top, per letter: a swap with the next letter, an omission, or an extra tap after it (half a
+/// doubled tap, half a neighbouring key). A one-letter word gets no omission.
+/// Chars with no key on the page (EN apostrophe, AR long-press alternates) are point-less exact taps, never edited.
 private struct NoisyTypist {
     private let centers: [String: Point]
     private let halfWidths: [String: Double]
+    private let neighbours: [String: [String]]  // keys whose centers are within 1.2 key units
     let sigma: Double
+    static let omissionRate = 0.015, extraRate = 0.015, swapRate = 0.005
 
     init(layout: Layout, sigma: Double) {
-        centers = layout.keyCenters()
+        let centers = layout.keyCenters()
+        self.centers = centers
         halfWidths = Dictionary(layout.rows.joined().filter { $0.kind == .char }.map { ($0.output, $0.width / 2) }) { a, _ in a }
+        neighbours = centers.mapValues { c in
+            centers.filter { $0.value != c && hypot($0.value.x - c.x, $0.value.y - c.y) <= 1.2 }.keys.sorted()
+        }
         self.sigma = sigma
     }
 
     func taps(_ word: String, using rng: inout SplitMix64) -> [Tap] {
-        word.map { letter in
-            guard let center = centers[letter.lowercased()] else { return Tap(String(letter), at: nil) }
-            let point = Point(x: center.x + sigma * rng.gaussian(), y: center.y + sigma * rng.gaussian())
-            let hit = key(at: point)
-            return Tap(letter.isUppercase ? hit.uppercased() : hit, at: point)
+        var letters = Array(word)
+        var i = 0
+        while i + 1 < letters.count {
+            let swappable = centers[letters[i].lowercased()] != nil && centers[letters[i + 1].lowercased()] != nil
+            if swappable, rng.chance(Self.swapRate) {
+                letters.swapAt(i, i + 1)
+                i += 1
+            }
+            i += 1
         }
+        var taps: [Tap] = []
+        for letter in letters {
+            let output = letter.lowercased()
+            guard centers[output] != nil else {
+                taps.append(Tap(String(letter), at: nil))
+                continue
+            }
+            if letters.count > 1, rng.chance(Self.omissionRate) { continue }
+            taps.append(tap(output, upper: letter.isUppercase, using: &rng))
+            if rng.chance(Self.extraRate) {
+                let extra = rng.chance(0.5) ? output : neighbours[output]?.randomElement(using: &rng) ?? output
+                taps.append(tap(extra, upper: letter.isUppercase, using: &rng))
+            }
+        }
+        return taps
+    }
+
+    private func tap(_ output: String, upper: Bool, using rng: inout SplitMix64) -> Tap {
+        let center = centers[output]!
+        let point = Point(x: center.x + sigma * rng.gaussian(), y: center.y + sigma * rng.gaussian())
+        let hit = key(at: point)
+        return Tap(upper ? hit.uppercased() : hit, at: point)
     }
 
     private func key(at p: Point) -> String {
@@ -124,6 +159,8 @@ struct SplitMix64: RandomNumberGenerator {
         z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
         return z ^ (z >> 31)
     }
+
+    mutating func chance(_ p: Double) -> Bool { Double.random(in: 0..<1, using: &self) < p }
 
     /// Standard normal (Box-Muller).
     mutating func gaussian() -> Double {

@@ -15,8 +15,9 @@ $K eval-personal --chat <_chat.txt>... --sender "Mohamed Morad" --klex-en $R/en.
   - False autocorrect: valid base words tapped at key centers that the commit changes.
   - Next-word top-3 and keystroke savings use the simulated typist (taps a top-3 suggestion as soon as it is the target).
   - Latency: wall time per `candidates` and `predict` request, release build, Apple-silicon Mac. The device budget is p95 ≤ 12 ms, and the device is 2 to 3x slower.
-  - The noise is substitutions only: no insertions, omissions or transpositions. Edit-cost changes are also checked on the 20 + 20 sanity table (Phase 3b report).
-- **eval-personal:** Moe's 3 chats, 3,759 of his messages; every 10th is held out (375 messages: EN 87 words, AR 1,320 words). "AC changes" is the share of held-out words, typed at key centers, that the commit changes. Moe leaves typos, so some changes are right.
+  - Up to Phase 3b the noise was substitutions only. Since Phase 3c, each letter also has a 1.5% omission, a 1.5% extra tap after it (half a doubled tap, half a neighbouring key within 1.2 key units), and a 0.5% swap with the next letter. One-letter words get no omission. Results before and after this change don't compare.
+- **eval-personal:** Moe's 3 chats, 3,759 of his messages, sorted by time, then text. `--fold k` holds out message i when i % 10 == k. Up to Phase 3b, every 10th message in file order was held out (375 messages: EN 87 words, AR 1,320 words). "AC changes" is the share of held-out words, typed at key centers, that the commit changes. Moe leaves typos, so some changes are right.
+  - **Moe AR R / W** (a guard since Phase 3c): the AR changes in the personal setup over all 10 folds (14,005 words), each judged right or wrong by hand. The judgements live outside the repo, because they quote Moe's text.
 
 Columns: AC = autocorrect top-1 on noisy words, FA = false autocorrect on clean words, NW = next-word top-3, KS = keystroke savings, p50/p95/p99 = candidates latency in ms.
 
@@ -106,3 +107,46 @@ eval-personal, tuned:
 | AR | personal | 15.2% | 27.0% | 0.8% |
 
 The EN changes are 3 or 4 of 87 words: 3 are right (guidence, syndrom, Securtiy), and 1 is wrong in base-only (LLMs → looks). Of the 11 AR personal changes, 4 are right and 7 are wrong (dialect clitic forms and completions). Candidates p95 stays under 4 ms on this Mac, so the completion frontier keeps its linear scan.
+
+## 2026-11-04 · Phase 3c: noisier eval, 10 folds, safer Arabic autocorrect
+
+git: `99da801` plus the Phase 3c working tree. klex sha256: EN `b98ee2a1…05ed42`, AR `d729d2df…e767e` (as in 3b). Eval at seed 1, with the new noise for every row. Moe = eval-personal over the 10 folds, personal setup (EN 834 words, AR 14,005 words).
+
+A wrong change costs Moe more than a missed fix: he has to notice it and undo it, and he already leaves 10 to 20% of his typos. So a rule that trades a few right changes for many fewer wrong ones is kept.
+
+One judgement call: بصديقتي → يصديقتي (11 of the changes in the rows before the clitic rule, which keeps it as ب + صديقتي) is counted as right. The importer already flagged بصديقتي as a likely typo (Moe typed يصديقتي at least 10x as often), and he slips ب for ي elsewhere (يحبيبتب, بعمب).
+
+| Run | EN AC / FA / KS | AR AC / FA / KS | Moe EN KS | Moe AR KS | Moe AR R / W | Verdict |
+|---|---|---|---|---|---|---|
+| 3b config on the new noise | 51.3 / 0.01 / 38.2 | 24.2 / 0.00 / 28.2 | 38.7 | 27.0 | 55 / 49 | baseline |
+| insertionCost 3 | 48.4 / 0.01 / 34.5 | 24.6 / 0.00 / 25.1 | 36.4 | 25.2 | n/a (181 changes) | rejected |
+| insertionCost 4 | 51.1 / 0.01 / 37.6 | 24.7 / 0.00 / 27.5 | 38.0 | 26.5 | n/a (118 changes) | rejected: 5 stays |
+| omissionCost 2.5 | 51.1 / 0.01 / 38.2 | 24.0 / 0.00 / 28.2 | 38.5 | 27.0 | 55 / 48 | rejected |
+| omissionCost 4 | 51.2 / 0.01 / 38.2 | 24.2 / 0.00 / 28.0 | 39.0 | 27.0 | 53 / 48 | rejected |
+| transpositionCost 1.5 | 51.1 / 0.01 / 38.0 | 24.1 / 0.00 / 27.9 | 38.6 | 26.8 | 55 / 50 | rejected |
+| transpositionCost 3 | 51.7 / 0.01 / 38.4 | 24.3 / 0.00 / 28.5 | 38.8 | 27.1 | 55 / 47 | gain within seed noise; dropped at the end: an imported swap typo (tamma → tamam, WhatsAppTests) stops being fixed |
+| transpositionCost 4 | 51.4 / 0.01 / 38.5 | 24.2 / 0.00 / 28.5 | 38.8 | 27.1 | 54 / 47 | no better than 3 |
+| sigma 0.4 (tr 3) | 46.3 / 0.01 / 38.2 | 21.6 / 0.00 / 28.6 | 39.3 | 27.6 | 47 / 42 | rejected: AC ↓ |
+| sigma 0.5 (tr 3) | 55.0 / 0.01 / 38.3 | 26.0 / 0.00 / 28.1 | 37.8 | 26.5 | 55 / 47 | rejected: AR KS ↓; sigma stays 0.45 |
+| [code] gentle: c* within 1 edit (edit distance on keys, a swap is 1) (tr 3) | 51.7 / 0.01 / 38.4 | 12.5 / 0.00 / 28.5 | 38.8 | 27.1 | 54 / 33 | replaced: two neighbour-key slips count as two edits, so AR AC halves |
+| [code] + completion adds at most 1 letter past the taps (`autocorrectMaxAddedLetters` 1) | 51.7 / 0.01 / 38.4 | 12.5 / 0.00 / 28.5 | 38.8 | 27.1 | 54 / 33 | kept |
+| [code] gentle: c*'s edit cost (not spatial) ≤ `gentleMaxEditCost` 3.0, i.e. one omission or swap, no extra tap or far key | 51.7 / 0.01 / 38.4 | 23.7 / 0.00 / 28.5 | 38.8 | 27.1 | 52 / 19 | kept, replaces the edit-distance rule |
+| gentleMaxEditCost 2.9 (doubled or hamza omissions only) | 51.7 / 0.01 / 38.4 | 22.6 / 0.00 / 28.5 | 38.8 | 27.1 | 45 / 13 | rejected: blocks real one-letter omissions |
+| gentleMaxEditCost 5 | 51.7 / 0.01 / 38.4 | 24.3 / 0.00 / 28.5 | 38.8 | 27.1 | 55 / 41 | rejected |
+| [code] AR rule 2: a known word plus one clitic counts as valid (prefixes و ف ب ل ك ه ح ال, suffixes ه ها هم ك كم ني نا ي; stem ≥ 2 letters, a valid base word or known to Moe) | 51.7 / 0.01 / 38.4 | 21.2 / 0.00 / 28.5 | 38.8 | 27.1 | 33 / 5 | kept |
+| unknownLogProbAR −14 | 51.7 / 0.01 / 38.4 | 18.1 / 0.00 / 28.2 | 38.8 | 27.0 | 22 / 3 | rejected: −11 right for −2 wrong |
+| unknownLogProbAR −17 | 51.7 / 0.01 / 38.4 | 25.6 / 0.00 / 28.8 | 38.8 | 27.1 | 38 / 15 | rejected: +5 right for +10 wrong; −15.5 stays |
+| [code] EN rule 3: no autocorrect when a capital follows the first letter (LLMs, iOS, PhD; covers all caps) | in the final row | | | | | kept |
+| [code] prefix لل (ل + ال, which drops its alif), orchestrator review | = | 21.0 / 0.00 / 28.2 | 38.7 | 27.0 | 33 / 4 | kept: only للرجالة → الرجالة goes |
+| **Final** (transpositionCost 2) | 51.3 / 0.01 / 38.2 | 21.0 / 0.00 / 28.2 | 38.7 | 27.0 | **33 / 4** | |
+
+Final latency (candidates p50 / p95 / p99): EN 0.25 / 1.51 / 1.66 ms, AR 0.32 / 2.69 / 3.14 ms. Predict p95 is 0.11 to 0.12 ms.
+
+Final eval-personal over the 10 folds:
+
+| Lang | Setup | NW | KS | AC changes |
+|---|---|---|---|---|
+| EN | personal | 20.2% | 38.7% | 1.44% |
+| AR | personal | 15.0% | 27.0% | 0.26% (33 right, 4 wrong) |
+
+Synthetic AR AC fell from 24.2% to 21.0%, a cost accepted because that set is MSA news. The 4 remaining wrong AR changes are dialect spellings: يخوي → يخويا (twice), بتلظبط → بالظبط and مؤاخدة → مؤاخذة.

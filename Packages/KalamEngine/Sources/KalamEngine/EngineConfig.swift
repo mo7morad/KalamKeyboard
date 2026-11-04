@@ -39,6 +39,8 @@ public struct EngineConfig: Sendable {
     public var autocorrectThresholdNormal = 2.5  // theta: score(c*) - score(literal)
     public var autocorrectThresholdGentle = 4.0
     public var autocorrectMinShare = 0.5  // c*'s softmax share among the candidates
+    public var gentleMaxEditCost = 3.0  // gentle mode: c*'s edit cost (not spatial) stays within one omission or swap
+    public var autocorrectMaxAddedLetters = 1  // a completion as c* adds at most this many letters past the taps
     public var variantFixRatio = 5.0  // P_LM(c*) >= ratio * P_LM(literal)
     public var variantFixMaxKept = 2  // no variant fix once Moe kept the literal this often
 
@@ -70,7 +72,7 @@ public struct EngineConfig: Sendable {
         "personalCorpusPrior": \.personalCorpusPrior, "correctionBoost": \.correctionBoost,
         "explicitCharBoost": \.explicitCharBoost, "decayHalfLifeDays": \.decayHalfLifeDays,
         "autocorrectThresholdNormal": \.autocorrectThresholdNormal, "autocorrectThresholdGentle": \.autocorrectThresholdGentle,
-        "autocorrectMinShare": \.autocorrectMinShare, "variantFixRatio": \.variantFixRatio,
+        "autocorrectMinShare": \.autocorrectMinShare, "gentleMaxEditCost": \.gentleMaxEditCost, "variantFixRatio": \.variantFixRatio,
         "learnerFlushSeconds": \.learnerFlushSeconds, "manualCorrectionSeconds": \.manualCorrectionSeconds,
         "undatedImportAgeDays": \.undatedImportAgeDays, "typoNeighbourRatio": \.typoNeighbourRatio,
     ]
@@ -78,7 +80,7 @@ public struct EngineConfig: Sendable {
         "maxEdits": \.maxEdits, "maxEditsShortLiteral": \.maxEditsShortLiteral,
         "shortLiteralLength": \.shortLiteralLength, "noFarSubstitutionLength": \.noFarSubstitutionLength,
         "beamWidth": \.beamWidth, "maxCompletions": \.maxCompletions, "personalTrieCap": \.personalTrieCap,
-        "variantFixMaxKept": \.variantFixMaxKept, "predictionPoolSize": \.predictionPoolSize,
+        "variantFixMaxKept": \.variantFixMaxKept, "autocorrectMaxAddedLetters": \.autocorrectMaxAddedLetters, "predictionPoolSize": \.predictionPoolSize,
         "knownMinUses": \.knownMinUses, "knownMinSessions": \.knownMinSessions, "knownMinImports": \.knownMinImports,
         "manualCorrectionMaxDistance": \.manualCorrectionMaxDistance, "storeBusyTimeoutMs": \.storeBusyTimeoutMs,
     ]

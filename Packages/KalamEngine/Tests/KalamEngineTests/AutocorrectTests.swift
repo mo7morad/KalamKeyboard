@@ -2,8 +2,8 @@ import Foundation
 import Testing
 @testable import KalamEngine
 
-private func candidate(_ text: String, lm: Double, cost: Double = 0, literal: Bool = false) -> Suggestion {
-    Suggestion(text: text, ident: text.lowercased(), isLiteral: literal, lm: lm, spatial: cost, edits: 0, completion: 0, boosts: 0)
+private func candidate(_ text: String, lm: Double, edits: Double = 0, completion: Double = 0, literal: Bool = false) -> Suggestion {
+    Suggestion(text: text, ident: text.lowercased(), isLiteral: literal, lm: lm, spatial: 0, edits: edits, completion: completion, boosts: 0)
 }
 
 private let normalFacts = AutocorrectFacts(lang: .en, mode: .normal, variantFix: true, traits: FieldTraits(), literalValid: false,
@@ -15,6 +15,8 @@ struct PolicyCase: CustomTestStringConvertible, Sendable {
     let best: String
     let bestLM: Double  // the literal's lm is -14 unless literalLM is set
     var literalLM = -14.0
+    var bestEdits = 0.0
+    var bestCompletion = 0.0
     var change: @Sendable (inout AutocorrectFacts) -> Void = { _ in }
     let corrects: Bool
     var testDescription: String { name }
@@ -29,6 +31,12 @@ private let cases: [PolicyCase] = [
     PolicyCase(name: "normal threshold met", literal: "teh", best: "the", bestLM: -11, corrects: true),
     PolicyCase(name: "gentle threshold missed", literal: "teh", best: "the", bestLM: -11, change: { $0.mode = .gentle }, corrects: false),
     PolicyCase(name: "gentle threshold met", literal: "teh", best: "the", bestLM: -9, change: { $0.mode = .gentle }, corrects: true),
+    PolicyCase(name: "gentle fixes one omission", literal: "hllo", best: "hello", bestLM: -4, bestEdits: 3,
+               change: { $0.mode = .gentle }, corrects: true),
+    PolicyCase(name: "gentle skips an extra-tap or far-key fix", literal: "hellp", best: "hell", bestLM: -4, bestEdits: 5,
+               change: { $0.mode = .gentle }, corrects: false),
+    PolicyCase(name: "completion one letter past the taps", literal: "goin", best: "going", bestLM: -4, bestCompletion: 1, corrects: true),
+    PolicyCase(name: "completion two letters past the taps", literal: "goi", best: "going", bestLM: -4, bestCompletion: 1, corrects: false),
     PolicyCase(name: "below normal threshold", literal: "teh", best: "the", bestLM: -12, corrects: false),
     PolicyCase(name: "EN contraction fix", literal: "dont", best: "don't", bestLM: -6, literalLM: -9.9,
                change: { $0.literalValid = true }, corrects: true),
@@ -48,6 +56,7 @@ private let cases: [PolicyCase] = [
     PolicyCase(name: "handle", literal: "@moe", best: "moe", bestLM: -4, corrects: false),
     PolicyCase(name: "never into a special token", literal: "mee", best: "me@x.com", bestLM: -4, corrects: false),
     PolicyCase(name: "EN all caps", literal: "OMG", best: "omg", bestLM: -4, corrects: false),
+    PolicyCase(name: "EN capital after the first letter", literal: "LLMs", best: "looks", bestLM: -4, corrects: false),
     PolicyCase(name: "autocorrect off", literal: "teh", best: "the", bestLM: -4, change: { $0.mode = .off }, corrects: false),
     PolicyCase(name: "field without autocorrection", literal: "teh", best: "the", bestLM: -4,
                change: { $0.traits.autocorrection = false }, corrects: false),
@@ -61,7 +70,7 @@ private let cases: [PolicyCase] = [
 func autocorrectPolicy(_ c: PolicyCase) {
     var facts = normalFacts
     c.change(&facts)
-    let ranked = [candidate(c.best, lm: c.bestLM), candidate(c.literal, lm: c.literalLM, literal: true)]
+    let ranked = [candidate(c.best, lm: c.bestLM, edits: c.bestEdits, completion: c.bestCompletion), candidate(c.literal, lm: c.literalLM, literal: true)]
     let result = autocorrectTarget(literal: c.literal, ranked: ranked, facts: facts, config: EngineConfig())
     #expect((result?.text == c.best) == c.corrects)
 }
@@ -88,4 +97,14 @@ func engineAutocorrectsWithDefaultSettings(_ typed: String, _ expected: String) 
     let engine = try personalEngine(.en, ["teh teh"])
     let input = InputState(context: [], taps: taps("teh"))
     #expect(engine.autocorrection(input, ranked: engine.candidates(input), traits: FieldTraits(), settings: Settings()) == nil)
+}
+
+@Test func arabicKnownWordPlusACliticIsKept() throws {
+    let engine = try fixtureEngine(.ar)
+    var settings = Settings()
+    settings.autocorrectAR = .normal
+    let input = InputState(context: [], taps: "ومن".map { Tap(String($0)) })
+    let ranked = engine.candidates(input)
+    #expect(ranked.first?.ident == "من")
+    #expect(engine.autocorrection(input, ranked: ranked, traits: FieldTraits(), settings: settings) == nil)
 }

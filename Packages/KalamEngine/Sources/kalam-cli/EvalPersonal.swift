@@ -1,22 +1,25 @@
 import Foundation
 import KalamEngine
 
-/// kalam-cli eval-personal --chat <_chat.txt>... [--sender <name>]... [--klex-en <path>] [--klex-ar <path>] [--samples N] [--set name=value]...
-/// Trains a temp personal store on 90% of the senders' messages (every 10th message is held out)
+/// kalam-cli eval-personal --chat <_chat.txt>... [--sender <name>]... [--klex-en <path>] [--klex-ar <path>] [--fold k] [--samples N] [--set name=value]...
+/// Trains a temp personal store on 90% of the senders' messages (sorted by time, then text; message
+/// i is held out when i % 10 == fold)
 /// and reports next-word top-3, keystroke savings and the autocorrect change rate (each held-out
 /// word typed at key centers, then committed) on the rest, base-only vs personal (SPEC 12).
 /// --samples prints up to N of the changes (typed -> corrected) per setup.
 func evalPersonal(_ args: [String]) -> Int32 {
     let flags = parseFlags(args)
-    guard let chats = flags["chat"], let config = parseConfig(flags) else {
-        print("usage: kalam-cli eval-personal --chat <_chat.txt>... [--sender <name>]... [--klex-en <path>] [--klex-ar <path>] [--samples N] [--set name=value]...")
+    guard let chats = flags["chat"], let config = parseConfig(flags), let fold = Int(flags["fold"]?.last ?? "0"), (0..<10).contains(fold) else {
+        print("usage: kalam-cli eval-personal --chat <_chat.txt>... [--sender <name>]... [--klex-en <path>] [--klex-ar <path>] [--fold k] [--samples N] [--set name=value]...")
         return 2
     }
     guard var messages = readChats(chats) else { return 1 }
     let senders = Set(flags["sender"] ?? messages.map(\.sender))
+    // Sorted, so the split doesn't depend on the order of the --chat files.
     messages = messages.filter { senders.contains($0.sender) }
-    let test = messages.enumerated().filter { $0.offset % 10 == 9 }.map(\.element)
-    let train = messages.enumerated().filter { $0.offset % 10 != 9 }.map(\.element)
+        .sorted { ($0.date ?? .distantPast, $0.text) < ($1.date ?? .distantPast, $1.text) }
+    let test = messages.enumerated().filter { $0.offset % 10 == fold }.map(\.element)
+    let train = messages.enumerated().filter { $0.offset % 10 != fold }.map(\.element)
     let now = messages.compactMap(\.date).max() ?? Date()  // decay as of the chat's end, not today
 
     let lexicons = [Lang.en, .ar].compactMap { lang in flags["klex-\(lang.rawValue)"]?.last.flatMap { BaseLexicon(url: URL(fileURLWithPath: $0)) } }

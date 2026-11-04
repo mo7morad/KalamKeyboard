@@ -20,13 +20,19 @@ func autocorrectTarget(literal: String, ranked: [Suggestion], facts: Autocorrect
           facts.mode != .off, facts.traits.allowsAutocorrect,  // rule 1
           !facts.literalKnown,  // rule 2, personal half
           !isSpecial(literal), !isSpecial(best.text), !literal.contains(where: \.isNumber),  // rule 3
-          !(lang == .en && literal.count >= 2 && literal.contains(where: \.isLetter) && literal == literal.uppercased()),
+          !(lang == .en && literal.dropFirst().contains(where: \.isUppercase)),  // OMG, LLMs, iOS, PhD
           !facts.bestRejected  // rule 4
     else { return nil }
-    if normalize(literal, lang: lang) == normalize(best.ident, lang: lang) {
+    let typedKey = normalize(literal, lang: lang), bestKey = normalize(best.ident, lang: lang)
+    let addedLetters = bestKey.unicodeScalars.count - typedKey.unicodeScalars.count
+    // Gentle fixes slips only: neighbour keys (spatial cost), plus edits up to one omission or swap.
+    guard best.completion == 0 || addedLetters <= config.autocorrectMaxAddedLetters,  // goin -> going, not يحبيب -> يحبيبتي
+          facts.mode != .gentle || best.edits <= config.gentleMaxEditCost
+    else { return nil }
+    if typedKey == bestKey {
         // Variant fix: replaces rule 2 for spellings of one key, valid or not (D8 keeps AR variants off).
         // Lazy spellings only: an apostrophe or hamza that normalization would drop or map was typed on purpose.
-        let lazySpelling = normalize(literal, lang: lang) == literal.lowercased()
+        let lazySpelling = typedKey == literal.lowercased()
         guard facts.variantFix, lazySpelling, exp(best.lm) >= config.variantFixRatio * exp(typed.lm), facts.keptCount < config.variantFixMaxKept
         else { return nil }
     } else if facts.literalValid {
@@ -46,10 +52,23 @@ extension Engine {
         let sameKey = normalize(best.ident, lang: lang) == normalize(literalIdent, lang: lang)
         let facts = AutocorrectFacts(
             lang: lang, mode: settings.autocorrect(lang), variantFix: settings.variantFix(lang), traits: traits,
-            literalValid: isValidBaseWord(literalIdent),
+            literalValid: isValidBaseWord(literalIdent) || isCliticForm(literalIdent),
             literalKnown: personal?.isKnown(lang, literalIdent) ?? false,
             keptCount: sameKey && !best.isLiteral ? personal?.uses(lang, literalIdent) ?? 0 : 0,
             bestRejected: personal?.hasCorrection(lang, typed: literalIdent, chosen: best.ident, rejected: true) ?? false)
         return autocorrectTarget(literal: literal, ranked: ranked, facts: facts, config: config)
     }
+
+    /// AR rule 2: a known word plus one clitic (بكلم, افتكره) counts as a word too.
+    private func isCliticForm(_ ident: String) -> Bool {
+        guard lang == .ar else { return false }
+        func known(_ stem: Substring) -> Bool {
+            stem.count >= 2 && (isValidBaseWord(String(stem)) || personal?.isKnown(lang, String(stem)) == true)
+        }
+        return arabicPrefixes.contains { ident.hasPrefix($0) && known(ident.dropFirst($0.count)) }
+            || arabicSuffixes.contains { ident.hasSuffix($0) && known(ident.dropLast($0.count)) }
+    }
 }
+
+private let arabicPrefixes = ["و", "ف", "ب", "ل", "ك", "ه", "ح", "ال", "لل"]  // لل: ل + ال, which drops its alif
+private let arabicSuffixes = ["ه", "ها", "هم", "ك", "كم", "ني", "نا", "ي"]
