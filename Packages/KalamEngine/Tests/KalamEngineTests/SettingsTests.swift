@@ -21,3 +21,13 @@ import Testing
     #expect((settings.autocorrect(.en), settings.autocorrect(.ar)) == (.normal, .gentle))
     #expect((settings.variantFix(.en), settings.variantFix(.ar)) == (true, false))
 }
+
+@Test func savedSettingsLoadBack() throws {
+    let suite = "kalam-tests-\(UUID().uuidString)"
+    let defaults = try #require(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    var settings = Settings()
+    (settings.haptics, settings.hapticStrength, settings.autocorrectAR, settings.pauseLearning) = (false, 0.3, .off, true)
+    settings.save(to: defaults)
+    #expect(Settings.load(from: defaults) == settings)
+}

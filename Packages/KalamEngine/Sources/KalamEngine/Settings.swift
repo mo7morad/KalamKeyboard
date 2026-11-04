@@ -1,6 +1,6 @@
 import Foundation
 
-public enum AutocorrectMode: String, Sendable {
+public enum AutocorrectMode: String, CaseIterable, Sendable {
     case off, gentle, normal
 }
 
@@ -47,6 +47,14 @@ public struct Settings: Equatable, Sendable {
         }
         if let value = defaults.object(forKey: "hapticStrength") as? Double { settings.hapticStrength = value }
         return settings
+    }
+
+    /// Writes every setting; nil defaults (no App Group access) writes nothing.
+    public func save(to defaults: UserDefaults? = UserDefaults(suiteName: appGroup)) {
+        guard let defaults else { return }
+        for (key, path) in Self.bools { defaults.set(self[keyPath: path], forKey: key) }
+        for (key, path) in Self.modes { defaults.set(self[keyPath: path].rawValue, forKey: key) }
+        defaults.set(hapticStrength, forKey: "hapticStrength")
     }
 
     public func autocorrect(_ lang: Lang) -> AutocorrectMode { lang == .en ? autocorrectEN : autocorrectAR }
