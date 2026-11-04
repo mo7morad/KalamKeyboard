@@ -76,17 +76,21 @@ public struct Engine {
         var results: [Suggestion] = paths.compactMap { ident, path in
             guard ident == literalIdent || personal?.isBlocked(lang, ident) != true else { return nil }
             let word = path.word ?? lexicon?.wordID(ident: ident)
+            let lmWord = validWord(word)
+            // SPEC 8.5 rule 2: an invalid base variant isn't a word, so it's only ever the literal (or one Moe knows).
+            let isWord = word == nil || lmWord != nil || personal?.isKnown(lang, ident) == true
+            guard ident == literalIdent || isWord else { return nil }
             let corrected = personal?.hasCorrection(lang, typed: literalIdent, chosen: ident, rejected: false) == true
             return Suggestion(
                 text: display(ident, word), ident: ident, isLiteral: ident == literalIdent,
-                lm: lmLogProb(ident, word: word, context), spatial: path.match.spatial, edits: path.match.edits,
+                lm: lmLogProb(ident, word: lmWord, context), spatial: path.match.spatial, edits: path.match.edits,
                 completion: path.match.completion,
                 boosts: Double(explicitChars.filter(ident.contains).count) * config.explicitCharBoost
                     + (corrected ? config.correctionBoost : 0))
         }
         if paths[literalIdent] == nil {
             results.append(Suggestion(text: literal, ident: literalIdent, isLiteral: true,
-                                      lm: lmLogProb(literalIdent, word: lexicon?.wordID(ident: literalIdent), context),
+                                      lm: lmLogProb(literalIdent, word: validWord(lexicon?.wordID(ident: literalIdent)), context),
                                       spatial: 0, edits: 0, completion: 0, boosts: 0))
         }
         results += tokenCandidates(literal)
@@ -142,9 +146,17 @@ public struct Engine {
         }
         if let lexicon {
             let bigrams = context.previous.map { Array(lexicon.bigrams(after: $0).prefix(size)) } ?? []
-            for word in bigrams + topKeys(size, in: lexicon).flatMap(lexicon.variants(ofKey:)) { pool[lexicon.surface(word)] = word }
+            for word in bigrams + topKeys(size, in: lexicon).flatMap(lexicon.variants(ofKey:)) where lexicon.isValid(word) {
+                pool[lexicon.surface(word)] = word
+            }
         }
         return pool
+    }
+
+    /// The base word id when it's a valid word; an invalid variant scores as unknown (SPEC 8.2).
+    private func validWord(_ word: Int?) -> Int? {
+        guard let lexicon, let word, lexicon.isValid(word) else { return nil }
+        return word
     }
 
     private func ranked(_ suggestions: [Suggestion]) -> [Suggestion] {

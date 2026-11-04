@@ -38,6 +38,9 @@ private struct State {
     let editCost: Double
     var cost: Double { spatial + editCost }
 
+    /// Cheaper first; ties by node, so results don't depend on dictionary order (seeded per process).
+    static func cheaper(_ a: State, _ b: State) -> Bool { (a.cost, a.node) < (b.cost, b.node) }
+
     func moved(to node: Int, spatial: Double = 0, edit: Double? = nil) -> State {
         State(node: node, edits: edits + (edit == nil ? 0 : 1), spatial: self.spatial + spatial, editCost: editCost + (edit ?? 0))
     }
@@ -64,7 +67,7 @@ extension Engine {
             addOmissions(&layers[i], maxEdits: maxEdits, lexicon)
             prune(&layers[i])
             guard i < taps.count else { break }
-            for s in layers[i].values {
+            for s in layers[i].values.sorted(by: State.cheaper) {
                 if s.edits < maxEdits { relax(&layers[i + 1], s.moved(to: s.node, edit: config.insertionCost)) }
                 for child in lexicon.children(s.node) {
                     let char = lexicon.char(child)
@@ -96,7 +99,7 @@ extension Engine {
 
     /// Missed letters: descend without consuming a tap, up to the edit limit.
     private func addOmissions<T: SearchTrie>(_ layer: inout [Int: State], maxEdits: Int, _ lexicon: T) {
-        var frontier = Array(layer.values)
+        var frontier = layer.values.sorted(by: State.cheaper)
         while !frontier.isEmpty {
             var added: [State] = []
             for s in frontier where s.edits < maxEdits {
@@ -108,13 +111,13 @@ extension Engine {
                     if relax(&layer, next) { added.append(next) }
                 }
             }
-            frontier = Array(added.sorted { $0.cost < $1.cost }.prefix(config.beamWidth))
+            frontier = Array(added.sorted(by: State.cheaper).prefix(config.beamWidth))
         }
     }
 
     private func prune(_ layer: inout [Int: State]) {
         guard layer.count > config.beamWidth else { return }
-        let kept = layer.values.sorted { $0.cost < $1.cost }.prefix(config.beamWidth)
+        let kept = layer.values.sorted(by: State.cheaper).prefix(config.beamWidth)
         layer = Dictionary(uniqueKeysWithValues: kept.map { ($0.node, $0) })
     }
 
@@ -155,7 +158,7 @@ extension Engine {
     /// minus path cost (the max-subtree score is an upper bound).
     private func addCompletions<T: SearchTrie>(below end: [Int: State], limit: Int, to best: inout [Int: KeyMatch], _ lexicon: T) {
         func subtree(_ node: Int, _ s: State) -> Item { Item(node: node, state: s, isWord: false, priority: lexicon.bestLogProb(node) - s.cost) }
-        var frontier = end.values.flatMap { s in lexicon.children(s.node).map { subtree($0, s) } }
+        var frontier = end.values.sorted(by: State.cheaper).flatMap { s in lexicon.children(s.node).map { subtree($0, s) } }
         var expanded: Set<Int> = []  // a node's first pop has its best priority; also bounds work on a corrupt trie
         var found = 0
         // ponytail: linear max scan over the frontier; use a heap if completions show up in profiles.

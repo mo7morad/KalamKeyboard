@@ -225,7 +225,7 @@ Required tests:
 - Moe downloads the tarballs from https://wortschatz.uni-leipzig.de/en/download/ into `corpora/` himself.
 - Use the `*sentences.txt` file (format: `Sentence_ID<TAB>Sentence`). Tokenize with `wordfreq.tokenize(text, lang)` so tokens match the unigram list, and insert `<s>` at each sentence start.
 - Hold out 5% of the sentences (deterministic hash split) for evaluation. These must never enter the lexicon.
-- **Casing table (EN):** for each lowercase word, use its most common non-sentence-initial casing in the raw sentences. Force `i` → `I`, and capitalize the I in the i-contractions (i'm, i'll, i'd, i've).
+- **Casing table (EN):** for each lowercase word, use its most common non-sentence-initial casing in the raw sentences, but only if that casing holds at least 90% of those forms. Below that, news title case (Street, King) and split forms (OK / ok) stay lowercase. Force `i` → `I`, and capitalize the I in the i-contractions (i'm, i'll, i'd, i've).
 
 **Validity, pruning and preferred spellings**
 
@@ -272,8 +272,8 @@ Search runs over the base trie and a small in-memory personal trie. A search sta
 
 | Transition | Rule | Cost |
 |---|---|---|
-| **Match** | Child letter x whose key center is within R = 1.5 key units of the tap point | `(dx² + dy²) / (2σ²)`, with σx = σy = 0.55. Point-less taps allow the exact char only, at cost 0. |
-| **Insertion** (extra tap) | i + 1, same node | 3.0 |
+| **Match** | Child letter x whose key center is within R = 1.5 key units of the tap point | `(dx² + dy²) / (2σ²)`, with σx = σy = 0.45. Point-less taps allow the exact char only, at cost 0. |
+| **Insertion** (extra tap) | i + 1, same node | 5.0 |
 | **Omission** (missed letter) | Child x, same i | 3.0; 1.5 if x repeats the previous letter (doubled letters); 1.2 for ء |
 | **Transposition** | Taps i and i+1 match x and y in swapped order | 2.0 |
 | **Far substitution** | Key outside R | 5.0 |
@@ -285,7 +285,9 @@ Search runs over the base trie and a small in-memory personal trie. A search sta
   - Plus up to 8 best-first completions (via max-subtree score), each with a 1.0 completion penalty.
 - Each matched key expands to its variants (surface + base word id).
 - **Personal trie:** built at launch from PersonalStore and updated each time the learner writes its batch (at most every 5 s, and on dismiss). Capped at 30k known words, with LRU eviction by decayed count.
-- The **literal is always a candidate**, with cost 0. Its LM score is its own if it's known; otherwise `unknownLogProb = −14`.
+- The **literal is always a candidate**, with cost 0. Its LM score is its own if it's known; otherwise `unknownLogProb`: −21 for EN, −15.5 for AR (Arabic unknowns are often real dialect words).
+- An **invalid base variant** scores as unknown and is never offered as a candidate or prediction, except as the literal or when Moe knows it.
+- Constants in this section were tuned in Phase 3b (`docs/eval-log.md`).
 
 ### 8.3 Scoring
 
@@ -325,6 +327,7 @@ Replace the literal ℓ with the top candidate c* only if all of the following h
 **Variant fix** (an exception to rule 2) applies when all of these hold:
 
 - ℓ and c* share a normalized key.
+- ℓ is a lazy spelling: it holds no character that normalization drops or maps (an apostrophe, a hamza). Moe typed those on purpose.
 - The setting allows it (EN contractions on; AR variants off by default).
 - `P_LM(c*|ctx) ≥ 5 · P_LM(ℓ|ctx)`.
 - Moe hasn't kept ℓ 2 or more times.

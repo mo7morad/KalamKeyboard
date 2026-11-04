@@ -31,6 +31,6 @@ extension Engine {
         let lambda3 = counts.trigramTotal > 0 ? config.trigramWeight : 0
         let lambda2 = (1 - lambda3) * config.bigramShare, lambda1 = (1 - lambda3) * (1 - config.bigramShare)
         let p = lambda3 * trigram + lambda2 * (mu * bigram + (1 - mu) * baseBigram) + lambda1 * (nu * unigram + (1 - nu) * baseUnigram)
-        return p > 0 ? log(p) : config.unknownLogProb
+        return p > 0 ? log(p) : config.unknownLogProb(lang)
     }
 }

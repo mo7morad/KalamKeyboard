@@ -24,7 +24,14 @@ func correctsTypo(_ typed: String, _ expected: String) throws {
 @Test func literalIsAlwaysACandidate() throws {
     let results = try fixtureEngine(.en).suggest(InputState(context: [], taps: taps("qzx")), limit: 10)
     let literal = try #require(results.first { $0.isLiteral })
-    #expect((literal.text, literal.lm) == ("qzx", EngineConfig().unknownLogProb))
+    #expect((literal.text, literal.lm) == ("qzx", EngineConfig().unknownLogProb(.en)))
+}
+
+@Test func invalidBaseVariantIsOnlyEverTheUnknownLiteral() throws {
+    let engine = try fixtureEngine(.en)
+    let typed = try #require(engine.suggest(InputState(context: [], taps: taps("alot")), limit: 10).first { $0.isLiteral })
+    #expect(typed.lm == EngineConfig().unknownLogProb(.en))
+    #expect(!suggestions(engine, "alo", limit: 10).contains("alot"))
 }
 
 @Test func knownLiteralMergesWithItsWord() throws {

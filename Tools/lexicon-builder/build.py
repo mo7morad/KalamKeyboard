@@ -34,6 +34,7 @@ MIN_BIGRAM_COUNT = 2
 APOSTROPHES = str.maketrans("’‘ʼ", "'''")
 CASED_WORD_RE = re.compile(r"[A-Za-z]+(?:'[A-Za-z]+)*")
 I_FORMS = ("i", "i'm", "i'll", "i'd", "i've")
+CASING_MIN_SHARE = 0.9  # below it, news title case (Street, King) and split forms (OK / ok) stay lowercase
 MISSPELLINGS_URL = (
     "https://en.wikipedia.org/w/api.php?action=parse&format=json&formatversion=2&prop=wikitext"
     "&page=Wikipedia:Lists_of_common_misspellings/For_machines"
@@ -111,13 +112,19 @@ def count_corpus(lang: str, sentences, vocab: list) -> tuple:
 
 
 def casing_table(forms: Counter, vocab: set) -> dict:
-    """lowercase word -> its most common casing, stored only when that differs; i and i-contractions forced when in vocab."""
+    """lowercase word -> its most common casing, stored only when that differs and holds CASING_MIN_SHARE of
+    the word's non-initial forms; i and i-contractions forced when in vocab."""
     by_lower = {}
     for form, count in forms.items():
         lower = form.lower()
         if lower in vocab:
             by_lower.setdefault(lower, []).append((-count, form != lower, form))
-    table = {lower: min(seen)[2] for lower, seen in by_lower.items()}
+    table = {}
+    for lower, seen in by_lower.items():
+        neg_count, _, form = min(seen)
+        total = -sum(neg for neg, _, _ in seen)
+        if -neg_count >= CASING_MIN_SHARE * total:
+            table[lower] = form
     table.update({w: "I" + w[1:] for w in I_FORMS if w in vocab})
     return {lower: form for lower, form in table.items() if form != lower}
 

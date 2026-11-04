@@ -2,8 +2,8 @@
 public struct EngineConfig: Sendable {
     // 8.2 Spatial model and edits
     public var matchRadius = 1.5  // key units
-    public var sigma = 0.55  // key units, same on both axes
-    public var insertionCost = 3.0
+    public var sigma = 0.45  // key units, same on both axes
+    public var insertionCost = 5.0
     public var omissionCost = 3.0
     public var doubledOmissionCost = 1.5
     public var hamzaOmissionCost = 1.2
@@ -17,7 +17,10 @@ public struct EngineConfig: Sendable {
     public var maxCompletions = 8
     public var completionPenalty = 1.0
     public var personalTrieCap = 30_000
-    public var unknownLogProb = -14.0
+    // AR is higher: its unknown words are often real dialect words missing from the MSA base (eval-log 2026-11-04).
+    public var unknownLogProbEN = -21.0
+    public var unknownLogProbAR = -15.5
+    func unknownLogProb(_ lang: Lang) -> Double { lang == .en ? unknownLogProbEN : unknownLogProbAR }
 
     // 8.3 Scoring
     public var alpha = 1.0  // weight of the spatial cost
@@ -62,7 +65,7 @@ public struct EngineConfig: Sendable {
         "omissionCost": \.omissionCost, "doubledOmissionCost": \.doubledOmissionCost,
         "hamzaOmissionCost": \.hamzaOmissionCost, "transpositionCost": \.transpositionCost,
         "farSubstitutionCost": \.farSubstitutionCost, "completionPenalty": \.completionPenalty,
-        "unknownLogProb": \.unknownLogProb, "alpha": \.alpha, "trigramWeight": \.trigramWeight,
+        "unknownLogProbEN": \.unknownLogProbEN, "unknownLogProbAR": \.unknownLogProbAR, "alpha": \.alpha, "trigramWeight": \.trigramWeight,
         "bigramShare": \.bigramShare, "personalContextPrior": \.personalContextPrior,
         "personalCorpusPrior": \.personalCorpusPrior, "correctionBoost": \.correctionBoost,
         "explicitCharBoost": \.explicitCharBoost, "decayHalfLifeDays": \.decayHalfLifeDays,

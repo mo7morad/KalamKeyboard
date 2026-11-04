@@ -25,7 +25,9 @@ func autocorrectTarget(literal: String, ranked: [Suggestion], facts: Autocorrect
     else { return nil }
     if normalize(literal, lang: lang) == normalize(best.ident, lang: lang) {
         // Variant fix: replaces rule 2 for spellings of one key, valid or not (D8 keeps AR variants off).
-        guard facts.variantFix, exp(best.lm) >= config.variantFixRatio * exp(typed.lm), facts.keptCount < config.variantFixMaxKept
+        // Lazy spellings only: an apostrophe or hamza that normalization would drop or map was typed on purpose.
+        let lazySpelling = normalize(literal, lang: lang) == literal.lowercased()
+        guard facts.variantFix, lazySpelling, exp(best.lm) >= config.variantFixRatio * exp(typed.lm), facts.keptCount < config.variantFixMaxKept
         else { return nil }
     } else if facts.literalValid {
         return nil  // rule 2, base half

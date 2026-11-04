@@ -38,6 +38,8 @@ private let cases: [PolicyCase] = [
                change: { $0.literalValid = true; $0.keptCount = 2 }, corrects: false),
     PolicyCase(name: "variant ratio under 5", literal: "dont", best: "don't", bestLM: -6, literalLM: -7,
                change: { $0.literalValid = true }, corrects: false),
+    PolicyCase(name: "typed apostrophe is never variant-fixed", literal: "week's", best: "weeks", bestLM: -6, literalLM: -9.9,
+               change: { $0.literalValid = true }, corrects: false),
     PolicyCase(name: "AR variant fix off by default", literal: "انا", best: "أنا", bestLM: -3, literalLM: -9,
                change: { $0.lang = .ar; $0.literalValid = true; $0.mode = .gentle; $0.variantFix = Settings().arabicVariantFix }, corrects: false),
     PolicyCase(name: "AR variant fix when turned on", literal: "انا", best: "أنا", bestLM: -3, literalLM: -9,

@@ -57,14 +57,14 @@ def test_bigram_probability_counts_unknown_followers_and_drops_singletons():
 
 
 def test_casing_takes_the_most_common_non_initial_form():
-    sentences = ["Apple said so", "we like Apple", "they like apple", "we use Apple", "Bob said hi"]
+    sentences = ["Apple said so", "we like Apple", "they like Apple", "we use Apple", "Bob said hi"]
     _, casing = count_corpus("en", sentences, ["apple", "bob", "said", "i"])
     assert casing == {"apple": "Apple", "i": "I"}  # "Bob" only appears sentence-initially
 
 
-def test_casing_ties_keep_lowercase_and_force_the_i_forms():
-    forms = Counter({"May": 2, "may": 2, "NASA": 3, "nasa": 1, "i'm": 9})
-    assert casing_table(forms, {"may", "nasa", "i'm", "i'll"}) == {
+def test_casing_needs_90_percent_of_the_forms_and_forces_the_i_forms():
+    forms = Counter({"May": 2, "may": 2, "NASA": 9, "nasa": 1, "OK": 68, "ok": 32, "i'm": 9})
+    assert casing_table(forms, {"may", "nasa", "ok", "i'm", "i'll"}) == {
         "nasa": "NASA", "i'm": "I'm", "i'll": "I'll",
     }
 
