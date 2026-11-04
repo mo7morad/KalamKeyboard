@@ -37,8 +37,8 @@ final class SQLite {
     private var db: OpaquePointer?
     private var statements: [String: OpaquePointer] = [:]
 
-    init(url: URL) throws {
-        let rc = sqlite3_open_v2(url.path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nil)
+    init(url: URL, readOnly: Bool = false) throws {
+        let rc = sqlite3_open_v2(url.path, &db, readOnly ? SQLITE_OPEN_READONLY : SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nil)
         guard rc == SQLITE_OK else {
             let error = SQLiteError(code: rc, message: db.map { String(cString: sqlite3_errmsg($0)) } ?? "open failed")
             sqlite3_close(db)
@@ -85,6 +85,18 @@ final class SQLite {
             try? execute("ROLLBACK")
             throw error
         }
+    }
+
+    /// Replaces this database's content with `source`'s through the online backup API, which takes
+    /// the write lock like any writer, so another process's open connection stays valid. The copy is
+    /// one step inside one write transaction: it lands whole or not at all.
+    func replaceContent(with source: SQLite) throws {
+        guard let backup = sqlite3_backup_init(db, "main", source.db, "main") else {
+            throw SQLiteError(code: sqlite3_errcode(db), message: String(cString: sqlite3_errmsg(db)))
+        }
+        let rc = sqlite3_backup_step(backup, -1)
+        sqlite3_backup_finish(backup)
+        guard rc == SQLITE_DONE else { throw SQLiteError(code: rc, message: String(cString: sqlite3_errstr(rc))) }
     }
 
     private func prepared(_ sql: String) throws -> OpaquePointer {

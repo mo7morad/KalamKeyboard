@@ -15,7 +15,7 @@ struct WordRow {
 /// The keyboard and the host app each open their own instance on the same file. Every write is one
 /// short BEGIN IMMEDIATE transaction, so the two processes' writers serialize under WAL.
 public final class PersonalStore {
-    private let db: SQLite
+    let db: SQLite
     let config: EngineConfig
 
     public init(url: URL, config: EngineConfig = EngineConfig()) throws {
@@ -54,7 +54,7 @@ public final class PersonalStore {
 
     static var schemaVersion: Int { migrations.count }
 
-    private func migrate() throws {
+    func migrate() throws {
         try db.transaction {
             var version = 0
             try db.query("PRAGMA user_version") { version = $0.int(0) }
