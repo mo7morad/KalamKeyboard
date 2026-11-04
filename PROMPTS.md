@@ -270,3 +270,16 @@ Scope (rules in TextContext / KeyBehavior with tests, the extension calls them):
 - Bar slots highlight, buzz and click on touch-down, like keys.
 Update SPEC §5.2, §5.4, §8.6, §8.7. Done when: engine tests pass and docs/device-checklist.md has a Phase 14 section (side by side with Apple's keyboard).
 ```
+
+---
+
+## Phase 15: comfort settings (docs/rd-plan.md)
+
+```
+Phase 15. Read CLAUDE.md, SPEC §2, §3, §5.1, §5.2, §10, docs/rd-plan.md (Phase 15) and docs/research/03-ui-sizing-touch.md.
+Scope (geometry and settings in the engine with tests; the keyboard and the host app read them):
+- Keyboard height: compact 50, default 54, tall 58 pt row pitch, a host-app setting.
+- Optional number row (off by default) on the letters pages, with a smaller pitch so the keyboard grows less; the top row then drops its digit hints and long-press digits.
+- Tap points stay in the letters page's key units, whatever the height or number row, so the spatial model and learned offsets keep working.
+Update SPEC §5.1, §5.2, §10. Done when: engine tests pass (geometry for each height, key units with and without the number row) and docs/device-checklist.md has a Phase 15 section.
+```
