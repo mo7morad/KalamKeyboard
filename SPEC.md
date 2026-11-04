@@ -37,6 +37,7 @@ Non-goals for v1: swipe/glide typing, dictation (no mic access in keyboard exten
 | **Full Access** is required for App Group shared-container writes. Older docs say haptics and sounds need it too. | `RequestsOpenAccess = YES`. Show a banner in the keyboard if `hasFullAccess == false`. |
 | `AVAudioPlayer` goes through the media volume bus, so clicks become inaudible at low media volume. `AudioServicesPlaySystemSound` uses the ringer volume, respects the silent switch and needs no audio session. | Use system sound IDs **1104** (key), **1155** (delete), **1156** (modifier). |
 | iOS forces the system keyboard in secure fields and phone-pad fields. Some apps block third-party keyboards. Extensions get no microphone. | Accept these limits; don't try to work around them. |
+| A keyboard runs only while it's shown, so it can't watch the clipboard in the background. Reading another app's clipboard text shows iOS's "Allow Paste" prompt unless the app is set to Allow (Settings › Kalam › Paste from Other Apps; unverified for keyboards). `changeCount`, `hasStrings` and `types` are metadata and never prompt. A keyboard can only insert text, not images. | The clipboard history (5.5) captures text when Kalam appears or the clipboard changes while it's shown. Moe sets Paste from Other Apps to Allow once. |
 | `documentContextBeforeInput` is partial and can be nil. | Engine context = the last 2 words from it. The keyboard keeps its own word state and resyncs on `textDidChange`. |
 | A SQLite lock held in an App Group container while the process suspends gets the process killed (`0xdead10cc`). | Short transactions only. Never hold a transaction open while idle. Flush on `viewWillDisappear`. |
 | KeyboardKit's free tier gives a basic English layout only. Localized layouts (Arabic) and autocomplete are paid Pro features, and it abstracts away raw touch points. | Don't use KeyboardKit (D1). |
@@ -165,6 +166,25 @@ There is a single `FeedbackPlayer`, called on touch-down for every key.
 - **Tapping a suggestion** replaces the current word (or inserts the prediction) and adds an auto-space. Tapping the literal is an explicit accept, so the word is learned.
 - **Blocking a word:** long-press a suggestion to open a small in-keyboard overlay, "Don't suggest ‘x’". This blocks the word (the host app lists it as Blocked; there, "Forget" deletes a word's learned data instead). Use no alerts, since extensions can't show them.
 - **Without Full Access:** the bar shows "Turn on Full Access for learning, haptics and sounds", and autocorrect is off, since it couldn't be seen pending.
+
+### 5.5 Clipboard (Gboard-style, needs Full Access)
+
+- **Capture:** on every appear, on every text or selection change while shown, and when the panel opens, compare `UIPasteboard.general.changeCount` with the last one seen (kept in App Group defaults; a lower value after a reboot counts as a change). When it changed, read the string once and add it to the history.
+  - Skip empty text, text over 10,000 characters, and items marked concealed (`org.nspasteboard.ConcealedType`, as password managers do).
+  - Copying a text that's already in the history moves it to the top.
+- **History:** `clipboard.json` in the App Group container, written atomically (no lock is held, so no 0xdead10cc).
+  - Pinned items stay until deleted. Other items are deleted 1 hour after they were captured, as in Gboard.
+  - At most 50 items; the oldest unpinned ones go first.
+- **Bar:**
+  - A clipboard button at the bar's left edge, in both languages. The three slots share the rest of the width.
+  - **Clip chip:** for 2 minutes after a clip is captured, while the current word is empty, the primary slot shows "📋" plus the clip's first line. A tap pastes it. It's gone once used, or as soon as Moe types a letter.
+- **Panel:** the button swaps the keys for a panel of the same height.
+  - Header: "Clipboard", "Clear" (deletes the unpinned items) and "ABC" (back to the letters). The button also toggles back.
+  - Below: a two-column grid of tiles, pinned first, then newest first. Each tile shows up to 3 lines, right-aligned for Arabic.
+  - A tap pastes the tile and the panel stays open, as in Gboard. A long-press offers Pin/Unpin and Delete on the tile.
+  - Empty state: "Text you copy shows up here. Pinned items stay; others go after an hour."
+- **Paste:** `insertText` of the clip. The input state resyncs afterwards, and pasted text is never learned.
+- **Off switch:** the Clipboard setting. When it's off there's no capture, no button and no chip; pinned items stay stored.
 
 ## 6. Text processing (engine)
 
@@ -442,6 +462,7 @@ Settings are stored in App Group `UserDefaults`:
 | Eastern Arabic digits | off |
 | Top-row digit hints | on |
 | Pause learning | off |
+| Clipboard (5.5) | on |
 | Debug overlay (Debug builds only) | off |
 
 ## 11. Performance and memory budgets
@@ -497,7 +518,6 @@ Settings are stored in App Group `UserDefaults`:
 
 ## 14. Later (not v1)
 
-- A clipboard chip in the bar (the last copied text; needs Full Access).
 - Emoji suggestions.
 - An Arabic tashkeel key.
 - A number-row option.
