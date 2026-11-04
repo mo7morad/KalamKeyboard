@@ -42,6 +42,10 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         super.viewDidLoad()
         view.accessibilityIdentifier = "kalam"
         keyboardView.delegate = self
+        keyboardView.barHasTarget = { [weak self] point in
+            guard let self else { return false }
+            return bar.hasTarget(at: bar.convert(point, from: keyboardView))
+        }
         input.lang = lang
         input.shiftCasing = { [weak self] in
             guard let self, lang == .en else { return .none }
@@ -416,10 +420,9 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         if !panel.isHidden { panel.items = clipboard.history.panelItems }
     }
 
-    /// Also after new slots, so the keys know whether the bar has something to tap (SPEC 5.2).
+    /// Also after new slots: the chip shows only between words.
     private func showChip() {
         bar.chip = clipboardEnabled && !input.hasWord ? clipboard.history.chip(now: Date()) : nil
-        keyboardView.barHasTappableContent = bar.hasTappableContent
     }
 
     private func paste(_ text: String) {

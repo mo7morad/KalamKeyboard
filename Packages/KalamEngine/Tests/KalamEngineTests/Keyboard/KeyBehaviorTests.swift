@@ -155,21 +155,21 @@ func wordDeleteLength(before: String, expected: Int) {
 }
 
 @Test func trackpadMovesOneCharPerNinePointsWhenSlow() {
-    var pad = Trackpad(startX: 100, downX: 100, rightToLeft: false)
+    var pad = Trackpad(startX: 100, rightToLeft: false)
     #expect(pad.offset(toX: 108, at: 0) == 0)
     #expect(pad.offset(toX: 120, at: 0.2) == 2)  // 60 pt/s
     #expect(pad.offset(toX: 117, at: 0.3) == 0)  // anchor moved to 118
     #expect(pad.offset(toX: 100, at: 0.5) == -2)  // 85 pt/s
 
-    var arabic = Trackpad(startX: 100, downX: 100, rightToLeft: true)
+    var arabic = Trackpad(startX: 100, rightToLeft: true)
     #expect(arabic.offset(toX: 118, at: 0) == -2)
 }
 
 @Test func trackpadSpeedsUpWithAFastFinger() {
-    var fast = Trackpad(startX: 100, downX: 100, rightToLeft: false)
+    var fast = Trackpad(startX: 100, rightToLeft: false)
     _ = fast.offset(toX: 100, at: 0)
     #expect(fast.offset(toX: 136, at: 0.04) == 10)  // 900 pt/s: 3.6 pt per character
-    var medium = Trackpad(startX: 100, downX: 100, rightToLeft: false)
+    var medium = Trackpad(startX: 100, rightToLeft: false)
     _ = medium.offset(toX: 100, at: 0)
     #expect(medium.offset(toX: 135, at: 0.1) == 5)  // 350 pt/s: 6.3 pt per character
 }
@@ -179,16 +179,19 @@ func trackpadPointsPerCharRamp(speed: Double, expected: Double) {
     #expect(abs(Trackpad.pointsPerChar(speed: speed) - expected) < 1e-9)
 }
 
+// The view starts the trackpad where the finger is, after a 0.4 s hold or a slide past 12 pt, so a
+// sloppy tap that slid 13 pt starts it and is still a tap until the cursor moves.
 @Test(arguments: [
-    (100.0, 108.0, true),  // a hold that never moved the cursor: a slow tap
-    (100, 109, false),  // the hold moved the cursor
-    (113, 113, false),  // a drag started it
-    (88, 95, true),  // a hold, the finger 12 pt from where it went down
-] as [(Double, Double, Bool)])
-func trackpadReleaseTypesSpaceOnlyAfterAStillHold(startX: Double, releaseX: Double, expected: Bool) {
-    var pad = Trackpad(startX: startX, downX: 100, rightToLeft: false)
-    _ = pad.offset(toX: releaseX, at: 1)
-    #expect(pad.releaseTypesSpace == expected)
+    (100.0, false),  // no further move: a tap, so it types a space
+    (108, false),
+    (109, true),
+    (92, false),
+    (91, true),
+] as [(Double, Bool)])
+func trackpadIsATapUntilTheCursorMoves(lastX: Double, moved: Bool) {
+    var pad = Trackpad(startX: 100, rightToLeft: false)
+    _ = pad.offset(toX: lastX, at: 1)
+    #expect(pad.movedCursor == moved)
 }
 
 @Test(arguments: [
@@ -215,7 +218,7 @@ func longPressStripPreselectsWhatTheKeyShows(output: String, hint: String?, alte
 }
 
 @Test(arguments: [
-    (false, nil, true),  // nothing to tap in the bar: the band is the top row's
+    (false, nil, true),  // nothing to pick above the touch (empty slot, a button): the band is the top row's
     (false, 3.0, true),
     (true, nil, false),  // no key touched yet
     (true, 0.15, true),  // mid-typing
@@ -223,8 +226,8 @@ func longPressStripPreselectsWhatTheKeyShows(output: String, hint: String?, alte
     (true, 0.4, false),  // after a pause: the bar's
     (true, 2.0, false),
 ] as [(Bool, Double?, Bool)])
-func barBandGoesToTheTopRowOnlyMidTyping(tappable: Bool, since: Double?, keys: Bool) {
-    #expect(BarBand.belongsToKeys(barTappable: tappable, sinceKeyDown: since) == keys)
+func barBandGoesToTheBarOnlyOverAPickAfterAPause(target: Bool, since: Double?, keys: Bool) {
+    #expect(BarBand.belongsToKeys(barTarget: target, sinceKeyDown: since) == keys)
 }
 
 @Test(arguments: [

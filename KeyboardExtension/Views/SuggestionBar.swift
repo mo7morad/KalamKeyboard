@@ -47,8 +47,9 @@ final class SuggestionBar: UIView {
         didSet { render() }
     }
 
-    /// A suggestion or the clip chip shows (SPEC 5.2: the top row's reach into the bar gives way).
-    var hasTappableContent: Bool { hasFullAccess && (chip != nil || slots.contains { $0 != nil }) }
+    /// Whether a tap at `point` would pick something: a suggestion, the clip chip, or the "Don't
+    /// suggest" overlay (SPEC 5.2: only there does the top row's reach into the bar give way).
+    func hasTarget(at point: CGPoint) -> Bool { blocking != nil || pickableSlot(at: point) != nil }
 
     var showsClipboardButton = false {
         didSet {
@@ -189,6 +190,12 @@ final class SuggestionBar: UIView {
         return slots.indices.contains(index) ? index : nil
     }
 
+    /// The slot at `point` with something to pick in it (a suggestion, or the clip chip).
+    private func pickableSlot(at point: CGPoint) -> Int? {
+        guard let index = slotIndex(at: point), slots[index] != nil || (index == Self.primary && chip != nil) else { return nil }
+        return index
+    }
+
     @objc private func tapped(_ gesture: UITapGestureRecognizer) {
         if blocking != nil { return hideBlock() }
         guard let index = slotIndex(at: gesture.location(in: self)) else { return }
@@ -212,8 +219,10 @@ final class SuggestionBar: UIView {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         super.touchesBegan(touches, with: event)
-        guard blocking == nil, let point = touches.first?.location(in: self), let index = slotIndex(at: point),
-              slots[index] != nil || (index == Self.primary && chip != nil) else { return }
+        guard let point = touches.first?.location(in: self) else { return }
+        let index = blocking == nil ? pickableSlot(at: point) : nil
+        trace(String(format: "bar touch at %.1f,%.1f slot %@", Double(point.x), Double(point.y), index.map(String.init) ?? "none"))
+        guard let index else { return }
         setPressed(labels[index])
         onPress?()
     }

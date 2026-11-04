@@ -141,16 +141,16 @@ public struct Trackpad: Sendable {
 
     private var anchor: Double
     private let direction: Double
-    private let fromHold: Bool
-    private var moved = false
     private var last: (x: Double, time: TimeInterval)?
+    /// Until the cursor moves, the press is still a tap (a slow one, or one whose finger slid a
+    /// little), however the trackpad started: rollover commits its space, and so does its release.
+    public private(set) var movedCursor = false
 
-    /// `downX` is where the finger went down on space. `rightToLeft` flips the direction so a
-    /// rightward drag moves the cursor right in Arabic text.
-    public init(startX: Double, downX: Double, rightToLeft: Bool) {
+    /// `startX` is where the finger is when the trackpad starts. `rightToLeft` flips the direction so
+    /// a rightward drag moves the cursor right in Arabic text.
+    public init(startX: Double, rightToLeft: Bool) {
         anchor = startX
         direction = rightToLeft ? -1 : 1
-        fromHold = abs(startX - downX) <= Self.startDistance
     }
 
     /// Points per character at a finger speed in pt/s.
@@ -168,12 +168,9 @@ public struct Trackpad: Sendable {
         let perChar = Self.pointsPerChar(speed: speed)
         let steps = ((x - anchor) / perChar).rounded(.towardZero)
         anchor += steps * perChar
-        if steps != 0 { moved = true }
+        if steps != 0 { movedCursor = true }
         return Int(steps * direction)
     }
-
-    /// A hold that never moved the cursor was a slow tap: its release types a space.
-    public var releaseTypesSpace: Bool { fromHold && !moved }
 }
 
 /// SPEC 5.2 long-press strip: its items, visual left to right, and the one preselected. A top-row
@@ -190,15 +187,17 @@ public func longPressStrip(output: String, hint: String?, alternates: [String], 
     return ([hint] + letters, 1 + (letters.firstIndex(of: output) ?? 0))
 }
 
-/// SPEC 5.2 bar band: the top row reaches into the bar's bottom edge during a typing burst only.
+/// SPEC 5.2 bar band: the top row reaches into the bar's bottom edge, except over something the bar
+/// can pick when the touch doesn't come mid-typing.
 public enum BarBand {
     /// UI timing, not a tunable: mid-typing top-row taps land high, a bar tap usually follows a pause.
     public static let typingWindow: TimeInterval = 0.4
 
-    /// Whether a touch in the band goes to the top row: always while the bar has nothing to tap,
-    /// else only when the last key touch-down was under `typingWindow` before it (nil: none yet).
-    public static func belongsToKeys(barTappable: Bool, sinceKeyDown: TimeInterval?) -> Bool {
-        guard barTappable else { return true }
+    /// Whether a touch in the band goes to the top row: always where the bar has nothing to pick right
+    /// above it (an empty slot, the clipboard and emoji buttons), else only when the last key
+    /// touch-down was under `typingWindow` before it (nil: none yet).
+    public static func belongsToKeys(barTarget: Bool, sinceKeyDown: TimeInterval?) -> Bool {
+        guard barTarget else { return true }
         guard let sinceKeyDown else { return false }
         return sinceKeyDown < typingWindow
     }

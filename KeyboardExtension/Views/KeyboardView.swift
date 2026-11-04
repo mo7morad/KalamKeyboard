@@ -4,7 +4,7 @@ import UIKit
 protocol KeyboardViewDelegate: AnyObject {
     /// Every key, on touch-down (feedback, shift, page, the first backspace).
     func keyDown(_ key: Layout.Key)
-    /// Non-char keys on touch-up (space, return, lang). Not sent for a space drag.
+    /// Non-char keys on touch-up (space, return, lang). Not sent for a space whose trackpad moved the cursor.
     func keyUp(_ key: Layout.Key)
     /// A char key's text; `point` is the commit point in key units, nil for a long-press pick.
     func commit(_ text: String, at point: Point?)
@@ -30,7 +30,7 @@ struct ReturnKeyStyle: Equatable {
 }
 
 /// One view with layer-drawn keys and raw touch handling (SPEC D1, 5.2). It covers the suggestion
-/// bar too, so popups can rise over it, but only takes touches in the key area and, mid-typing, the bar's bottom edge.
+/// bar too, so popups can rise over it, but only takes touches in the key area and the bar's bottom edge (`BarBand`).
 final class KeyboardView: UIView {
     /// Apple's is 44. Some host apps get about 16 pt of extra system panel above Kalam's view and
     /// some don't, so the bar is sized for none: 30 was cramped there (device round 2).
@@ -40,8 +40,8 @@ final class KeyboardView: UIView {
         barHeight + KeyGeometry.height(setting, numberRow: numberRow)
     }
     /// How far the top row's touch area reaches up into the bar. Moe's top-row taps run right up
-    /// to the bar, and taps landing in it were lost (device round 2 trace). Only mid-typing while
-    /// the bar has something to tap (SPEC 5.2, `BarBand`).
+    /// to the bar, and taps landing in it were lost (device round 2 trace). Not over something the
+    /// bar can pick, after a pause (SPEC 5.2, `BarBand`).
     static let topRowReach: CGFloat = 12
 
     weak var delegate: KeyboardViewDelegate?
@@ -55,8 +55,9 @@ final class KeyboardView: UIView {
     /// set before `layout`, which rebuilds the keys.
     var keyboardHeight = KeyboardHeight.default
     var numberRow = false
-    /// Whether the bar shows a suggestion or the clip chip (set by the view controller).
-    var barHasTappableContent = false
+    /// Whether a tap at a point (in this view) would pick something in the bar: a suggestion, the
+    /// clip chip (set by the view controller).
+    var barHasTarget: (CGPoint) -> Bool = { _ in false }
 
     private var geometry: KeyGeometry?
     private var builtWidth: CGFloat = 0
@@ -79,9 +80,10 @@ final class KeyboardView: UIView {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        guard super.point(inside: point, with: event), point.y >= Self.barHeight - Self.topRowReach else { return false }
+        guard point.y < Self.barHeight else { return true }
         let now = event?.timestamp ?? CACurrentMediaTime()
-        let reach = BarBand.belongsToKeys(barTappable: barHasTappableContent, sinceKeyDown: lastKeyDown.map { now - $0 })
-        return point.y >= Self.barHeight - (reach ? Self.topRowReach : 0) && super.point(inside: point, with: event)
+        return BarBand.belongsToKeys(barTarget: barHasTarget(point), sinceKeyDown: lastKeyDown.map { now - $0 })
     }
 
     /// The globe key's cap frame, for the system's input-mode button placed over it.
@@ -399,7 +401,9 @@ final class KeyboardView: UIView {
         press.timer?.invalidate()
         guard press.trackpad == nil else { return }
         let rightToLeft = delegate?.trackpadIsRightToLeft() ?? (layout?.lang == .ar)
-        press.trackpad = Trackpad(startX: Double(press.touch.location(in: self).x), downX: Double(press.start.x), rightToLeft: rightToLeft)
+        let x = press.touch.location(in: self).x
+        trace(String(format: "trackpad start, %.1f pt from touch-down", Double(x - press.start.x)))
+        press.trackpad = Trackpad(startX: Double(x), rightToLeft: rightToLeft)
         setLabelsHidden(true)
     }
 
@@ -428,20 +432,20 @@ final class KeyboardView: UIView {
     private func rollsOver(_ press: Press) -> Bool {
         switch press.frame.key.kind {
         case .char: press.strip == nil
-        case .space: press.trackpad == nil
+        case .space: press.trackpad?.movedCursor != true  // a trackpad that never moved the cursor is a tap
         case .return: true
         default: false
         }
     }
 
-    /// The touch-up action: a char commits, other keys send keyUp (not a space drag, nor the keys
-    /// that act on touch-down). A still space hold is a slow tap (SPEC 5.2).
+    /// The touch-up action: a char commits, other keys send keyUp (not a space whose trackpad moved
+    /// the cursor, nor the keys that act on touch-down). Until the cursor moves, space is a tap (SPEC 5.2).
     private func release(_ press: Press) {
         switch press.frame.key.kind {
         case .char:
             commit(press)
             if press.origin == .page { delegate?.pageSlideEnded() }
-        case .space where press.trackpad?.releaseTypesSpace == false: break
+        case .space where press.trackpad?.movedCursor == true: break
         case .backspace, .shift, .page, .gap, .globe: break
         default:
             trace("keyUp \(press.frame.key.kind)")

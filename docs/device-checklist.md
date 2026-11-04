@@ -247,3 +247,13 @@ Setup: install a Debug build with Full Access on. Change the settings in the Kal
 - [ ] Arabic number row: with Eastern Arabic digits off, the AR page's row types 1 to 0; on, ١ to ٠, left to right like Apple's 123 page ____. Holding ض shows no digit strip ____.
 - [ ] Words after a digit: type "3ashan" with the number row's 3, and "2day": autocorrect leaves them alone as before ____.
 - [ ] Switching settings: with the keyboard open in Notes, go to the Kalam app and change the height or the number row, then come back to Notes: the change shows the next time the keyboard appears (not before) ____. Digit Hints is greyed out in Settings while the number row is on.
+
+## Device round 3: lost keystrokes
+
+Setup: install a Debug build with Full Access on. Test in Notes, then WhatsApp, EN then AR. The Debug trace now also logs bar touches ("bar touch at x,y slot n") and trackpad starts.
+
+- [ ] Sloppy space: type "hello world how are you" 3 times fast with two thumbs, hitting space with a slight sideways flick. Every space arrives ____. The key labels may blink on a flick that slides far; say if that bothers you ____.
+- [ ] Two thumbs over a slid space: in "hi there", let the space thumb slide a little while the other thumb starts "there". It gives "hi there", never "hit here" ____.
+- [ ] Trackpad still works: hold space and drag, or drag sideways right away: the cursor moves and no space is typed. A short slide that never moves the cursor types a space ____.
+- [ ] Top row after a pause: type "ok ", wait a second, then tap q, w, e, t, p aiming high, near the bar's bottom edge. Each types its letter unless it landed right under a suggestion (then the suggestion is picked, as before). A high tap on q or w no longer opens the emoji or clipboard panel ____. The emoji and clipboard buttons still open when tapped in their middle ____.
+- [ ] If a keystroke still goes missing: note the time, the key, and whether it clicked and buzzed, then send `kalam-trace.log` ____.
