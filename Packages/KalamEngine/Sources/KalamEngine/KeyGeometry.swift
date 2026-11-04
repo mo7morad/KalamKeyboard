@@ -16,15 +16,17 @@ public struct KeyGeometry: Sendable {
     static let capGap: CGFloat = 6
     /// Key area top to the first hit row.
     static let topInset: CGFloat = 7
-    /// Apple's is 54. One less keeps the bottom row where it is and brings the rows above it and the
-    /// panel top 1 to 3 pt lower, as Moe asked (device round 2); the extension can't draw any lower.
-    public static let rowPitch: CGFloat = 53
+    /// Apple's is 54. Tighter rows leave room for `bottomInset` with the panel top where device
+    /// round 2 put it (3 pt below Apple's).
+    public static let rowPitch: CGFloat = 51.5
     static let capTop: CGFloat = 1.1
     static let capHeight: CGFloat = 42.8
+    /// Touch band under the bottom row's caps (it maps to the bottom row). Without it, taps aimed
+    /// where Apple's lower space bar sits fall into iOS's globe strip and are lost (device round 2).
+    static let bottomInset: CGFloat = 4.5
     /// Height of the key area, excluding the suggestion bar. Apple's is 226; a third-party keyboard
-    /// gets a 17 pt taller globe strip below it on iOS 27, so the area ends at the bottom row's cap
-    /// to bring the rows as low as they can go (still 3.6 pt above Apple's).
-    public static let height: CGFloat = topInset + 3 * rowPitch + capTop + capHeight
+    /// gets a 17 pt taller globe strip below it on iOS 27, so the area is as short as it can be.
+    public static let height: CGFloat = topInset + 3 * rowPitch + capTop + capHeight + bottomInset
 
     public let frames: [Frame]
     /// Points per key unit, horizontally.

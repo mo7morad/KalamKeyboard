@@ -140,7 +140,7 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
   - When it's true: `[123] [globe] [EN/AR] [space] [return]`. The globe uses `handleInputModeList(from:with:)`: a tap goes to the next system keyboard, and a long-press opens the list.
   - The EN/AR key toggles the layout and the engine language. The last-used language is remembered.
 - **Appearance:** light and dark follow `textDocumentProxy.keyboardAppearance` and the trait collection. Match the screenshots for key color, corner radius, shadow, font, keyboard height per device, and suggestion bar height.
-  - iOS 27 puts a 75 pt globe/dictation strip under third-party keyboards (Apple's is 58 pt). Kalam's bar is 40 pt (Apple's 44) and the key area ends at the bottom row's cap, and the rows sit 3.6 pt higher. Nothing in the extension can bring them lower (device round 1; keys drawn past the view's bottom are clipped). Moe found it a bit high, so the row pitch is 53 (Apple's 54): the bottom row stays, the upper rows and the panel top sit 1 to 3 pt lower (device round 2).
+  - iOS 27 puts a 75 pt globe/dictation strip under third-party keyboards (Apple's is 58 pt). Kalam's bar is 40 pt (Apple's 44) and the key area ends at the bottom row's cap, and the rows sit 3.6 pt higher. Nothing in the extension can bring them lower (device round 1; keys drawn past the view's bottom are clipped). Moe found it a bit high, so the panel top sits 3 pt below Apple's (device round 2). His bottom-row taps aim where Apple's lower space bar is, and taps past the view's bottom go to iOS's strip and are lost, so a 4.5 pt touch band sits under the bottom row's caps; the row pitch is 51.5 (Apple's 54) to fit both.
 
 ### 5.3 Feedback
 
