@@ -45,19 +45,11 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		B9A8564A481E4A8D9E5DC2EF /* KeyboardExtension */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
 			path = KeyboardExtension;
 			sourceTree = "<group>";
 		};
 		E58AC250C710BE32D6BC8D9F /* App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
 			path = App;
 			sourceTree = "<group>";
 		};

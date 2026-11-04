@@ -150,7 +150,7 @@ There is a single `FeedbackPlayer`, called on touch-down for every key.
   - One `UIImpactFeedbackGenerator(style: .rigid)` (stronger and crisper than `.light`, device round 1).
   - Call `prepare()` on keyboard appear and after each fire.
   - `impactOccurred(intensity:)` with the intensity setting (0.3 to 1.0, default 0.7).
-- **Sound:** Apple's own `key_press_click`, `key_press_delete` and `key_press_modifier` sounds, peak-normalized to -1 dBFS (about +7.5 dB, `docs/reference/harness/sounds.md`) and bundled as `.caf`. Each is registered once with `AudioServicesCreateSystemSoundID` and played with `AudioServicesPlaySystemSound`. If one fails to load, its system ID plays instead and the failure is logged.
+- **Sound:** Apple's key sounds as they are, played by system ID (Moe preferred them to the +7.5 dB copies of device round 1). The "Louder" setting (0 to 1, default 0) adds up to +7.5 dB: the keyboard scales the bundled 16-bit WAV copies of `key_press_click`, `key_press_delete` and `key_press_modifier` (`docs/reference/harness/sounds.md`), writes them to its temp folder and registers them with `AudioServicesCreateSystemSoundID`. If one fails to load, its system ID plays instead and the failure is logged.
   - Letters, digits and punctuation → click (1104); backspace → delete (1155); shift, 123, EN/AR, globe, return and space → modifier (1156).
   - Verify this mapping by ear against Apple's keyboard on the device and adjust the table if needed.
 - Never use `AVAudioPlayer` or `AVAudioSession` in the extension.
@@ -458,6 +458,7 @@ Settings are stored in App Group `UserDefaults`:
 | Haptics | on |
 | Haptic strength | 0.7 |
 | Sounds | on |
+| Louder (sound boost, 0 to 1) | 0 |
 | Autocorrect EN (off / gentle / normal) | normal |
 | Autocorrect AR (off / gentle / normal) | gentle |
 | Auto-capitalize | on |

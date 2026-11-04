@@ -12,6 +12,8 @@ public struct Settings: Equatable, Sendable {
     public var haptics = true
     public var hapticStrength = 0.7
     public var sounds = true
+    /// 0 plays Apple's key sounds as they are; 1 is +7.5 dB, their peak at -1 dBFS (SPEC 5.3).
+    public var soundBoost = 0.0
     public var autocorrectEN = AutocorrectMode.normal
     public var autocorrectAR = AutocorrectMode.gentle
     public var autoCapitalize = true
@@ -32,6 +34,9 @@ public struct Settings: Equatable, Sendable {
         "arabicVariantFix": \.arabicVariantFix, "easternArabicDigits": \.easternArabicDigits,
         "digitHints": \.digitHints, "pauseLearning": \.pauseLearning, "clipboard": \.clipboard, "debugOverlay": \.debugOverlay,
     ]
+    private static let doubles: [String: WritableKeyPath<Settings, Double>] = [
+        "hapticStrength": \.hapticStrength, "soundBoost": \.soundBoost,
+    ]
     private static let modes: [String: WritableKeyPath<Settings, AutocorrectMode>] = [
         "autocorrectEN": \.autocorrectEN, "autocorrectAR": \.autocorrectAR,
     ]
@@ -46,7 +51,9 @@ public struct Settings: Equatable, Sendable {
         for (key, path) in modes {
             if let value = defaults.string(forKey: key).flatMap(AutocorrectMode.init) { settings[keyPath: path] = value }
         }
-        if let value = defaults.object(forKey: "hapticStrength") as? Double { settings.hapticStrength = value }
+        for (key, path) in doubles {
+            if let value = defaults.object(forKey: key) as? Double { settings[keyPath: path] = value }
+        }
         return settings
     }
 
@@ -55,7 +62,7 @@ public struct Settings: Equatable, Sendable {
         guard let defaults else { return }
         for (key, path) in Self.bools { defaults.set(self[keyPath: path], forKey: key) }
         for (key, path) in Self.modes { defaults.set(self[keyPath: path].rawValue, forKey: key) }
-        defaults.set(hapticStrength, forKey: "hapticStrength")
+        for (key, path) in Self.doubles { defaults.set(self[keyPath: path], forKey: key) }
     }
 
     public func autocorrect(_ lang: Lang) -> AutocorrectMode { lang == .en ? autocorrectEN : autocorrectAR }

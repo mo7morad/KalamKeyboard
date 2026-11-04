@@ -14,6 +14,10 @@ struct SettingsView: View {
                 }
                 .disabled(!settings.haptics)
                 Toggle("Key Sounds", isOn: $settings.sounds)
+                LabeledContent("Louder") {
+                    Slider(value: $settings.soundBoost, in: 0...1)  // SPEC 5.3
+                }
+                .disabled(!settings.sounds)
             }
             Section {
                 autocorrectPicker("English Autocorrect", selection: $settings.autocorrectEN)

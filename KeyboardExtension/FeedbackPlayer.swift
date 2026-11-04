@@ -1,14 +1,16 @@
 import AudioToolbox
+import Foundation
 import KalamEngine
 import os
 import UIKit
 
-/// SPEC 5.3: a rigid haptic and Apple's key sound, made louder, on touch-down. No AVAudioPlayer or
-/// audio session: system sounds follow the ringer volume and the silent switch.
+/// SPEC 5.3: a rigid haptic and Apple's key sound on touch-down. No AVAudioPlayer or audio session:
+/// system sounds follow the ringer volume and the silent switch.
 final class FeedbackPlayer {
     enum Sound: CaseIterable {
         case key, delete, modifier
 
+        /// Apple's own sound, bundled as 16-bit WAV for the boosted copies.
         var resource: String {
             switch self {
             case .key: "key_press_click"
@@ -17,7 +19,6 @@ final class FeedbackPlayer {
             }
         }
 
-        /// Apple's own sound, if the bundled one fails to load.
         var systemID: SystemSoundID {
             switch self {
             case .key: 1104
@@ -27,29 +28,18 @@ final class FeedbackPlayer {
         }
     }
 
+    /// `soundBoost` 1 adds this much: Apple's sounds peak near -8.5 dBFS.
+    private static let maxBoostDB = 7.5
     private static let log = Logger(subsystem: "com.morad.kalam.keyboard", category: "feedback")
 
     private let generator = UIImpactFeedbackGenerator(style: .rigid)
-    private let soundIDs: [Sound: SystemSoundID]
-    var settings = Settings()
-
-    init() {
-        soundIDs = Dictionary(uniqueKeysWithValues: Sound.allCases.map { ($0, Self.register($0)) })
+    /// Boosted copies; empty at boost 0, where the system IDs play.
+    private var soundIDs: [Sound: SystemSoundID] = [:]
+    var settings = Settings() {
+        didSet { if settings.soundBoost != oldValue.soundBoost { registerSounds() } }
     }
 
-    deinit {
-        for (sound, id) in soundIDs where id != sound.systemID { AudioServicesDisposeSystemSoundID(id) }
-    }
-
-    private static func register(_ sound: Sound) -> SystemSoundID {
-        var id: SystemSoundID = 0
-        guard let url = Bundle.main.url(forResource: sound.resource, withExtension: "caf"),
-              AudioServicesCreateSystemSoundID(url as CFURL, &id) == kAudioServicesNoError else {
-            log.error("\(sound.resource, privacy: .public).caf didn't load; using system sound \(sound.systemID)")
-            return sound.systemID
-        }
-        return id
-    }
+    deinit { disposeSounds() }
 
     func prepare() {
         if settings.haptics { generator.prepare() }
@@ -66,5 +56,48 @@ final class FeedbackPlayer {
     /// Sound only, for backspace repeats.
     func play(_ sound: Sound) {
         if settings.sounds { AudioServicesPlaySystemSound(soundIDs[sound, default: sound.systemID]) }
+    }
+
+    private func registerSounds() {
+        disposeSounds()
+        guard settings.soundBoost > 0 else { return }
+        let gain = pow(10, settings.soundBoost * Self.maxBoostDB / 20)
+        for sound in Sound.allCases {
+            var id: SystemSoundID = 0
+            guard let url = Self.boosted(sound, gain: gain),
+                  AudioServicesCreateSystemSoundID(url as CFURL, &id) == kAudioServicesNoError else {
+                Self.log.error("boosted \(sound.resource, privacy: .public) didn't load; using system sound \(sound.systemID)")
+                continue
+            }
+            soundIDs[sound] = id
+        }
+    }
+
+    private func disposeSounds() {
+        soundIDs.values.forEach { AudioServicesDisposeSystemSoundID($0) }
+        soundIDs = [:]
+    }
+
+    /// Writes the bundled WAV with its 16-bit samples scaled by `gain` (clipped) to the temp folder,
+    /// named by gain so a new level never reuses a file iOS may have cached.
+    private static func boosted(_ sound: Sound, gain: Double) -> URL? {
+        guard let source = Bundle.main.url(forResource: sound.resource, withExtension: "wav"),
+              var data = try? Data(contentsOf: source),
+              let chunk = data.range(of: Data("data".utf8)) else { return nil }
+        let samples = chunk.upperBound + 4  // past the chunk size
+        data.withUnsafeMutableBytes { bytes in
+            for offset in stride(from: samples, to: bytes.count - 1, by: 2) {
+                let sample = Double(Int16(littleEndian: bytes.loadUnaligned(fromByteOffset: offset, as: Int16.self)))
+                bytes.storeBytes(of: Int16(clamping: Int((sample * gain).rounded())).littleEndian, toByteOffset: offset, as: Int16.self)
+            }
+        }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(sound.resource)-\(Int(gain * 1000)).wav")
+        do {
+            try data.write(to: url, options: .atomic)
+            return url
+        } catch {
+            log.error("boosted \(sound.resource, privacy: .public) not written: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
     }
 }

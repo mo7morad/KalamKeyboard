@@ -33,6 +33,7 @@ Setup: install a Debug build, then Settings > General > Keyboard > Keyboards > A
 
 - [ ] Haptic on every touch-down, light, close to Apple's.
 - [ ] Sounds: letters click (1104), delete has its own sound (1155), shift / 123 / EN/AR / space / return use the modifier sound (1156). Each backspace repeat clicks. Silent switch mutes them.
+- [ ] Sounds at "Louder" 0 match the first build. Move Kalam > Settings > Louder up: the next keyboard open is louder, at the top as loud as device round 1, with no crackle.
 - [ ] With Full Access off: the bar shows "Turn on Full Access for learning, haptics and sounds", and nothing crashes.
 
 **Memory (Debug overlay, red text at the top-left of the bar)**

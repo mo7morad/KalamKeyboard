@@ -29,7 +29,7 @@ import Testing
     defer { defaults.removePersistentDomain(forName: suite) }
     var settings = Settings()
     (settings.haptics, settings.hapticStrength, settings.autocorrectAR, settings.pauseLearning) = (false, 0.3, .off, true)
-    settings.clipboard = false
+    (settings.clipboard, settings.soundBoost) = (false, 0.5)
     settings.save(to: defaults)
     #expect(Settings.load(from: defaults) == settings)
 }
