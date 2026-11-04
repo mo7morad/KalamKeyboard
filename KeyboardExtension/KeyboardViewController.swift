@@ -344,7 +344,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
 
     func backspaceRepeated(_ count: Int) {
         let word = BackspaceRepeat.deletesWord(repeat: count)
-        input.backspace(word ? BackspaceRepeat.wordLength(before: textDocumentProxy.documentContextBeforeInput ?? "") : 1)
+        input.backspace(word ? BackspaceRepeat.wordLength(before: textDocumentProxy.documentContextBeforeInput ?? "") : 1, repeated: true)
         feedback.play(.delete)
     }
 
@@ -365,6 +365,10 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
 
     func moveCursor(by offset: Int) {
         textDocumentProxy.adjustTextPosition(byCharacterOffset: offset)
+    }
+
+    func trackpadIsRightToLeft() -> Bool? {
+        textIsRightToLeft(before: textDocumentProxy.documentContextBeforeInput, after: textDocumentProxy.documentContextAfterInput)
     }
 
     private func showLetters() {
@@ -392,8 +396,10 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         if !panel.isHidden { panel.items = clipboard.history.panelItems }
     }
 
+    /// Also after new slots, so the keys know whether the bar has something to tap (SPEC 5.2).
     private func showChip() {
         bar.chip = clipboardEnabled && !input.hasWord ? clipboard.history.chip(now: Date()) : nil
+        keyboardView.barHasTappableContent = bar.hasTappableContent
     }
 
     private func paste(_ text: String) {

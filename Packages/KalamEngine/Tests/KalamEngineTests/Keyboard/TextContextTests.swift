@@ -72,3 +72,52 @@ func punctuationSpacing(char: String, autoSpace: Bool, delete: Int, insert: Stri
     #expect(!continuesWord(",", word: "me"))
     #expect(!continuesWord(" ", word: "me"))
 }
+
+@Test(arguments: [
+    ("hello", nil, false),  // EN text on the AR layout
+    ("مرحبا", nil, true),  // AR text on the EN layout
+    ("hello مرحبا", nil, true),  // cursor after the Arabic part
+    ("hello", " مرحبا", false),  // cursor after the English part
+    ("مرحبا 123, 😀 ", nil, true),  // digits, punctuation, emoji and spaces skipped
+    ("", "مرحبا", true),  // nothing before: the text after
+    ("بِ", nil, true),  // a mark is skipped, its letter counts
+    ("123 ", "!", nil),  // digits only: the layout decides
+    ("", nil, nil),
+    (nil, nil, nil),
+] as [(String?, String?, Bool?)])
+func trackpadDirectionFollowsTheTextAtTheCursor(before: String?, after: String?, expected: Bool?) {
+    #expect(textIsRightToLeft(before: before, after: after) == expected)
+}
+
+/// One autocorrect slot, "teh" → "the", after its commit inserted `tail` (deleting `deleting`
+/// characters of an auto-space first), backspaced once per step against the text that results.
+@Test(arguments: [
+    // Space: the auto-space and the word go back in one backspace.
+    ([" "], 0, "the ", [AutocorrectUndo.Step.revert(delete: 4, insert: "teh")]),
+    // Punctuation and return: a plain backspace first, then the revert.
+    ([","], 0, "the,", [.delete, .revert(delete: 3, insert: "teh")]),
+    (["."], 0, "the.", [.delete, .revert(delete: 3, insert: "teh")]),
+    (["?"], 0, "the?", [.delete, .revert(delete: 3, insert: "teh")]),
+    (["!"], 0, "the!", [.delete, .revert(delete: 3, insert: "teh")]),
+    (["\n"], 0, "the\n", [.delete, .revert(delete: 3, insert: "teh")]),
+    // Punctuation after the auto-space brings its own space.
+    ([" ", ", "], 1, "the, ", [.delete, .delete, .revert(delete: 3, insert: "teh")]),
+    // The text moved on under the slot.
+    ([","], 0, "they,", [.gone]),
+    ([" "], 0, "the  ", [.gone]),
+] as [([String], Int, String, [AutocorrectUndo.Step])])
+func autocorrectUndoStepsBackThroughItsTail(tails: [String], deleting: Int, text: String, steps: [AutocorrectUndo.Step]) {
+    var slot: AutocorrectUndo? = AutocorrectUndo(literal: "teh", taps: [], replacement: "the")
+    for (i, tail) in tails.enumerated() { slot = slot?.typed(tail, deleting: i == tails.count - 1 ? deleting : 0) }
+    var before = text
+    for expected in steps {
+        let step = slot?.backspace(before: before)
+        #expect(step == expected)
+        before.removeLast()
+    }
+}
+
+@Test func autocorrectUndoSlotEndsWhenTheKeyDeletesPastItsTail() {
+    let slot = AutocorrectUndo(literal: "teh", taps: [], replacement: "the")
+    #expect(slot.typed(",", deleting: 1) == nil)
+}

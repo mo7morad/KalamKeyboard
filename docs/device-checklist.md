@@ -159,3 +159,19 @@ Setup: install a Debug build. Test in Notes, EN and AR.
 - [ ] Type "pizza", "love", "coffee", "قهوة", "حب": the bar offers the emoji in the right slot (left slot in Arabic). Tap it: the word becomes the emoji plus a space. Type "teh pizza": the emoji is never put in on space by autocorrect.
 - [ ] Long-press the emoji slot: no "Don't suggest" overlay. Note any word whose emoji pick looks wrong next to Apple's ____.
 - [ ] Memory: open the panel and fling through all categories twice. The logged footprint ____ MB, and Kalam isn't killed.
+
+## Phase 10: lost keystrokes
+
+Setup: install a Debug build with Full Access on. Test in Notes unless a step says otherwise.
+
+- [ ] Fast two thumbs, EN: type "the quick brown fox jumps over the lazy dog" 3 times as fast as you can. Dropped letters ____, swapped letters or spaces ____. Same in AR with "انا رايح الشغل دلوقتي وراجع بالليل": dropped ____, swapped ____.
+- [ ] Slow space: type "hi", then press and hold space for about half a second without moving, and release. A space is typed (the key labels may hide while you hold). Hold and slide sideways: the cursor moves and no space is typed. Slide a little, then back, without the cursor moving: say what happens ____.
+- [ ] Low bar taps right after typing: type "hel" and, within a blink, tap the middle suggestion near its bottom edge. Note whether a top-row letter was typed instead ____ (expected mid-typing: the letter).
+- [ ] Low bar taps after a pause: type "hel", wait a second, tap the middle suggestion near its bottom edge: the suggestion is picked, no letter. Same for the clip chip (copy some text first, then tap the chip low in an empty field). Top-row taps mid-typing still land as before; any lost ones ____.
+- [ ] Slow presses, AR: press and hold ض, ص, ه and ح for about half a second and release without sliding. Each types its letter, never a digit. The strip shows the digit and the letter, with the letter selected; slide onto the digit and release types the digit.
+- [ ] Slow presses, EN with digit hints on: holding q types 1 and holding e types 3 (the digit is drawn, so it's selected). With digit hints off (host app setting): holding q types q and holding e types e; the strip still offers the digit.
+- [ ] Cancels: while typing a word, pull down a notification banner (or have one arrive) or start the home-bar swipe mid-tap. The letter under the finger is typed (or say if it isn't) ____. A long-press strip that gets cancelled types nothing.
+- [ ] Trackpad in mixed text: in "hello مرحبا world" put the cursor inside "hello" on the AR layout and drag right on space: the cursor moves right. Put it inside "مرحبا" on the EN layout and drag right: the cursor moves right on screen too. Note any part where it goes the wrong way ____.
+- [ ] Undo after punctuation: type "teh," : it shows "the,". Backspace deletes the ","; the next backspace turns "the" back into "teh". Same with "teh." , "teh?" , "teh!" and "teh" + return. Then type "teh," again: it is not corrected this time.
+- [ ] Undo after a space then punctuation: type "teh" + space (shows "the ") then ",": shows "the, ". Backspaces go " ", then ",", then "the" becomes "teh".
+- [ ] Holding backspace after "the," deletes characters normally (it doesn't revert "the" mid-repeat).

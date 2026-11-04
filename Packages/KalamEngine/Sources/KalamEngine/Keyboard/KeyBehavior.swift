@@ -79,25 +79,72 @@ public enum BackspaceRepeat {
     }
 }
 
-/// SPEC 5.2 space-bar trackpad: a drag past 12 pt starts it, then the cursor moves one character per 9 pt.
+/// SPEC 5.2 space-bar trackpad: a drag past 12 pt or a 0.4 s hold starts it, then the cursor moves
+/// one character per 9 pt.
 public struct Trackpad: Sendable {
     public static let startDistance: Double = 12
     static let pointsPerChar: Double = 9
 
     private var anchor: Double
     private let direction: Double
+    private let fromHold: Bool
+    private var moved = false
 
-    /// `rightToLeft` flips the direction so a rightward drag moves the cursor right in Arabic text.
-    public init(startX: Double, rightToLeft: Bool) {
+    /// `downX` is where the finger went down on space. `rightToLeft` flips the direction so a
+    /// rightward drag moves the cursor right in Arabic text.
+    public init(startX: Double, downX: Double, rightToLeft: Bool) {
         anchor = startX
         direction = rightToLeft ? -1 : 1
+        fromHold = abs(startX - downX) <= Self.startDistance
     }
 
     /// The character offset to apply for the finger now at `x`, since the last call.
     public mutating func offset(toX x: Double) -> Int {
         let steps = ((x - anchor) / Self.pointsPerChar).rounded(.towardZero)
         anchor += steps * Self.pointsPerChar
+        if steps != 0 { moved = true }
         return Int(steps * direction)
+    }
+
+    /// A hold that never moved the cursor was a slow tap: its release types a space.
+    public var releaseTypesSpace: Bool { fromHold && !moved }
+}
+
+/// SPEC 5.2 long-press strip: its items, visual left to right, and the one preselected. A top-row
+/// digit comes first, and is preselected only where its hint is drawn; elsewhere the letter is in the
+/// strip too (right after the digit, unless its alternates hold it) and is preselected, so a slow
+/// press types the letter the key shows. Nil when the key has no strip.
+public func longPressStrip(output: String, hint: String?, alternates: [String], hintShown: Bool) -> (items: [String], selected: Int)? {
+    guard let hint else {
+        guard !alternates.isEmpty else { return nil }
+        return (alternates, alternates.firstIndex(of: output) ?? 0)
+    }
+    if hintShown { return ([hint] + alternates, 0) }
+    let letters = alternates.contains(output) ? alternates : [output] + alternates
+    return ([hint] + letters, 1 + (letters.firstIndex(of: output) ?? 0))
+}
+
+/// SPEC 5.2 bar band: the top row reaches into the bar's bottom edge during a typing burst only.
+public enum BarBand {
+    /// UI timing, not a tunable: mid-typing top-row taps land high, a bar tap usually follows a pause.
+    public static let typingWindow: TimeInterval = 0.4
+
+    /// Whether a touch in the band goes to the top row: always while the bar has nothing to tap,
+    /// else only when the last key touch-down was under `typingWindow` before it (nil: none yet).
+    public static func belongsToKeys(barTappable: Bool, sinceKeyDown: TimeInterval?) -> Bool {
+        guard barTappable else { return true }
+        guard let sinceKeyDown else { return false }
+        return sinceKeyDown < typingWindow
+    }
+}
+
+/// SPEC 5.2 system cancels (an edge gesture, a banner): a letter that was really pressed still counts.
+public enum CancelledTouch {
+    public static let minDuration: TimeInterval = 0.03
+
+    /// Whether a cancelled press commits like a touch-up: a char key with no strip open, held at least `minDuration`.
+    public static func commits(isChar: Bool, stripOpen: Bool, heldFor: TimeInterval) -> Bool {
+        isChar && !stripOpen && heldFor >= minDuration
     }
 }
 

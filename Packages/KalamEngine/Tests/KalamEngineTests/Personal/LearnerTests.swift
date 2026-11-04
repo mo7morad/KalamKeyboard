@@ -147,3 +147,11 @@ func noLearningInSensitiveFields(_ traits: FieldTraits) throws {
     rig.learner.flush()
     #expect(try rig.store.word(lang: "en", ident: "hello")?.hits.count == 1)
 }
+
+@Test func anAutocorrectCommittedByASentenceEndCanStillBeUndone() throws {
+    let rig = try Rig()
+    rig.learner.commit("the", lang: .en, context: [], how: .autocorrect(from: "teh"))
+    rig.learner.sentenceEnded()  // "teh." or "teh" + return
+    rig.learner.undoAutocorrect()
+    #expect(rig.model.hasCorrection(.en, typed: "teh", chosen: "the", rejected: true))
+}

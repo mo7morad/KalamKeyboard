@@ -124,11 +124,14 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
 ### 5.2 Touch model
 
 - **Hit-testing:** every touch point maps to a key (nearest key, no dead zones). Each row's hit band starts 5 pt above Apple's gap line, and the top row also takes the bar's bottom 12 pt: Moe's taps land high, and top-row taps that fell in the bar were lost (device round 2).
+  - The 12 pt band goes to the top row only during a typing burst. While the bar shows something tappable (a suggestion or the clip chip), a touch there goes to the bar unless the previous key touch-down was less than 0.4 s before it (`BarBand`). With nothing tappable in the bar, it always goes to the keys. Mid-typing top-row taps land high; a bar tap usually follows a pause.
 - **Haptic and sound fire on touch-down.** A letter is output on touch-up, at the key under the finger. The finger may slide, and the popup follows it.
 - **Rollover:** a new touch-down immediately commits any pending letter, space (unless in trackpad mode) or return touch, through the same touch-up path. Touches that arrive together are handled in timestamp order.
+- **System cancels** (an edge gesture, a notification banner): a cancelled letter press with no alternates strip open that was down at least 30 ms commits its letter through the touch-up path. Other keys and shorter presses are dropped.
 - **Tap recording:** record the commit point of every letter tap (in key units) as a `Tap`.
 - **Popups:** a key popup appears on press (except on bottom-row keys).
   - A long-press of 0.35 s opens the alternates strip. Slide to select, and release to insert.
+  - Preselection: a slow press types what the key shows (`longPressStrip`). A top-row digit comes first and is preselected only where its hint is drawn (English with digit hints on). Elsewhere (Arabic, hints off) the strip still offers the digit, but the letter is in it too, right after the digit unless its alternates already hold it, and the letter is preselected. Keys without a digit preselect their own output if the alternates hold it, else the first item.
 - **Shift:** a tap shifts one letter; a double-tap within 0.3 s locks caps. Auto-shift follows 8.6.
   - Slide from shift: a finger that went down on shift and is released on a letter types it capitalized, and shift is off afterwards (unless caps lock was on). Released on shift itself, it's a plain shift tap. Once on a letter, it slides like a letter press.
 - **Backspace:**
@@ -140,6 +143,8 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
 - **Space:**
   - A tap inserts a space, which is also the autocorrect commit.
   - A horizontal drag of more than 12 pt, or a long-press of 0.4 s, enters trackpad mode: key labels hide, and the cursor moves via `adjustTextPosition` at about 1 character per 9 pt. Releasing exits.
+  - A trackpad started by the hold (the finger within 12 pt of where it went down) that never moved the cursor was a slow tap: its release types a space, like a tap. Rollover still skips a space in trackpad mode.
+  - Direction comes from the text at the cursor when the trackpad starts: the nearest strong-direction letter before the cursor (Arabic script is right to left, other letters left to right; spaces, digits, punctuation, emoji and marks are skipped), else the nearest after it, else the layout language.
 - **Double-space** → ". " when the previous character is a letter or digit (setting).
 - **Pages:** 123 and #+= pages work like Apple's. Typing space or ' on the 123 page returns to letters.
   - A page key switches on touch-down. If the same finger slides onto a key of the new page and is released there, that key is typed and the keyboard returns to the page it came from (123 → a digit → letters). A plain tap just switches.
@@ -391,7 +396,9 @@ Replace the literal ℓ with the top candidate c* only if all of the following h
 **Undo**
 
 - If the very next key is backspace (cursor unchanged), restore ℓ and drop the auto-space, all in **one** backspace.
-- Record the rejection (ℓ → c*) and mark ℓ as explicitly accepted (known).
+- After a commit by punctuation or return ("teh," shown as "the,"; also . ? ! and "\n"), the first backspace deletes the punctuation as usual and keeps the slot; the next restores ℓ in one go. When punctuation took an auto-space's place (8.7), the slot covers what it inserted (", ") the same way. Any other key, a repeat backspace, a host text change or a cursor move ends the slot.
+- A pending autocorrect stays pending through the sentence end its punctuation or return makes, so the undo can still reject it.
+- Record the rejection (ℓ → c*) and mark ℓ as explicitly accepted (known), on the restoring backspace only.
 
 **Timing**
 

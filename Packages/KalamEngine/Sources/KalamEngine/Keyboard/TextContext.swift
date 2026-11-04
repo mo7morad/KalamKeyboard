@@ -61,3 +61,64 @@ public func punctuationEdit(_ char: String, afterAutoSpace: Bool) -> (delete: In
 public func endsSentence(_ char: String) -> Bool {
     [".", "!", "?", "؟", "\n"].contains(char)
 }
+
+/// SPEC 5.2 trackpad direction, from the text at the cursor: the nearest strong-direction letter
+/// before it (Arabic script is right to left, any other letter left to right), else the nearest
+/// after it. Spaces, digits, punctuation, emoji and marks don't count. Nil when there is none.
+public func textIsRightToLeft(before: String?, after: String?) -> Bool? {
+    func direction<S: Sequence>(_ scalars: S) -> Bool? where S.Element == Unicode.Scalar {
+        scalars.lazy.compactMap(strongDirection).first
+    }
+    return direction((before ?? "").unicodeScalars.reversed()) ?? direction((after ?? "").unicodeScalars)
+}
+
+/// True for an Arabic-script letter, false for any other letter, nil otherwise.
+private func strongDirection(_ scalar: Unicode.Scalar) -> Bool? {
+    switch scalar.properties.generalCategory {
+    case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter:
+        let arabic: [ClosedRange<UInt32>] = [0x0600...0x06FF, 0x0750...0x077F, 0x08A0...0x08FF, 0xFB50...0xFDFF, 0xFE70...0xFEFF]
+        return arabic.contains { $0.contains(scalar.value) }
+    default: return nil
+    }
+}
+
+/// SPEC 8.5 undo slot: an autocorrect plus the tail its commit inserted after the replacement (an
+/// auto-space, punctuation, a newline). Backspaces first delete the tail as usual; the one that
+/// reaches the replacement restores the literal, taking an auto-space with it.
+public struct AutocorrectUndo: Sendable {
+    public enum Step: Equatable, Sendable {
+        /// Delete `delete` characters and insert the literal; the slot is used up.
+        case revert(delete: Int, insert: String)
+        /// A plain one-character backspace; the slot stays.
+        case delete
+        /// The text no longer ends with the replacement and its tail: a plain backspace, no slot.
+        case gone
+    }
+
+    public let literal: String
+    /// The literal's taps, restored with it.
+    public let taps: [Tap]
+    public let replacement: String
+    public private(set) var tail = ""
+
+    public init(literal: String, taps: [Tap], replacement: String) {
+        (self.literal, self.taps, self.replacement) = (literal, taps, replacement)
+    }
+
+    /// The slot after the commit's key deleted `deleting` characters of the tail (punctuation taking
+    /// an auto-space's place) and inserted `text`. Nil when the delete reaches past the tail.
+    public func typed(_ text: String, deleting: Int = 0) -> AutocorrectUndo? {
+        guard deleting <= tail.count else { return nil }
+        var next = self
+        next.tail = String(tail.dropLast(deleting)) + text
+        return next
+    }
+
+    /// One backspace with `before` the text before the cursor.
+    public mutating func backspace(before: String) -> Step {
+        guard before.hasSuffix(replacement + tail) else { return .gone }
+        if tail.isEmpty || tail == " " { return .revert(delete: replacement.count + tail.count, insert: literal) }
+        tail.removeLast()
+        return .delete
+    }
+}

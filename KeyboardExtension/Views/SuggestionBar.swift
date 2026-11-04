@@ -42,6 +42,9 @@ final class SuggestionBar: UIView {
         didSet { render() }
     }
 
+    /// A suggestion or the clip chip shows (SPEC 5.2: the top row's reach into the bar gives way).
+    var hasTappableContent: Bool { hasFullAccess && (chip != nil || slots.contains { $0 != nil }) }
+
     var showsClipboardButton = false {
         didSet {
             clipboardButton.isHidden = !showsClipboardButton

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Learns from what Moe commits in the keyboard (SPEC 9.2). The last committed word stays pending
-/// until the next commit, a sentence end or flush, so backspacing into it can still drop it.
+/// until the next commit, a sentence end (not an autocorrect) or flush, so backspacing into it can still drop it.
 /// Final events are batched and written at most every learnerFlushSeconds (checked on each call,
 /// or by writeIfDue) and on flush. Confined to the engine queue.
 public final class Learner {
@@ -67,7 +67,10 @@ public final class Learner {
         writeIfDue()
     }
 
+    /// A pending autocorrect stays pending: the punctuation or return that committed it can be
+    /// backspaced and the autocorrect undone (SPEC 8.5).
     public func sentenceEnded() {
+        if case .autocorrect? = pending?.commit { return writeIfDue() }
         finalizePending()
         writeIfDue()
     }

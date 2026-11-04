@@ -6,13 +6,6 @@ import UIKit
 /// follow from each key. It edits through the text proxy and never waits on the engine, except for
 /// the commit path's bounded wait in EngineClient.
 final class InputController {
-    /// An autocorrect that the very next backspace can undo (SPEC 8.5).
-    private struct Undo {
-        let literal: String
-        let taps: [Tap]
-        let replacement: String
-    }
-
     private let proxy: UITextDocumentProxy
     private let client: EngineClient
 
@@ -30,7 +23,8 @@ final class InputController {
     private var literal: String { taps.map(\.char).joined() }
     private var autoSpace = false
     private var lastKeyWasSpace = false
-    private var undo: Undo?
+    /// An autocorrect the next backspaces can undo (SPEC 8.5).
+    private var undo: AutocorrectUndo?
     /// A literal restored by undo; committing it unchanged neither corrects nor learns it again.
     private var restoredLiteral: String?
     /// The word a paste ended on; committing it unchanged neither corrects nor learns it (SPEC 5.5).
@@ -58,16 +52,18 @@ final class InputController {
 
     /// A char key's output. `point` is in key units of the letters page, nil otherwise.
     func type(_ text: String, at point: Point?) {
-        undo = nil
+        let pending = undo
+        dropUndo()
         if continuesWord(text, word: literal) {
             insert(text)
             taps.append(Tap(text, at: point))
         } else {
             if !taps.isEmpty { commitWord() }
-            undo = nil  // undo is for the space after an autocorrect only
             let edit = punctuationEdit(text, afterAutoSpace: autoSpace)
             delete(edit.delete)
             insert(edit.insert)
+            // SPEC 8.5: the slot covers the punctuation that committed the word, or that took its auto-space's place.
+            undo = (undo ?? (edit.delete > 0 ? pending : nil))?.typed(edit.insert, deleting: edit.delete)
             autoSpace = edit.insert.hasSuffix(" ")
             // An apostrophe that took an auto-space's place joins the word before it (Moe + 's).
             taps = resyncedTaps([], to: currentWord(before: before))
@@ -77,7 +73,7 @@ final class InputController {
     }
 
     func typeSpace() {
-        undo = nil
+        dropUndo()
         let corrected = taps.isEmpty ? nil : commitWord()
         if settings.doubleSpacePeriod, lastKeyWasSpace, doubleSpaceBecomesPeriod(before: before) {
             delete(1)
@@ -87,33 +83,46 @@ final class InputController {
             insert(" ")
             lastKeyWasSpace = true
             autoSpace = corrected != nil
+            undo = undo?.typed(" ")
         }
         refresh()
     }
 
     func typeReturn() {
+        dropUndo()
         if !taps.isEmpty { commitWord() }
-        undo = nil
         insert("\n")
+        undo = undo?.typed("\n")
         client.sentenceEnded()
         refresh()
     }
 
-    /// Backspace (count 1) or a whole-word repeat step. The first backspace right after an
-    /// autocorrect restores the literal and drops the auto-space in one go.
-    func backspace(_ count: Int) {
+    /// Backspace, or a repeat step (`repeated`, possibly a whole word). Right after an autocorrect,
+    /// backspace first deletes the punctuation or newline that committed it, keeping the slot; the
+    /// backspace that reaches the word restores the literal, an auto-space going with it (SPEC 8.5).
+    func backspace(_ count: Int, repeated: Bool = false) {
         swipeRestore = nil
-        if count == 1, let undo, before.hasSuffix(undo.replacement + " ") {
-            self.undo = nil
-            delete(undo.replacement.count + 1)
-            insert(undo.literal)
-            taps = undo.taps
-            restoredLiteral = undo.literal
-            client.undoAutocorrect()
-            refresh()
-            return
+        if !repeated, var slot = undo {
+            switch slot.backspace(before: before) {
+            case .revert(let length, let text):
+                undo = nil
+                delete(length)
+                insert(text)
+                taps = slot.taps
+                restoredLiteral = text
+                client.undoAutocorrect()
+                refresh()
+                return
+            case .delete:
+                delete(1)
+                taps = resyncedTaps(taps, to: currentWord(before: before))
+                undo = slot  // the learner hears of the reopened word when the slot ends (dropUndo)
+                refresh()
+                return
+            case .gone: break
+            }
         }
-        undo = nil
+        dropUndo()
         let after = String(before.dropLast(count))
         let wasInWord = !taps.isEmpty
         delete(count)
@@ -138,7 +147,7 @@ final class InputController {
     /// SPEC 5.2 backspace swipe, live: deletes or puts back whole words until `words` are gone.
     /// Returns how many words this step deleted, for the delete sound.
     func swipeBackspace(toWords words: Int) -> Int {
-        undo = nil
+        dropUndo()
         if let restore = swipeRestore {  // the swipe works in whole words
             swipeRestore = nil
             insert(restore)
@@ -162,7 +171,7 @@ final class InputController {
 
     /// A tap replaces the current word (or inserts the prediction) and adds an auto-space.
     func accept(_ slot: BarSlot) {
-        undo = nil
+        dropUndo()
         let context = contextWords(before: before)
         delete(literal.count)
         insert(slot.word + " ")
@@ -183,7 +192,7 @@ final class InputController {
 
     /// SPEC 5.5, 5.6: inserts a clip or a panel emoji as is; it is never learned.
     func paste(_ text: String) {
-        undo = nil
+        dropUndo()
         insert(text)
         taps = resyncedTaps([], to: currentWord(before: before))
         pastedWord = taps.isEmpty ? nil : literal
@@ -204,7 +213,7 @@ final class InputController {
 
     /// Rebuilds the current word from the text before the cursor (also on appear).
     func resync() {
-        undo = nil
+        dropUndo()
         autoSpace = false
         lastKeyWasSpace = false
         restoredLiteral = nil
@@ -254,8 +263,15 @@ final class InputController {
         delete(literal.count)
         insert(replacement)
         learn(replacement, context: context, how: .autocorrect(from: literal))
-        undo = Undo(literal: literal, taps: taps, replacement: replacement)
+        undo = AutocorrectUndo(literal: literal, taps: taps, replacement: replacement)
         return replacement
+    }
+
+    /// Ends the undo slot. Once backspace took its punctuation the cursor is back in the corrected
+    /// word, so the learner now hears what a plain backspace there would have told it.
+    private func dropUndo() {
+        if let undo, undo.tail.isEmpty { client.backspaced(into: undo.replacement, lang: lang) }
+        undo = nil
     }
 
     /// Numbers and stray marks aren't words (SPEC 6.2), so the learner only sees words with a letter.

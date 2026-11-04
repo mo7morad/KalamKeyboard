@@ -15,6 +15,8 @@ protocol KeyboardViewDelegate: AnyObject {
     func pageSlideEnded()
     func hideKeyboard()
     func moveCursor(by offset: Int)
+    /// SPEC 5.2: the trackpad's direction from the text at the cursor, nil to follow the layout.
+    func trackpadIsRightToLeft() -> Bool?
 }
 
 /// The host's return key (SPEC 5.2): a title for non-default types, nil for the ⏎ icon.
@@ -25,14 +27,15 @@ struct ReturnKeyStyle: Equatable {
 }
 
 /// One view with layer-drawn keys and raw touch handling (SPEC D1, 5.2). It covers the suggestion
-/// bar too, so popups can rise over it, but only takes touches in the key area and the bar's bottom edge.
+/// bar too, so popups can rise over it, but only takes touches in the key area and, mid-typing, the bar's bottom edge.
 final class KeyboardView: UIView {
     /// Apple's is 44. Some host apps get about 16 pt of extra system panel above Kalam's view and
     /// some don't, so the bar is sized for none: 30 was cramped there (device round 2).
     static let barHeight: CGFloat = 40
     static let height = barHeight + KeyGeometry.height
     /// How far the top row's touch area reaches up into the bar. Moe's top-row taps run right up
-    /// to the bar, and taps landing in it were lost (device round 2 trace).
+    /// to the bar, and taps landing in it were lost (device round 2 trace). Only mid-typing while
+    /// the bar has something to tap (SPEC 5.2, `BarBand`).
     static let topRowReach: CGFloat = 12
 
     weak var delegate: KeyboardViewDelegate?
@@ -42,6 +45,8 @@ final class KeyboardView: UIView {
     var returnKey = ReturnKeyStyle() { didSet { if returnKey != oldValue { refreshContents() } } }
     var palette = Palette.light { didSet { refreshColors() } }
     var showsHints = true
+    /// Whether the bar shows a suggestion or the clip chip (set by the view controller).
+    var barHasTappableContent = false
 
     private var geometry: KeyGeometry?
     private var builtWidth: CGFloat = 0
@@ -49,6 +54,8 @@ final class KeyboardView: UIView {
     private var presses: [Press] = []
     private let glyphs = GlyphCache()
     private let popups = PopupLayers()
+    /// The latest key touch-down, in touch timestamps (system uptime).
+    private var lastKeyDown: TimeInterval?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -62,7 +69,9 @@ final class KeyboardView: UIView {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        point.y >= Self.barHeight - Self.topRowReach && super.point(inside: point, with: event)
+        let now = event?.timestamp ?? CACurrentMediaTime()
+        let reach = BarBand.belongsToKeys(barTappable: barHasTappableContent, sinceKeyDown: lastKeyDown.map { now - $0 })
+        return point.y >= Self.barHeight - (reach ? Self.topRowReach : 0) && super.point(inside: point, with: event)
     }
 
     /// The globe key's cap frame, for the system's input-mode button placed over it.
@@ -191,10 +200,12 @@ final class KeyboardView: UIView {
 
     private func cornerImage(_ key: Layout.Key) -> CGImage? {
         if key.kind == .space { return glyphs.text(layout?.lang == .ar ? "ع" : "A", font: KeyFont.spaceMark, color: palette.secondaryLabel) }
-        // Not on Arabic, like Apple: the corner digit sat on the letters' dots (ف غ خ ث ق).
-        guard showsHints, layout?.lang != .ar, let hint = key.hint else { return nil }
+        guard drawsHint(key), let hint = key.hint else { return nil }
         return glyphs.text(hint, font: KeyFont.hint, color: palette.secondaryLabel)
     }
+
+    /// Not on Arabic, like Apple: the corner digit sat on the letters' dots (ف غ خ ث ق).
+    private func drawsHint(_ key: Layout.Key) -> Bool { showsHints && layout?.lang != .ar && key.hint != nil }
 
     private func cornerCenter(_ key: Layout.Key, image: CGImage?, in bounds: CGRect) -> CGPoint {
         guard let image else { return .zero }
@@ -252,6 +263,7 @@ final class KeyboardView: UIView {
             guard let frame = geometry?.key(at: point) else { continue }
             traceTouch("began", touch, key: frame.key)
             let press = Press(touch: touch, frame: frame, start: point)
+            lastKeyDown = touch.timestamp
             presses.append(press)
             setPressed(frame, true)
             delegate?.keyDown(frame.key)
@@ -286,12 +298,12 @@ final class KeyboardView: UIView {
     private func scheduleLongPress(_ press: Press) {
         press.timer?.invalidate()
         let key = press.frame.key
-        let items = (key.hint.map { [$0] } ?? []) + key.alternates
-        guard !items.isEmpty else { return }
+        guard let strip = longPressStrip(output: key.output, hint: key.hint, alternates: key.alternates, hintShown: drawsHint(key))
+        else { return }
         press.timer = after(0.35) { [weak self, weak press] in
             guard let self, let press else { return }
-            press.strip = items.map { self.isUppercase ? $0.uppercased() : $0 }
-            press.selected = key.hint == nil ? items.firstIndex(of: key.output) ?? 0 : 0
+            press.strip = strip.items.map { self.isUppercase ? $0.uppercased() : $0 }
+            press.selected = strip.selected
             self.popups.hideBubble()
             self.popups.showStrip(items: press.strip ?? [], selected: press.selected, over: press.frame.cap,
                                   in: self.bounds, glyph: { self.stripImage($0) }, palette: self.palette)
@@ -371,7 +383,8 @@ final class KeyboardView: UIView {
     private func startTrackpad(_ press: Press) {
         press.timer?.invalidate()
         guard press.trackpad == nil else { return }
-        press.trackpad = Trackpad(startX: Double(press.touch.location(in: self).x), rightToLeft: layout?.lang == .ar)
+        let rightToLeft = delegate?.trackpadIsRightToLeft() ?? (layout?.lang == .ar)
+        press.trackpad = Trackpad(startX: Double(press.touch.location(in: self).x), downX: Double(press.start.x), rightToLeft: rightToLeft)
         setLabelsHidden(true)
     }
 
@@ -387,7 +400,13 @@ final class KeyboardView: UIView {
         for touch in touches {
             guard let press = presses.first(where: { $0.touch === touch }) else { continue }
             traceTouch("cancelled", touch, key: press.frame.key)
-            finish(press)
+            // SPEC 5.2: a system cancel (edge gesture, banner) still types a letter that was really pressed.
+            let held = CACurrentMediaTime() - press.startTime
+            if CancelledTouch.commits(isChar: press.frame.key.kind == .char, stripOpen: press.strip != nil, heldFor: held) {
+                release(press)
+            } else {
+                finish(press)
+            }
         }
     }
 
@@ -401,13 +420,13 @@ final class KeyboardView: UIView {
     }
 
     /// The touch-up action: a char commits, other keys send keyUp (not a space drag, nor the keys
-    /// that act on touch-down).
+    /// that act on touch-down). A still space hold is a slow tap (SPEC 5.2).
     private func release(_ press: Press) {
         switch press.frame.key.kind {
         case .char:
             commit(press)
             if press.origin == .page { delegate?.pageSlideEnded() }
-        case .space where press.trackpad != nil: break
+        case .space where press.trackpad?.releaseTypesSpace == false: break
         case .backspace, .shift, .page, .gap, .globe: break
         default:
             trace("keyUp \(press.frame.key.kind)")
