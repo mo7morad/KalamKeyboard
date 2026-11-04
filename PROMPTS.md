@@ -206,3 +206,20 @@ Scope (logic in KeyBehavior / TextContext with tests, the extension only calls i
 - An autocorrect committed by punctuation or return can be undone: backspace removes the punctuation, the next one reverts.
 Update SPEC §5.2 and §8.5. Done when: engine tests pass, and docs/device-checklist.md has a Phase 10 section (fast typing, slow space, low bar taps, Arabic slow presses, cancels, mixed-script trackpad, undo after punctuation).
 ```
+
+---
+
+## Phase 11: autocorrect you can trust (docs/rd-plan.md)
+
+```
+Phase 11. Read CLAUDE.md, SPEC §2, §3, §5.4, §8.2, §8.5, §8.6, §9.2, docs/rd-plan.md (Phase 11) and docs/research/04-prediction-autocorrect.md §3 to §5.
+Re-check each item against the current code first; skip and report what's already done.
+Scope (logic in Autocorrect / TextContext / Learner / Engine with tests):
+- Revert memory: deleting an autocorrected word and retyping the literal at the same spot is a rejection, like the one-backspace undo (the literal stays, the pair is stored, the literal counts as accepted).
+- Never correct away a word Moe used 2 or more times (typed or imported), unless it's a recorded typo of another word.
+- Guard rules: no correction inside URLs, paths, domains or emails (the whole token at the cursor), for mixed-script words, or for mid-sentence capitals; a stricter margin for words of 1 to 3 letters (EngineConfig, tuned with eval).
+- Ambiguous contractions (its, were, ill, well, hell, id, shell, wed, shed, lets): suggest the contraction, never auto-apply it.
+- Tap a corrected word (cursor in or after it) to revert it: the bar offers the original, and a tap replaces the whole word around the cursor.
+- Learning hygiene: next-word predictions never offer a word that is neither a valid base word nor known to Moe.
+Update SPEC §3 D8, §5.4, §8.5, §8.6, §9.2. Done when: engine tests pass, the policy table tests are extended, an eval run is logged in docs/eval-log.md with the guards holding, and docs/device-checklist.md has a Phase 11 section.
+```
