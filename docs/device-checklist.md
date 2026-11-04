@@ -40,3 +40,20 @@ Setup: install a Debug build, then Settings > General > Keyboard > Keyboards > A
 - [ ] Note the MB and "free" readings on first open: ____ MB, ____ free.
 - [ ] 20 show/hide cycles across 3 apps (Notes, Messages, WhatsApp): MB grows by less than 2 MB. Final: ____ MB.
 - [ ] The latency field shows "– ms" (Phase 5 fills it).
+
+## Phase 6: host app
+
+Setup: install a Debug build. Keep one WhatsApp `_chat.txt` in Files (extract the zip there first).
+
+- [ ] Setup shows "Kalam is added" once the keyboard is added. (The simulator can't read this, so it stayed hidden there.)
+- [ ] Open Settings lands on Kalam's page, with Keyboards and Allow Full Access.
+- [ ] Import a real `_chat.txt`:
+  - "Mohamed Morad" is preselected and the message counts look right;
+  - the result appears;
+  - the "no base word lists" warning is absent.
+- [ ] A big chat (10k+ messages) imports without freezing the app, and switching apps during the import doesn't kill it.
+- [ ] Learned Words: EN and Arabic lists, search, swipe to forget or block, add a word. Arabic rows read right to left.
+- [ ] Export Backup to Files, then Reset Learning, then Restore from that backup: the words come back.
+- [ ] Restoring a random file shows "This file isn't a Kalam backup." and keeps your data.
+- [ ] Change a setting in the app; the keyboard follows it the next time it appears (needs Phase 5).
+- [ ] Leave the app in the background for a minute while you type in another app: no crash (0xdead10cc).
