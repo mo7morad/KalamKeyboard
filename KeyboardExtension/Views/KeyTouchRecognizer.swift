@@ -9,7 +9,8 @@ import UIKit.UIGestureRecognizerSubclass
 /// anything, and no other recognizer can make it fail.
 final class KeyTouchRecognizer: UIGestureRecognizer {
     var onBegan: (Set<UITouch>) -> Void = { _ in }
-    var onMoved: (Set<UITouch>) -> Void = { _ in }
+    /// With the event, for the samples coalesced into each move.
+    var onMoved: (Set<UITouch>, UIEvent) -> Void = { _, _ in }
     var onEnded: (Set<UITouch>) -> Void = { _ in }
     var onCancelled: (Set<UITouch>) -> Void = { _ in }
     /// The touch sequence ended without an end or cancel for every touch (the view left its window).
@@ -27,7 +28,7 @@ final class KeyTouchRecognizer: UIGestureRecognizer {
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesMoved(touches, with: event)
-        onMoved(touches)
+        onMoved(touches, event)
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {

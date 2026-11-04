@@ -73,7 +73,7 @@ final class KeyboardView: UIView {
         isMultipleTouchEnabled = true
         let touches = KeyTouchRecognizer(target: nil, action: nil)
         touches.onBegan = { [weak self] in self?.began($0) }
-        touches.onMoved = { [weak self] in self?.moved($0) }
+        touches.onMoved = { [weak self] in self?.moved($0, in: $1) }
         touches.onEnded = { [weak self] in self?.ended($0) }
         touches.onCancelled = { [weak self] in self?.cancelled($0) }
         touches.onReset = { [weak self] in self?.dropPresses() }
@@ -258,6 +258,10 @@ final class KeyboardView: UIView {
         let origin: Layout.Key.Kind
         let start: CGPoint
         let startTime: TimeInterval
+        /// The finger's latest sample: its point, its time and the step that brought it there (SPEC 5.2 sudden moves).
+        var last: CGPoint
+        var lastTime: TimeInterval
+        var lastStep: CGFloat = 0
         var timer: Timer?
         var strip: [String]?
         var selected = 0
@@ -265,9 +269,9 @@ final class KeyboardView: UIView {
         var repeats = 0
         var swipeWords: Int?
 
-        init(touch: UITouch, frame: KeyGeometry.Frame, start: CGPoint) {
-            (self.touch, self.frame, self.start) = (touch, frame, start)
-            (origin, startTime) = (frame.key.kind, touch.timestamp)
+        init(touch: UITouch, frame: KeyGeometry.Frame, start: CGPoint, time: TimeInterval) {
+            (self.touch, self.frame, self.start, self.last) = (touch, frame, start, start)
+            (origin, startTime, lastTime) = (frame.key.kind, time, time)
         }
     }
 
@@ -280,22 +284,29 @@ final class KeyboardView: UIView {
     /// From KeyTouchRecognizer, as are the moves, ends and cancels below.
     private func began(_ touches: Set<UITouch>) {
         for touch in touches.sorted(by: { $0.timestamp < $1.timestamp }) {
-            // SPEC 5.2 rollover: a new touch releases any letter, space or return still waiting for
-            // its touch-up, so two thumbs keep their order ("hi there", not "hit here").
-            for press in presses where rollsOver(press) {
-                trace("rollover \(press.frame.key.id)")
-                release(press)
-            }
-            let point = touch.location(in: self)
-            guard let frame = geometry?.key(at: point) else { continue }
-            traceTouch("began", touch, key: frame.key)
-            let press = Press(touch: touch, frame: frame, start: point)
-            lastKeyDown = touch.timestamp
-            presses.append(press)
-            setPressed(frame, true)
-            delegate?.keyDown(frame.key)
-            begin(press)
+            touchDown(touch, at: touch.location(in: self), time: touch.timestamp)
         }
+    }
+
+    /// A finger going down at `point`, from `began` or a sudden move: the rollover, then its press
+    /// with the touch-down feedback. Nil when there is no key to press.
+    @discardableResult
+    private func touchDown(_ touch: UITouch, at point: CGPoint, time: TimeInterval) -> Press? {
+        // SPEC 5.2 rollover: a new touch releases any letter, space or return still waiting for
+        // its touch-up, so two thumbs keep their order ("hi there", not "hit here").
+        for press in presses where rollsOver(press) {
+            trace("rollover \(press.frame.key.id)")
+            release(press)
+        }
+        guard let frame = geometry?.key(at: point) else { return nil }
+        let press = Press(touch: touch, frame: frame, start: point, time: time)
+        traceTouch("began", press, at: point, time: time)
+        lastKeyDown = time
+        presses.append(press)
+        setPressed(frame, true)
+        delegate?.keyDown(frame.key)
+        begin(press)
+        return press
     }
 
     private func begin(_ press: Press) {
@@ -345,29 +356,65 @@ final class KeyboardView: UIView {
         Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { _ in action() }
     }
 
-    private func moved(_ touches: Set<UITouch>) {
+    private func moved(_ touches: Set<UITouch>, in event: UIEvent) {
         for touch in touches {
-            guard let press = presses.first(where: { $0.touch === touch }) else { continue }
-            let point = touch.location(in: self)
-            switch press.frame.key.kind {
-            case .char where press.strip != nil:
-                press.selected = popups.stripIndex(at: point.x)
-                popups.select(press.selected, palette: palette)
-            case .char:
-                if !hidesOnSwipeDown(press, at: point) { slide(press, to: point) }
-            case .shift, .page:
-                slide(press, to: point)
-            case .backspace:
-                swipeBackspace(press, to: point)
-            case .space:
-                if press.trackpad == nil, abs(point.x - press.start.x) > Trackpad.startDistance { startTrackpad(press) }
-                if var pad = press.trackpad {
-                    let offset = pad.offset(toX: Double(point.x), at: touch.timestamp)
-                    press.trackpad = pad
-                    if offset != 0 { delegate?.moveCursor(by: offset) }
-                }
-            default: break
+            guard let found = presses.first(where: { $0.touch === touch }),
+                  let press = track(found, through: event.coalescedTouches(for: touch) ?? [touch]) else { continue }
+            follow(press, to: touch.location(in: self))
+        }
+    }
+
+    /// Takes a press through its touch's samples since the last move, one at a time, so a sudden
+    /// step can't hide among them. SPEC 5.2 sudden moves: a long step from rest is the next
+    /// finger landing, reported as this one moving. The press goes through its touch-up, and the
+    /// new point gets a touch-down of its own. Returns the touch's press after the samples, if any.
+    private func track(_ press: Press, through samples: [UITouch]) -> Press? {
+        var press = press
+        for sample in samples {
+            let point = sample.location(in: self)
+            let step = hypot(point.x - press.last.x, point.y - press.last.y)
+            if isSuddenMove(press, step: step, at: sample.timestamp) {
+                trace(String(format: "sudden move from %@, %.1f pt, %.1f ms after a %.1f pt step", press.frame.key.id, Double(step),
+                             (sample.timestamp - press.lastTime) * 1000, Double(press.lastStep)))
+                release(press)
+                // Landed outside the keys (in the bar): meant for the bar, which can't have this touch.
+                guard self.point(inside: point, with: nil),
+                      let landed = touchDown(press.touch, at: point, time: sample.timestamp) else { return nil }
+                press = landed
             }
+            (press.last, press.lastTime, press.lastStep) = (point, sample.timestamp, step)
+        }
+        return press
+    }
+
+    /// A press that can still be a tap: no strip pick, cursor move or backspace swipe under way
+    /// (there a fast finger is the finger's own).
+    private func isSuddenMove(_ press: Press, step: CGFloat, at time: TimeInterval) -> Bool {
+        guard let geometry, press.strip == nil, press.trackpad?.movedCursor != true, press.swipeWords == nil else { return false }
+        return SuddenMove.isNewTouch(step: Double(step), stepBefore: Double(press.lastStep), interval: time - press.lastTime,
+                                     keyWidth: Double(geometry.unit))
+    }
+
+    /// The finger now at `point`: the strip pick, a slide, the backspace swipe or the trackpad.
+    private func follow(_ press: Press, to point: CGPoint) {
+        switch press.frame.key.kind {
+        case .char where press.strip != nil:
+            press.selected = popups.stripIndex(at: point.x)
+            popups.select(press.selected, palette: palette)
+        case .char:
+            if !hidesOnSwipeDown(press, at: point) { slide(press, to: point) }
+        case .shift, .page:
+            slide(press, to: point)
+        case .backspace:
+            swipeBackspace(press, to: point)
+        case .space:
+            if press.trackpad == nil, abs(point.x - press.start.x) > Trackpad.startDistance { startTrackpad(press) }
+            if var pad = press.trackpad {
+                let offset = pad.offset(toX: Double(point.x), at: press.touch.timestamp)
+                press.trackpad = pad
+                if offset != 0 { delegate?.moveCursor(by: offset) }
+            }
+        default: break
         }
     }
 
@@ -424,7 +471,8 @@ final class KeyboardView: UIView {
     private func ended(_ touches: Set<UITouch>) {
         for touch in touches.sorted(by: { $0.timestamp < $1.timestamp }) {
             guard let press = presses.first(where: { $0.touch === touch }) else { continue }
-            traceTouch("ended", touch, key: press.frame.key)
+            press.last = touch.location(in: self)
+            traceTouch("ended", press, at: press.last, time: touch.timestamp)
             release(press)
         }
     }
@@ -434,7 +482,7 @@ final class KeyboardView: UIView {
     private func cancelled(_ touches: Set<UITouch>) {
         for touch in touches {
             guard let press = presses.first(where: { $0.touch === touch }) else { continue }
-            traceTouch("cancelled", touch, key: press.frame.key)
+            traceTouch("cancelled", press, at: touch.location(in: self), time: touch.timestamp)
             // SPEC 5.2: a system cancel (edge gesture, banner) still types a letter that was really pressed.
             let held = CACurrentMediaTime() - press.startTime
             if CancelledTouch.commits(isChar: press.frame.key.kind == .char, stripOpen: press.strip != nil, heldFor: held) {
@@ -473,17 +521,18 @@ final class KeyboardView: UIView {
     private func commit(_ press: Press) {
         let picked = press.strip.map { $0[press.selected] } ?? press.frame.key.output
         let text = press.origin == .shift ? picked.uppercased() : picked  // shift may be off by now
-        let point = press.strip == nil && !press.frame.inNumberRow ? geometry?.keyUnits(press.touch.location(in: self)) : nil
+        // The finger's own last point: after a sudden move the touch is already at the next key.
+        let point = press.strip == nil && !press.frame.inNumberRow ? geometry?.keyUnits(press.last) : nil
         trace("commit \(text.debugDescription)")
         delegate?.commit(text, at: point)
     }
 
-    private func traceTouch(_ phase: String, _ touch: UITouch, key: Layout.Key) {
+    private func traceTouch(_ phase: String, _ press: Press, at point: CGPoint, time: TimeInterval) {
         trace({
-            let units = geometry?.keyUnits(touch.location(in: self)) ?? Point(x: -1, y: -1)
+            let units = geometry?.keyUnits(point) ?? Point(x: -1, y: -1)
             // The id matches the touch's "spy" lines (Debug/TouchSpy); kalam-cli tapmap reads only up to the point.
-            return String(format: "touch %@ %@ at %.2f,%.2f lag %.1f ms id %@", phase, key.id, units.x, units.y,
-                          (CACurrentMediaTime() - touch.timestamp) * 1000, "\(Unmanaged.passUnretained(touch).toOpaque())")
+            return String(format: "touch %@ %@ at %.2f,%.2f lag %.1f ms id %@", phase, press.frame.key.id, units.x, units.y,
+                          (CACurrentMediaTime() - time) * 1000, "\(Unmanaged.passUnretained(press.touch).toOpaque())")
         }())
     }
 

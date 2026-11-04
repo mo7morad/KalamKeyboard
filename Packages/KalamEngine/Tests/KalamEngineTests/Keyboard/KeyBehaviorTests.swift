@@ -257,3 +257,16 @@ func backspaceSwipeDeletesOneMoreWordEvery22Points(dx: Double, expected: Int) {
 func swipeDownHidesOnlyWhenFastStraightAndFromTheUpperRows(row: Int, dx: Double, dy: Double, elapsed: Double, expected: Bool) {
     #expect(SwipeDownHide.triggers(startRow: row, dx: dx, dy: dy, elapsed: elapsed) == expected)
 }
+
+@Test(arguments: [
+    (23.9, 0.0, 0.008, false),  // under 0.6 of a key: the finger itself (a slide, a thumb rolling off as it lifts)
+    (24, 0, 0.008, true),  // 0.6 of a key from rest: the next finger landing
+    (90, 2, 0.008, true),  // a jump across the keyboard
+    (90, 9.9, 0.008, true),
+    (90, 10, 0.008, false),  // a quarter key in the sample just before: a flick or a quick drag
+    (90, 10, 0.019, false),
+    (90, 10, 0.02, true),  // no sample for 20 ms: that finger was at rest (it landed with a jump, then held still)
+] as [(Double, Double, Double, Bool)])
+func suddenMoveFromRestIsANewTouch(step: Double, before: Double, interval: Double, newTouch: Bool) {
+    #expect(SuddenMove.isNewTouch(step: step, stepBefore: before, interval: interval, keyWidth: 40) == newTouch)
+}

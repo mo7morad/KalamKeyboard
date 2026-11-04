@@ -236,3 +236,26 @@ public enum SwipeDownHide {
         startRow <= 1 && dy >= minDown && abs(dx) < maxSideways && elapsed <= maxDuration
     }
 }
+
+/// SPEC 5.2 sudden moves: when one finger lifts as another lands, the touch screen can report the
+/// two taps as one touch that jumps to the second key (LatinIME's "phantom sudden move": "quick
+/// successive touches may be reported as a sudden move by touch panel firmware"). A finger at rest
+/// never covers 0.6 of a key in one touch sample (about 2,800 pt/s at 120 Hz; a thumb rolling off a
+/// key as it lifts moves far less), so that step is a lift and a new touch-down. A finger already
+/// moving fast (a flick, a quick drag) is left alone.
+public enum SuddenMove {
+    /// In key widths.
+    static let minStep: Double = 0.6
+    /// A finger whose previous step was this long (in key widths) was moving fast...
+    static let fastStep: Double = 0.25
+    /// ...unless that step came this long before: samples come every 8 ms at 120 Hz, so a finger
+    /// with none for 20 ms was at rest.
+    static let restAfter: TimeInterval = 0.02
+
+    /// Whether a step of `step` points between two samples is a new touch, after a previous step of
+    /// `stepBefore` points `interval` seconds before it.
+    public static func isNewTouch(step: Double, stepBefore: Double, interval: TimeInterval, keyWidth: Double) -> Bool {
+        let movingFast = stepBefore >= fastStep * keyWidth && interval < restAfter
+        return step >= minStep * keyWidth && !movingFast
+    }
+}

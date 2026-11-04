@@ -260,3 +260,13 @@ Setup: install a Debug build with Full Access on. Test in Notes, then WhatsApp, 
 - [ ] Nothing else changed: slides between keys, long-press strips, the space trackpad, backspace hold and swipe, shift and 123 slides, swipe down to hide, and the bar and panels (they keep iOS's own touch timing) ____.
 - [ ] If taps still drop, compare: the same sentence just as fast on Apple's keyboard (haptics on): any tap with no buzz there ____? On Gboard or another third-party keyboard, if installed ____?
 - [ ] Then on Kalam, Debug build: delete `kalam-trace.log`, open Notes, type "the quick brown fox jumps over the lazy dog" 3 times fast, note how many letters went missing ____, and send the trace. It now has a "spy" line for every touch the keyboard's window got and a "touch" line for every touch the keys got (matched by id), plus every gesture recognizer on the window with its delays, so a missing letter shows where the touch stopped: never reached Kalam, held back by a system recognizer, or reached the keys.
+
+## Device round 4: sudden moves
+
+Round 3's touch intake didn't fix the lost taps (Moe: still no buzz and no letter on fast taps that change letters). The likely cause: when one thumb lifts just as the other lands, the screen reports the two taps as one finger jumping to the second key, and Kalam took the jump as a slide. A jump now types the first key and presses the second, with its own buzz (SPEC 5.2 sudden moves). Install a Debug build from `development`, Full Access on, haptics on. Test in Notes, EN then AR.
+
+- [ ] Two thumbs, as fast as you type, changing letters: "the quick brown fox jumps over the lazy dog" 3 times. Every tap buzzes and types ____. Letters missing, if any: ____.
+- [ ] Word gaps: "hello world how are you" 3 times fast. No space lost, and no first letter lost after a space ____.
+- [ ] Nothing doubled: no tap types two letters ____.
+- [ ] Still the same: touch a letter, slide to its neighbour and lift: only the neighbour is typed ____. Shift slid onto a letter, 123 slid onto a digit ____. The space trackpad, including a quick flick ____. Backspace hold and swipe ____. Swipe down to hide ____.
+- [ ] If taps still drop: does Apple's keyboard drop any at the same speed ____? Then pull the trace on the Mac and send it: `xcrun devicectl device copy from --device <iPhone name> --domain-type appGroupDataContainer --domain-identifier group.com.morad.kalam --source Library/Caches/kalam-trace.log --destination ~/Desktop/kalam-trace.log`. Its "sudden move" lines are the jumps Kalam split; a lost tap with neither a "sudden move" nor a "spy began" line never reached Kalam.
