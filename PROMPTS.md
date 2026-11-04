@@ -254,3 +254,19 @@ Scope (engine with tests):
 - Sentence start: base bigrams after <s> get less weight against the unigram and Moe's own (EngineConfig, tuned with eval; docs/issues.md).
 Update SPEC §5.4, §8.2, §8.3. Done when: engine tests pass, an eval run is logged with the guards holding, and docs/device-checklist.md has a Phase 13 section (incl. backspace with tashkeel and lam-alef).
 ```
+
+---
+
+## Phase 14: text polish (docs/rd-plan.md, Apple parity)
+
+```
+Phase 14. Read CLAUDE.md, SPEC §2, §3, §5.2, §5.4, §8.6, §8.7, docs/rd-plan.md (Phase 14) and docs/research/05-code-audit.md §2.
+Re-check each item against the current code first; skip and report what's already done (the mid-word suggestion tap was done in Phase 11).
+Scope (rules in TextContext / KeyBehavior with tests, the extension calls them):
+- The space before . , ? ! goes after a plain typed space too; a space right after an auto-space adds nothing.
+- Quotes: an opening quote after a space keeps it, a closing one takes its place. Auto-capitals after ." .) ?" and the like.
+- Caps lock makes suggestions all caps. Holding shift while typing capitalizes every letter.
+- Backspace acceleration (0.5 s delay, 0.1 s then 0.06 s, slower whole words) and trackpad acceleration.
+- Bar slots highlight, buzz and click on touch-down, like keys.
+Update SPEC §5.2, §5.4, §8.6, §8.7. Done when: engine tests pass and docs/device-checklist.md has a Phase 14 section (side by side with Apple's keyboard).
+```
