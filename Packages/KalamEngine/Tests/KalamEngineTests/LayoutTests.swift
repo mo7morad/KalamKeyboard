@@ -38,6 +38,8 @@ func everyPageLoadsWithUniqueIDsAndFullRows(_ id: String) throws {
     func alternates(_ keys: some Sequence<Layout.Key>, _ id: String) -> [String] { keys.first { $0.id == id }?.alternates ?? [] }
     #expect(alternates(en, "e") == ["ë", "é", "e", "è", "ê", "ě", "ẽ", "ē", "ė", "ę"])
     #expect(alternates(en, "c") == ["c", "ç", "ć", "č", "ċ"])
+    #expect(alternates(en, "o") == ["ő", "ō", "õ", "ø", "œ", "ǒ", "ö", "ó", "ò", "o", "ô"])  // Phase 5 recapture
+    #expect(alternates(en, "l") == ["ľ", "ļ", "ł", "l"])
     // SPEC 5.1 minimums for Arabic.
     #expect(Set(["أ", "إ", "آ", "ء"]).isSubset(of: alternates(ar, "ا")))
     #expect(Set(["ى", "ئ"]).isSubset(of: alternates(ar, "ي")))

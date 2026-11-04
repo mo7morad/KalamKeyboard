@@ -8,27 +8,27 @@
   {"id": "e", "label": "e", "alternates": ["ë", "é", "e", "è", "ê", "ě", "ẽ", "ē", "ė", "ę"], "hint": "3"},
   {"id": "r", "label": "r", "hint": "4"},
   {"id": "t", "label": "t", "hint": "5"},
-  {"id": "y", "label": "y", "hint": "6"},
+  {"id": "y", "label": "y", "alternates": ["ÿ", "ŷ", "ý", "y"], "hint": "6"},
   {"id": "u", "label": "u", "alternates": ["ų", "ů", "ű", "ũ", "ü", "ú", "ù", "u", "û", "ǔ", "ū"], "hint": "7"},
-  {"id": "i", "label": "i", "hint": "8"},
-  {"id": "o", "label": "o", "hint": "9"},
+  {"id": "i", "label": "i", "alternates": ["į", "ı", "ī", "ĩ", "ï", "í", "ì", "i", "î", "ǐ"], "hint": "8"},
+  {"id": "o", "label": "o", "alternates": ["ő", "ō", "õ", "ø", "œ", "ǒ", "ö", "ó", "ò", "o", "ô"], "hint": "9"},
   {"id": "p", "label": "p", "hint": "0"}
  ],
  [
   {"id": "a", "label": "a", "alternates": ["æ", "ã", "å", "ā", "ă", "ą", "a", "à", "á", "â", "ä", "ǎ"]},
-  {"id": "s", "label": "s"},
+  {"id": "s", "label": "s", "alternates": ["s", "ß", "ş", "ș", "ś", "š"]},
   {"id": "d", "label": "d"},
   {"id": "f", "label": "f"},
   {"id": "g", "label": "g"},
   {"id": "h", "label": "h"},
   {"id": "j", "label": "j"},
   {"id": "k", "label": "k", "alternates": ["ķ", "k"]},
-  {"id": "l", "label": "l"}
+  {"id": "l", "label": "l", "alternates": ["ľ", "ļ", "ł", "l"]}
  ],
  [
   {"id": "shift", "label": "", "kind": "shift", "width": 1.3},
   {"id": "gap-l", "label": "", "kind": "gap", "width": 0.2},
-  {"id": "z", "label": "z"},
+  {"id": "z", "label": "z", "alternates": ["z", "ź", "ž", "ż"]},
   {"id": "x", "label": "x"},
   {"id": "c", "label": "c", "alternates": ["c", "ç", "ć", "č", "ċ"]},
   {"id": "v", "label": "v"},

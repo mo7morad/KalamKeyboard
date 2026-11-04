@@ -10,3 +10,11 @@ What to look for:
 - Popups can't rise above the keyboard in a third-party keyboard, so top-row popups (`popup-e`, `keypress-q`) are pushed down over the top row. `keypress-q` shows Kalam's long-press strip, because the capture held q long enough to open it.
 
 To recapture, use `../harness/UITests/Kalam.swift` with the harness described in `../README.md` (`testEnableFullAccess` once, then `testPages` per appearance).
+
+## Suggestion bar (Phase 5, Debug build, light)
+
+- `bar-en-typing.png`: "teh" typed. The pending autocorrect "the" is bold in the middle, the quoted literal on the left.
+- `bar-en-predictions.png`: after the space that fixed it ("the "), three next-word predictions.
+- `bar-ar-typing.png`: "انا" typed. The slots are mirrored (primary in the middle, alt1 on the right), and the variant أنا is offered as a suggestion.
+
+They come from `../harness/UITests/Phase5.swift` (`testTypoUndoArabic`), which also checks the field text: "teh" + space gives "the ", and one backspace gives "teh" back. `testPickPunctuationBlock` checks a suggestion tap ("hel" -> "he "), punctuation spacing ("he, ") and the "Don’t suggest" overlay.

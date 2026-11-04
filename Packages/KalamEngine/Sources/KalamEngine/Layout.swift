@@ -77,6 +77,25 @@ public struct Layout: Codable, Sendable {
         return Layout(id: id, lang: lang, rows: rows)
     }
 
+    /// Every digit on the page as Eastern Arabic (١٢٣) or Western (123), for the Arabic pages'
+    /// easternArabicDigits setting: the 123 page, the top-row hints and their long-press picks.
+    public func withDigits(eastern: Bool) -> Layout {
+        func convert(_ text: String) -> String {
+            String(String.UnicodeScalarView(text.unicodeScalars.map { scalar in
+                let (from, to): (UInt32, UInt32) = eastern ? (0x30, 0x660) : (0x660, 0x30)
+                guard (from...from + 9).contains(scalar.value) else { return scalar }
+                return Unicode.Scalar(scalar.value - from + to) ?? scalar
+            }))
+        }
+        let rows = rows.map { row in
+            row.map { key in
+                Key(id: convert(key.id), label: convert(key.label), output: convert(key.output), width: key.width, kind: key.kind,
+                    alternates: key.alternates.map(convert), popup: key.popup, hint: key.hint.map(convert))
+            }
+        }
+        return Layout(id: id, lang: lang, rows: rows)
+    }
+
     /// Char key output -> key center in key units. x counts key widths from the left edge of the
     /// widest row (narrower rows are centered); y counts rows, so row 0 centers at y = 0.5.
     public func keyCenters() -> [String: Point] {

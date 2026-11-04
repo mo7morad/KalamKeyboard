@@ -1,4 +1,5 @@
 import AudioToolbox
+import KalamEngine
 import UIKit
 
 /// SPEC 5.3: a light haptic and a system click on touch-down. No AVAudioPlayer or audio session.
@@ -8,11 +9,7 @@ final class FeedbackPlayer {
     }
 
     private let generator = UIImpactFeedbackGenerator(style: .light)
-    private let settings: KeyboardSettings
-
-    init(settings: KeyboardSettings) {
-        self.settings = settings
-    }
+    var settings = Settings()
 
     func prepare() {
         if settings.haptics { generator.prepare() }
@@ -20,7 +17,7 @@ final class FeedbackPlayer {
 
     func touchDown(_ sound: Sound) {
         if settings.haptics {
-            generator.impactOccurred(intensity: settings.hapticStrength)
+            generator.impactOccurred(intensity: CGFloat(settings.hapticStrength))
             generator.prepare()
         }
         play(sound)

@@ -3,9 +3,9 @@ import os
 import UIKit
 
 /// Debug-only readout (SPEC §11): phys_footprint, os_proc_available_memory headroom, and the last
-/// suggestion latency, which Phase 5 sets.
+/// suggestion latency, refreshed every second.
 final class DebugOverlay: UILabel {
-    var latencyMs: Double? { didSet { refresh() } }
+    var latencyMs: () -> Double? = { nil }
     private var timer: Timer?
     private static let log = Logger(subsystem: "com.morad.kalam.keyboard", category: "memory")
 
@@ -29,7 +29,7 @@ final class DebugOverlay: UILabel {
     }
 
     private func refresh() {
-        let latency = latencyMs.map { String(format: "%.1f ms", $0) } ?? "– ms"
+        let latency = latencyMs().map { String(format: "%.1f ms", $0) } ?? "– ms"
         text = String(format: "%.1f MB · %.1f free · ", Self.footprintMB, Self.headroomMB) + latency
     }
 

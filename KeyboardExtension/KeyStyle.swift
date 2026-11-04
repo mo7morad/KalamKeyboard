@@ -50,6 +50,7 @@ enum KeyFont {
     static let hint = UIFont.systemFont(ofSize: 10, weight: .regular)
     static let spaceMark = UIFont.systemFont(ofSize: 10, weight: .regular)
     static let bar = UIFont.systemFont(ofSize: 17, weight: .regular)
+    static let barBold = UIFont.systemFont(ofSize: 17, weight: .semibold)
     static let iconSize: CGFloat = 19
 }
 

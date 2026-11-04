@@ -27,6 +27,7 @@ Every capture has a `-light.png` and a `-dark.png` version.
 | `ar-symbols` | AR #+= page |
 | `ar-letters-nobar` | AR letters with the bar hidden |
 | `popup-e`, `popup-a`, `popup-u`, `popup-n`, `popup-c` | EN long-press alternates |
+| `popup-i`, `popup-o`, `popup-s`, `popup-y`, `popup-z`, `popup-l` | More EN alternates (Phase 5, light only, cropped to the keyboard top; `harness/UITests/Accents.swift`) |
 | `popup-alef`, `popup-yeh`, `popup-waw`, `popup-heh` | AR long-press alternates for ا ي و ه |
 | `popup-kaf` | AR ك held down. It turned out to have an alternate (گ). |
 | `keypress-f` | Key-press preview bubble: finger down on `f`, which has no alternates |

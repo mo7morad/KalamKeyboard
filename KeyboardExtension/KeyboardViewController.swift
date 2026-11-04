@@ -1,13 +1,15 @@
 import KalamEngine
 import UIKit
 
-/// Phase 1 keyboard shell: pages, shift, editing keys and feedback, no engine (SPEC 5).
+/// The keyboard (SPEC 5): pages, shift, feedback and the suggestion bar. Typing state lives in
+/// InputController, the engine behind EngineClient.
 final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate {
-    /// Every committed letter tap with its point in key units (SPEC 5.2). Phase 5 consumes it.
-    var onTap: ((Tap) -> Void)?
-
-    private let settings = KeyboardSettings.current
-    private lazy var feedback = FeedbackPlayer(settings: settings)
+    private var settings = Settings.load()
+    private let feedback = FeedbackPlayer()
+    private let client = EngineClient()
+    private lazy var input = InputController(proxy: textDocumentProxy, client: client)
+    private var writeTimer: Timer?
+    private var isVisible = false
     private let keyboardView = KeyboardView()
     private let bar = SuggestionBar()
     private let globeButton = UIButton(type: .custom)
@@ -15,10 +17,17 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     private let overlay = DebugOverlay()
     #endif
 
-    private var lang = KeyboardSettings.lastLanguage
+    private var lang = lastLanguage
     private var page = "letters"
     private var shift = ShiftState()
-    private var lastKeyWasSpace = false
+
+    private static let lastLanguageKey = "lastLanguage"
+
+    /// The last EN/AR choice (SPEC 5.2), in the extension's own defaults: App Group writes need Full Access.
+    private static var lastLanguage: Lang {
+        get { UserDefaults.standard.string(forKey: lastLanguageKey).flatMap(Lang.init(rawValue:)) ?? .en }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: lastLanguageKey) }
+    }
 
     override func loadView() {
         let inputView = UIInputView(frame: .zero, inputViewStyle: .keyboard)
@@ -30,7 +39,19 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         super.viewDidLoad()
         view.accessibilityIdentifier = "kalam"
         keyboardView.delegate = self
-        keyboardView.showsHints = settings.digitHints
+        input.lang = lang
+        input.isShifted = { [weak self] in self?.shift.mode != .off }
+        input.onEdit = { [weak self] in
+            self?.refreshAutoShift()
+            self?.refreshReturnKey()
+        }
+        input.onSlots = { [weak self] in self?.bar.slots = $0 }
+        bar.onPick = { [weak self] in self?.input.accept($0) }
+        bar.onBlock = { [weak self] in self?.input.block($0) }
+        for name in [NSNotification.Name.NSExtensionHostWillResignActive, .NSExtensionHostDidEnterBackground] {
+            NotificationCenter.default.addObserver(self, selector: #selector(hostWillHide), name: name, object: nil)
+        }
+        NotificationCenter.default.addObserver(self, selector: #selector(hostDidBecomeActive), name: .NSExtensionHostDidBecomeActive, object: nil)
         registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: Self, _) in self.refreshAppearance() }
         globeButton.addTarget(self, action: #selector(handleInputModeList(from:with:)), for: .allTouchEvents)
         for subview in [bar, keyboardView, globeButton] {
@@ -49,19 +70,36 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
             keyboardView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
         #if DEBUG
-        if settings.debugOverlay {
-            overlay.frame = CGRect(x: 28, y: 2, width: 220, height: 12)
-            view.addSubview(overlay)
-        }
+        overlay.frame = CGRect(x: 28, y: 2, width: 220, height: 12)
+        overlay.latencyMs = { [weak self] in self?.client.latest?.latencyMs }
         #endif
         reloadLayout()
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        isVisible = true
+        applySettings()
         feedback.prepare()
         reloadLayout()  // needsInputModeSwitchKey is reliable from here on
+        client.open()  // also picks up the host app's changes (import, forget, reset, restore)
         refreshHostState()
+        input.resync()
+        importLexiconIfDue()
+        writeTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.client.writeIfDue() }
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        isVisible = false
+        writeTimer?.invalidate()
+        client.close()
+    }
+
+    @objc private func hostWillHide() { client.close() }
+
+    @objc private func hostDidBecomeActive() {
+        if isVisible { client.open() }
     }
 
     override func viewDidLayoutSubviews() {
@@ -72,19 +110,49 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
         refreshHostState()
+        input.hostTextChanged()
+    }
+
+    override func selectionDidChange(_ textInput: UITextInput?) {
+        super.selectionDidChange(textInput)
+        input.hostTextChanged()
     }
 
     /// CLAUDE.md: the controller is recreated per host app; release its views a turn later.
     deinit {
+        writeTimer?.invalidate()
         let views = viewIfLoaded?.subviews ?? []
         DispatchQueue.main.async { views.forEach { $0.removeFromSuperview() } }
     }
 
     // MARK: State
 
+    /// Settings are re-read on every appear, so the host app's changes apply the next time.
+    private func applySettings() {
+        settings = Settings.load()
+        feedback.settings = settings
+        input.settings = settings
+        keyboardView.showsHints = settings.digitHints
+        client.setLearning(traits: input.traits, paused: settings.pauseLearning)
+        #if DEBUG
+        if settings.debugOverlay { view.addSubview(overlay) } else { overlay.removeFromSuperview() }
+        #endif
+    }
+
+    /// SPEC 9.2: UILexicon entries (contact names, text replacements) on the first launch, then weekly.
+    private func importLexiconIfDue() {
+        let key = "lexiconImportedAt"
+        guard hasFullAccess, !settings.pauseLearning, let defaults = UserDefaults(suiteName: Settings.appGroup) else { return }
+        let now = Date().timeIntervalSince1970
+        guard now - defaults.double(forKey: key) >= 7 * 86_400 else { return }
+        defaults.set(now, forKey: key)
+        requestSupplementaryLexicon { [client] lexicon in client.addLexiconEntries(lexicon.entries.map(\.documentText)) }
+    }
+
     private func reloadLayout() {
         let id = "\(lang.rawValue)-\(page)"
-        let layout = Layout.bundled(id)
+        let bundled = Layout.bundled(id)
+        let layout = lang == .ar ? bundled?.withDigits(eastern: settings.easternArabicDigits) : bundled
         view.accessibilityValue = id  // lets UI tests see the page; keys are layer-drawn
         keyboardView.layout = needsInputModeSwitchKey ? layout?.withGlobeKey() : layout
         keyboardView.shift = shift.mode
@@ -93,9 +161,32 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
 
     private func refreshHostState() {
         bar.hasFullAccess = hasFullAccess
+        let traits = fieldTraits
+        if traits != input.traits {
+            input.traits = traits
+            client.setLearning(traits: traits, paused: settings.pauseLearning)
+        }
         refreshAppearance()
         refreshReturnKey()
         refreshAutoShift()
+    }
+
+    /// SPEC 8.5 rule 1 and 9.2: no autocorrect or learning in URL, email, password and code fields.
+    /// Safari's address bar is a web-search field, so web search counts as URL. Without Full Access
+    /// the bar shows its banner instead of suggestions, so an autocorrect couldn't be seen coming: none.
+    private var fieldTraits: FieldTraits {
+        let proxy = textDocumentProxy
+        let keyboardType: FieldTraits.KeyboardType = switch proxy.keyboardType ?? .default {
+        case .URL, .webSearch: .url
+        case .emailAddress: .email
+        default: .other
+        }
+        let contentType: FieldTraits.ContentType = switch proxy.textContentType ?? nil {
+        case UITextContentType.password?, UITextContentType.newPassword?: .password
+        case UITextContentType.oneTimeCode?: .oneTimeCode
+        default: .other
+        }
+        return FieldTraits(autocorrection: proxy.autocorrectionType != .no && hasFullAccess, keyboardType: keyboardType, contentType: contentType)
     }
 
     private func refreshAppearance() {
@@ -150,28 +241,33 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         case .char: feedback.touchDown(.key)
         case .backspace:
             feedback.touchDown(.delete)
-            deleteBackward(1)
+            input.backspace(1)
         case .shift:
             feedback.touchDown(.modifier)
             shift.tap(at: ProcessInfo.processInfo.systemUptime)
             keyboardView.shift = shift.mode
+            input.redrawBar()
         default: feedback.touchDown(.modifier)
         }
     }
 
     func keyUp(_ key: Layout.Key) {
         switch key.kind {
-        case .space: typeSpace()
-        case .return: insert("\n")
+        case .space:
+            input.typeSpace()
+            if page == "numbers" { showLetters() }
+        case .return: input.typeReturn()
         case .page:
             page = key.output
             reloadLayout()
         case .lang:
             lang = lang == .en ? .ar : .en
-            KeyboardSettings.lastLanguage = lang
+            Self.lastLanguage = lang
             page = "letters"
             reloadLayout()
             refreshHostState()
+            input.lang = lang
+            input.refresh()
         default: break
         }
     }
@@ -179,48 +275,19 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     func commit(_ text: String, at point: Point?) {
         let output = lang == .en && shift.mode != .off ? text.uppercased() : text
         shift.letterTyped()
-        insert(output)
-        onTap?(Tap(output, at: point))
+        input.type(output, at: page == "letters" ? point : nil)  // the engine's spatial model knows the letters page only
         // SPEC 5.2: an apostrophe on the 123 page returns to letters.
         if page == "numbers", output == "'" { showLetters() }
     }
 
     func backspaceRepeated(_ count: Int) {
         let word = BackspaceRepeat.deletesWord(repeat: count)
-        deleteBackward(word ? BackspaceRepeat.wordLength(before: textDocumentProxy.documentContextBeforeInput ?? "") : 1)
+        input.backspace(word ? BackspaceRepeat.wordLength(before: textDocumentProxy.documentContextBeforeInput ?? "") : 1)
         feedback.play(.delete)
     }
 
     func moveCursor(by offset: Int) {
         textDocumentProxy.adjustTextPosition(byCharacterOffset: offset)
-    }
-
-    // MARK: Editing
-
-    private func typeSpace() {
-        let before = textDocumentProxy.documentContextBeforeInput ?? ""
-        if settings.doubleSpacePeriod, lastKeyWasSpace, doubleSpaceBecomesPeriod(before: before) {
-            textDocumentProxy.deleteBackward()
-            insert(". ")
-        } else {
-            insert(" ")
-            lastKeyWasSpace = true
-        }
-        if page == "numbers" { showLetters() }
-    }
-
-    private func insert(_ text: String) {
-        textDocumentProxy.insertText(text)
-        lastKeyWasSpace = false
-        refreshAutoShift()
-        refreshReturnKey()
-    }
-
-    private func deleteBackward(_ count: Int) {
-        for _ in 0..<count { textDocumentProxy.deleteBackward() }
-        lastKeyWasSpace = false
-        refreshAutoShift()
-        refreshReturnKey()
     }
 
     private func showLetters() {

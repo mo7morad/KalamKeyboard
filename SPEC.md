@@ -164,7 +164,7 @@ There is a single `FeedbackPlayer`, called on touch-down for every key.
 - **With an empty current word:** the bar shows 3 next-word predictions.
 - **Tapping a suggestion** replaces the current word (or inserts the prediction) and adds an auto-space. Tapping the literal is an explicit accept, so the word is learned.
 - **Blocking a word:** long-press a suggestion to open a small in-keyboard overlay, "Don't suggest ‘x’". This blocks the word (the host app lists it as Blocked; there, "Forget" deletes a word's learned data instead). Use no alerts, since extensions can't show them.
-- **Without Full Access:** the bar shows "Turn on Full Access for learning, haptics and sounds".
+- **Without Full Access:** the bar shows "Turn on Full Access for learning, haptics and sounds", and autocorrect is off, since it couldn't be seen pending.
 
 ## 6. Text processing (engine)
 

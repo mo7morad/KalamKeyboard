@@ -14,7 +14,7 @@ func shotAsync(_ name: String, delay: Double) {
     try! "\(delay)".write(toFile: "\(base)/req/\(name)", atomically: true, encoding: .utf8)
 }
 
-final class Capture: XCTestCase {
+class Capture: XCTestCase {
     var app: XCUIApplication!
     var kb: XCUIElement { app.keyboards.firstMatch }
 
