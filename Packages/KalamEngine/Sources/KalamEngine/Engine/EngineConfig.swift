@@ -9,6 +9,15 @@ public struct EngineConfig: Sendable {
     public var hamzaOmissionCost = 1.2
     public var transpositionCost = 2.0
     public var farSubstitutionCost = 5.0
+    public var learnedConfusionCost = 2.5  // a far substitution (typed char -> intended) Moe's corrections show...
+    public var learnedConfusionMinCorrections = 2  // ...in this many distinct corrections
+    // Tap offset: where Moe's taps land relative to a key center, in key units (y: 1.0 = one 54 pt row,
+    // negative = above). The device round 2 trace puts them about 7 pt above the caps' centers (eval-log Phase 12).
+    public var tapOffsetX = 0.0
+    public var tapOffsetY = -0.13
+    public var keyOffsetPrior = 20.0  // K: a key's learned mean counts as K samples of the all-keys mean
+    public var keyOffsetMaxSamples = 300  // n stops growing here, so the running mean keeps adapting
+    public var keyOffsetCap = 0.3  // key widths: the anchor, so a key's center always maps to that key
     public var maxEdits = 2
     public var maxEditsShortLiteral = 1
     public var shortLiteralLength = 4  // literals this short get maxEditsShortLiteral
@@ -68,7 +77,8 @@ public struct EngineConfig: Sendable {
         "matchRadius": \.matchRadius, "sigma": \.sigma, "insertionCost": \.insertionCost,
         "omissionCost": \.omissionCost, "doubledOmissionCost": \.doubledOmissionCost,
         "hamzaOmissionCost": \.hamzaOmissionCost, "transpositionCost": \.transpositionCost,
-        "farSubstitutionCost": \.farSubstitutionCost, "completionPenalty": \.completionPenalty,
+        "farSubstitutionCost": \.farSubstitutionCost, "learnedConfusionCost": \.learnedConfusionCost,
+        "tapOffsetX": \.tapOffsetX, "tapOffsetY": \.tapOffsetY, "keyOffsetPrior": \.keyOffsetPrior, "keyOffsetCap": \.keyOffsetCap, "completionPenalty": \.completionPenalty,
         "unknownLogProbEN": \.unknownLogProbEN, "unknownLogProbAR": \.unknownLogProbAR, "alpha": \.alpha, "trigramWeight": \.trigramWeight,
         "bigramShare": \.bigramShare, "personalContextPrior": \.personalContextPrior,
         "personalCorpusPrior": \.personalCorpusPrior, "correctionBoost": \.correctionBoost,
@@ -81,7 +91,8 @@ public struct EngineConfig: Sendable {
     private static let ints: [String: WritableKeyPath<EngineConfig, Int>] = [
         "maxEdits": \.maxEdits, "maxEditsShortLiteral": \.maxEditsShortLiteral,
         "shortLiteralLength": \.shortLiteralLength, "noFarSubstitutionLength": \.noFarSubstitutionLength,
-        "beamWidth": \.beamWidth, "maxCompletions": \.maxCompletions, "personalTrieCap": \.personalTrieCap,
+        "beamWidth": \.beamWidth, "maxCompletions": \.maxCompletions, "personalTrieCap": \.personalTrieCap, "keyOffsetMaxSamples": \.keyOffsetMaxSamples,
+        "learnedConfusionMinCorrections": \.learnedConfusionMinCorrections,
         "variantFixMaxKept": \.variantFixMaxKept, "protectMinUses": \.protectMinUses, "autocorrectMaxAddedLetters": \.autocorrectMaxAddedLetters, "predictionPoolSize": \.predictionPoolSize,
         "knownMinUses": \.knownMinUses, "knownMinSessions": \.knownMinSessions, "knownMinImports": \.knownMinImports,
         "manualCorrectionMaxDistance": \.manualCorrectionMaxDistance, "storeBusyTimeoutMs": \.storeBusyTimeoutMs,

@@ -168,3 +168,30 @@ func noLearningInSensitiveFields(_ traits: FieldTraits) throws {
     rig.learner.undoAutocorrect()
     #expect(rig.model.hasCorrection(.en, typed: "teh", chosen: "the", rejected: true))
 }
+
+/// Taps at the en-letters key centers, 0.2 key units high.
+private func high(_ typed: String) -> [Tap] {
+    taps(typed).map { Tap($0.char, at: $0.point.map { Point(x: $0.x, y: $0.y - 0.2) }) }
+}
+
+@Test func typedAndAutocorrectedWordsTeachTheKeyOffsets() throws {
+    let rig = try Rig()
+    rig.learner.commit("hello", lang: .en, context: [], how: .typed, taps: high("hello"))
+    rig.learner.commit("the", lang: .en, context: [], how: .autocorrect(from: "teh"), taps: high("teh"))
+    rig.learner.flush()
+    let offsets = try rig.store.keyOffsets(lang: "en")
+    #expect(offsets["l"]?.n == 2 && offsets["h"]?.n == 1 && offsets["t"]?.n == 1 && offsets["e"]?.n == 1)
+    #expect(abs((offsets["l"]?.dy ?? 0) + 0.2) < 1e-9)
+}
+
+@Test func revertsLiteralsSuggestionsAndDroppedWordsTeachNoOffsets() throws {
+    let rig = try Rig()
+    rig.learner.commit("the", lang: .en, context: [], how: .autocorrect(from: "teh"), taps: high("teh"))
+    rig.learner.undoAutocorrect()  // becomes a literal accept of "teh"
+    rig.learner.commit("hello", lang: .en, context: [], how: .suggestion, taps: high("hel"))
+    rig.learner.commit("wait", lang: .en, context: [], how: .literal, taps: high("wait"))
+    rig.learner.commit("ok", lang: .en, context: [], how: .typed, taps: high("ok"))
+    rig.learner.backspaced(into: "ok", lang: .en)
+    rig.learner.flush()
+    #expect(try rig.store.keyOffsets(lang: "en").isEmpty)
+}

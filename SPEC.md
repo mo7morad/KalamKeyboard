@@ -128,7 +128,7 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
 - **Haptic and sound fire on touch-down.** A letter is output on touch-up, at the key under the finger. The finger may slide, and the popup follows it.
 - **Rollover:** a new touch-down immediately commits any pending letter, space (unless in trackpad mode) or return touch, through the same touch-up path. Touches that arrive together are handled in timestamp order.
 - **System cancels** (an edge gesture, a notification banner): a cancelled letter press with no alternates strip open that was down at least 30 ms commits its letter through the touch-up path. Other keys and shorter presses are dropped.
-- **Tap recording:** record the commit point of every letter tap (in key units) as a `Tap`.
+- **Tap recording:** record the commit point of every letter tap (in key units) as a `Tap`. The taps of a committed word go to the learner too, for the key offsets (8.2, 9.2).
 - **Popups:** a key popup appears on press (except on bottom-row keys).
   - A long-press of 0.35 s opens the alternates strip. Slide to select, and release to insert.
   - Preselection: a slow press types what the key shows (`longPressStrip`). A top-row digit comes first and is preselected only where its hint is drawn (English with digit hints on). Elsewhere (Arabic, hints off) the strip still offers the digit, but the letter is in it too, right after the digit unless its alternates already hold it, and the letter is preselected. Keys without a digit preselect their own output if the alternates hold it, else the first item.
@@ -330,13 +330,19 @@ Search runs over the base trie and a small in-memory personal trie. A search sta
 
 | Transition | Rule | Cost |
 |---|---|---|
-| **Match** | Child letter x whose key center is within R = 1.5 key units of the tap point | `(dx² + dy²) / (2σ²)`, with σx = σy = 0.45. Point-less taps allow the exact char only, at cost 0. |
+| **Match** | Child letter x whose key center, moved by its tap offset (below), is within R = 1.5 key units of the tap point | `(dx² + dy²) / (2σ²)`, with σx = σy = 0.45. Point-less taps allow the exact char only, at cost 0. |
 | **Insertion** (extra tap) | i + 1, same node | 5.0 |
 | **Omission** (missed letter) | Child x, same i | 3.0; 1.5 if x repeats the previous letter (doubled letters); 1.2 for ء |
 | **Transposition** | Taps i and i+1 match x and y in swapped order | 2.0 |
-| **Far substitution** | Key outside R | 5.0 |
+| **Far substitution** | Key outside R | 5.0; 2.5 for a learned confusion pair (below) |
 
 - **Limits:** at most 2 edits, or 1 if the literal is ≤ 4 characters. No far substitutions if the literal is ≤ 3 characters.
+- **Tap offsets** (Phase 12): the spatial model measures each tap against the key center plus that key's offset, applied to the centers once when the model is built. Hit-testing (5.2) doesn't move.
+  - The fixed offset is `tapOffsetX` / `tapOffsetY` in key units (y: 1.0 = one 54 pt row; negative = above): 0 and −0.13, from the device round 2 trace (taps land about 7 pt above the caps' centers; eval-log Phase 12).
+  - Learned per key (9.1 `key_offsets`, 9.2): a key's effective offset is `(n·mean + K·global) / (n + K)` with K = `keyOffsetPrior` = 20, where `global` is the all-keys mean of that language, itself shrunk toward the fixed offset the same way (`(N·mean + K·fixed) / (N + K)`). A key with little data follows the others, and with no data at all every key gets the fixed offset.
+  - **Anchor:** the effective offset is capped at 0.3 key widths (Euclidean, `keyOffsetCap`), so a key's center always maps to that key.
+  - A store error leaves the fixed offset.
+- **Learned confusion pairs:** from the non-rejected corrections (manual corrections and import typos) whose typed and chosen words have the same normalized length and differ in exactly one position, a (typed char, intended char) pair seen in at least 2 distinct corrections costs `learnedConfusionCost` = 2.5 instead of 5.0 as a far substitution, when the tap's typed char and the trie char form that pair. Same edit and length limits. Loaded with the corrections and refreshed after each learner write.
 - **Beam:** 64 states per i; dedupe on `(node, i)`, keeping the lowest cost.
 - **End states** (i = n):
   - A terminal node gives a full-word candidate.
@@ -440,6 +446,7 @@ words(lang, ident, norm, display, display_votes, count, t_last, state[pending|kn
       sessions_seen, last_session, uses, imports, source[typed|import|lexicon|manual], accepted_explicitly)
 ngrams(lang, w1, w2, w3, count, t_last)        -- w1 = '' for bigrams; '<s>' allowed
 corrections(lang, typed, chosen, rejected, count, t_last)
+key_offsets(lang, char, n, dx, dy)              -- schema 2: per-key running mean of tap - key center (8.2)
 meta(key, value)                                -- stats; the schema version is PRAGMA user_version
 ```
 
@@ -448,6 +455,7 @@ Add indexes that match the query patterns. Writes from both the keyboard and the
 - `uses` and `imports` are raw (undecayed) counts for the pending → known rules, because a decayed count of 2 is already below 2.
 - `display_votes` runs a weighted majority vote over display forms. Sentence-initial capitals don't vote.
 - There is no `ctx_totals` table. Context totals are the sums of the loaded continuations, which decay the same way.
+- `key_offsets`: `char` is the key's output on the letters page of `lang` (en or ar); dx, dy are in key units. The mean is a running mean whose n stops at `keyOffsetMaxSamples` = 300, so later taps keep a weight of 1/300 and the mean follows Moe's typing.
 
 ### 9.2 Learning rules
 
@@ -462,6 +470,11 @@ Add indexes that match the query patterns. Writes from both the keyboard and the
   - an explicit accept (tapping the literal, or reverting an autocorrect);
   - an import count ≥ 2;
   - a manual add.
+- **Key offsets** (8.2): the commit carries the word's taps. When an event becomes final as typed or autocorrect (not a suggestion tap, a revert or a literal accept, and not one dropped by a backspace), its taps are aligned to its letters:
+  - only when the number of taps with points equals the number of letters of the committed word's normalized form, pairing them in order (point-less taps are skipped);
+  - each pair gives the sample tap − key center for that letter's key on the letters page (a letter on two keys, like AR ي and ى, is measured to the nearer);
+  - a pair whose tap is more than 1 key unit from that center is skipped (a misaligned edit, like teh → the).
+  - Samples are written in the learner's batch transaction.
 - **Manual-correction learning:** if Moe deletes a committed word D and commits W at the same position within 10 s, with edit distance(D, W) ≤ 2 and D ≠ W, then `corrections(D → W) += 1`.
 - **Where not to learn:** `.URL` fields, password and oneTimeCode content types, or when "Pause learning" is on.
 - **Special tokens** (emails, handles) are learned as lang `tok`. They're suggested by prefix and never autocorrected.
@@ -547,6 +560,8 @@ Settings are stored in App Group `UserDefaults`:
     - **false-autocorrect rate on clean known words (guard ≤ 0.5%)**;
     - next-word top-3 accuracy;
     - keystroke savings (the simulated user taps the right suggestion as soon as it appears).
+  - `--bias-x` / `--bias-y` (key units, default 0) add a systematic shift to every noisy tap before the key under it is chosen, so a bias can change which key a tap types, as on the device. The eval typist's hit rects tile the rows at the key centers; they don't have the device's raised hit bands (5.2).
+  - `tapmap --lang en|ar (--personal <db> | --trace <kalam-trace.log>)` prints the letters page as rows of keys with n and the mean offset (dx, dy) in key units and in points (402 pt wide keyboard, 54 pt rows). With `--personal` it adds the effective (shrunk, capped) offset; with `--trace` it reads the trace's `touch ended <key id> at x,y` lines (offsets to the key the touch ended on, so biased by the hit test) and prints the mean dy as the value to try for `tapOffsetY`.
   - `eval-personal` trains a personal store on 90% of Moe's own WhatsApp messages and evaluates on the other 10%. It reports the **personalization lift** in top-3 accuracy and keystroke savings versus base-only.
     - Messages are sorted by time; `--fold k` holds out message i when i % 10 == k.
     - **Guard:** the wrong autocorrect changes on Moe's Arabic over all 10 folds, each judged by hand, must not grow.

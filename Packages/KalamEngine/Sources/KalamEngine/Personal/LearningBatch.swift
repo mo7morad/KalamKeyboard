@@ -66,12 +66,18 @@ struct LearningBatch {
         let rejected: Bool
     }
 
+    struct KeyOffsetKey: Hashable {
+        let lang: String
+        let key: String  // the key's output on the letters page
+    }
+
     let halfLife: Double
     var words: [WordKey: WordUpdate] = [:]
     var ngrams: [NgramKey: Hits] = [:]
     var corrections: [CorrectionKey: Hits] = [:]
+    var keyOffsets: [KeyOffsetKey: [Point]] = [:]  // tap - key center samples, in commit order
 
-    var isEmpty: Bool { words.isEmpty && ngrams.isEmpty && corrections.isEmpty }
+    var isEmpty: Bool { words.isEmpty && ngrams.isEmpty && corrections.isEmpty && keyOffsets.isEmpty }
 
     /// One use of a word after its context (≤ 2 idents of the same run, oldest first, maybe starting with <s>).
     mutating func addWord(_ surface: String, kind: Token.Kind, context: [String], at time: Double,
@@ -99,6 +105,13 @@ struct LearningBatch {
     mutating func addCorrection(lang: String, typed: String, chosen: String, rejected: Bool, count: Double = 1, at time: Double) {
         corrections[CorrectionKey(lang: lang, typed: typed, chosen: chosen, rejected: rejected), default: Hits()]
             .add(count, at: time, halfLife: halfLife)
+    }
+
+    /// SPEC 9.2: the tap offset samples of a word committed as typed or autocorrected.
+    mutating func addKeyOffsets(_ word: String, taps: [Tap], layout: Layout) {
+        for sample in offsetSamples(word, taps: taps, layout: layout) {
+            keyOffsets[KeyOffsetKey(lang: layout.lang.rawValue, key: sample.key), default: []].append(sample.offset)
+        }
     }
 
     /// Moves n-gram counts from spellings to the words they stand for, in every position.

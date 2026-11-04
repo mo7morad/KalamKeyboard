@@ -93,3 +93,36 @@ import Testing
     #expect(suggestions(engine, "teh").first == "the")
     #expect(engine.predict(context: ["see"]).first?.text == "you")
 }
+
+/// A tap halfway between l and p, after "hel": of hell and help, help wins on the LM alone. Taps
+/// land where they fall, so the fixed offset is 0 here.
+@Test func aLearnedKeyOffsetDecidesAnAmbiguousTap() throws {
+    var config = EngineConfig()
+    config.tapOffsetY = 0
+    let centers = try #require(Layout.bundled("en-letters")).keyCenters()
+    let (l, p) = (centers["l"]!, centers["p"]!)
+    let input = InputState(context: [], taps: taps("hel") + [Tap("l", at: Point(x: (l.x + p.x) / 2, y: (l.y + p.y) / 2))])
+    func first(_ samples: [Point]) throws -> String? {
+        let store = try personalStore([]) { batch in
+            if !samples.isEmpty { batch.keyOffsets[LearningBatch.KeyOffsetKey(lang: "en", key: "l")] = samples }
+        }
+        let lexicon = try #require(BaseLexicon(url: fixtures.appendingPathComponent("fixture-en.klex")))
+        let engine = Engine(lang: .en, lexicon: lexicon, layout: Layout.bundled("en-letters"),
+                            personal: PersonalModel(store: store, config: config, clock: epoch), config: config)
+        return engine.candidates(input).first { ["hell", "help"].contains($0.ident) }?.ident
+    }
+    #expect(try first([]) == "help")
+    // Moe's l taps land 0.3 key units high: the l key's center moves up toward the tap.
+    #expect(try first(Array(repeating: Point(x: 0, y: -0.3), count: 300)) == "hell")
+}
+
+@Test func aSubstitutionMoeCorrectedTwiceIsCheaper() throws {
+    let lettar = InputState(context: [], taps: "lettar".map { Tap(String($0)) })
+    let once = try personalEngine(.en, []) { $0.addCorrection(lang: "en", typed: "tha", chosen: "the", rejected: false, at: 0) }
+    #expect(once.suggest(lettar, limit: 5).first { $0.text == "letter" }?.edits == EngineConfig().farSubstitutionCost)
+    let twice = try personalEngine(.en, []) {
+        $0.addCorrection(lang: "en", typed: "tha", chosen: "the", rejected: false, at: 0)
+        $0.addCorrection(lang: "en", typed: "sha", chosen: "she", rejected: false, at: 0)
+    }
+    #expect(twice.suggest(lettar, limit: 5).first { $0.text == "letter" }?.edits == EngineConfig().learnedConfusionCost)
+}

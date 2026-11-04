@@ -191,7 +191,7 @@ final class InputController {
             recent.remove(offer)
             client.revertAutocorrect(offer.literal, replacement: offer.replacement, lang: lang, context: context)
         } else {
-            learn(slot.word, context: context, how: slot.isLiteral ? .literal : .suggestion)  // an emoji has no letter: not learned
+            learn(slot.word, context: context, how: slot.isLiteral ? .literal : .suggestion, taps: taps)  // an emoji has no letter: not learned
         }
         // Followed by text, the cursor stays at the word's end: it is the current word, already learned.
         taps = followed ? resyncedTaps([], to: currentWord(before: slot.word)) : []
@@ -287,14 +287,14 @@ final class InputController {
         }
         guard let target = client.resultForCommit()?.autocorrect else {
             trace("commitWord \(literal.debugDescription) delete 0")
-            learn(literal, context: context, how: .typed)
+            learn(literal, context: context, how: .typed, taps: taps)
             return nil
         }
         let replacement = cased(target.text, capitalized: literal.first?.isUppercase == true)
         trace("commitWord \(literal.debugDescription) -> \(replacement.debugDescription) delete \(literal.count)")
         delete(literal.count)
         insert(replacement)
-        learn(replacement, context: context, how: .autocorrect(from: literal))
+        learn(replacement, context: context, how: .autocorrect(from: literal), taps: taps)
         undo = AutocorrectUndo(literal: literal, taps: taps, replacement: replacement)
         recent.add(literal: literal, replacement: replacement, before: prefix)
         return replacement
@@ -309,9 +309,10 @@ final class InputController {
     }
 
     /// Numbers and stray marks aren't words (SPEC 6.2), so the learner only sees words with a letter.
-    private func learn(_ word: String, context: [String], how: Learner.Commit) {
+    /// The taps go along for the key offsets (SPEC 9.2).
+    private func learn(_ word: String, context: [String], how: Learner.Commit, taps: [Tap]) {
         guard word.contains(where: \.isLetter) else { return }
-        client.commit(word, lang: lang, context: context, how: how)
+        client.commit(word, lang: lang, context: context, how: how, taps: taps)
     }
 
     // MARK: Editing

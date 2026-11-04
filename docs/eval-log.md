@@ -15,6 +15,7 @@ $K eval-personal --chat <_chat.txt>... --sender "Mohamed Morad" --klex-en $R/en.
   - False autocorrect: valid base words tapped at key centers that the commit changes.
   - Next-word top-3 and keystroke savings use the simulated typist (taps a top-3 suggestion as soon as it is the target).
   - Latency: wall time per `candidates` and `predict` request, release build, Apple-silicon Mac. The device budget is p95 ≤ 12 ms, and the device is 2 to 3x slower.
+  - `--bias-x` / `--bias-y` (Phase 12) shift every noisy tap by a fixed amount before the key under it is chosen; the default is no bias.
   - Up to Phase 3b the noise was substitutions only. Since Phase 3c, each letter also has a 1.5% omission, a 1.5% extra tap after it (half a doubled tap, half a neighbouring key within 1.2 key units), and a 0.5% swap with the next letter. One-letter words get no omission. Results before and after this change don't compare.
 - **eval-personal:** Moe's 3 chats, 3,759 of his messages, sorted by time, then text. `--fold k` holds out message i when i % 10 == k. Up to Phase 3b, every 10th message in file order was held out (375 messages: EN 87 words, AR 1,320 words). "AC changes" is the share of held-out words, typed at key centers, that the commit changes. Moe leaves typos, so some changes are right.
   - **Moe AR R / W** (a guard since Phase 3c): the AR changes in the personal setup over all 10 folds (14,005 words), each judged right or wrong by hand. The judgements live outside the repo, because they quote Moe's text.
@@ -233,3 +234,47 @@ What to expect, and to judge (Moe AR R / W over the 10 folds):
 - AR synthetic AC drops a little (the short-word margin), FA stays 0.
 - eval-personal AR changes should fall a little, mostly through the short-word margin (short dialect words) and mixed-script words. Rule 2's new protection adds little here: a word imported twice was already known, and imports that `markLikelyTypos` or `keepLazySpellingsPending` zero out don't count. It matters for live typing (a word typed twice in one session). Judge every AR change right or wrong as in Device round 2 (normal 39 / 12, gentle 30 / 3); the guard is that the wrong count doesn't grow.
 - EN eval-personal changes should fall (capitals, ambiguous contractions, words used twice); next-word top-3 may move slightly, since pending one-off words no longer get predicted.
+
+## 2026-11-04 · Phase 12: touch model (proxy lexicons)
+
+Proxy lexicons, not comparable with earlier rows (the same `/proxy` klex and held-out files as Phase 11, sha256 EN `4dc43a49ae710a53d47366ba361222c67ca27a834242dd8ffecb4d04d44bad86`, AR `5e3e099b9be89b65d80ef65127487a53afc064061826d5c5bfe065fa46f768d7`). git: `b28b295` plus the Phase 12 working tree. Seed 1, 500 sentences. Bias = the eval typist's systematic tap shift (`--bias-y`), offset = the decoder's `tapOffsetY`, both in key units (-0.13 = 7 pt up). No personal store, so the learned per-key offsets and confusion pairs don't take part (unit tests cover them).
+
+```bash
+K=.build/release/kalam-cli
+$K eval --lang en --klex /proxy/en.klex --heldout /proxy/heldout/en.txt --bias-y B --set tapOffsetY=O
+$K eval --lang ar --klex /proxy/ar.klex --heldout /proxy/heldout/ar.txt --autocorrect normal|gentle --bias-y B --set tapOffsetY=O
+```
+
+| Run | bias / offset | EN AC / FA / NW / KS | AR normal AC / FA / KS | AR gentle AC / FA |
+|---|---|---|---|---|
+| baseline `1b74a57` | 0 / none | 48.1 / 0.00 / 23.2 / 37.4 | 22.8 / 0.00 / 21.0 | 6.7 / 0.00 |
+| (a) | 0 / 0 | 48.1 / 0.00 / 23.2 / 37.4 | 22.8 / 0.00 / 21.0 | |
+| (b) Moe's bias, today's decoder | -0.13 / 0 | 47.0 / 0.00 / 23.2 / 37.2 | 23.2 / 0.00 / 21.0 | 7.0 / 0.00 |
+| **(c) Moe's bias, offset** | **-0.13 / -0.13** | **48.3 / 0.00 / 23.2 / 37.4** | **25.2 / 0.00 / 21.1** | **8.0 / 0.00** |
+| (d) no bias, offset | 0 / -0.13 | 47.1 / 0.00 / 23.2 / 37.2 | 21.6 / 0.00 / 20.5 | 6.0 / 0.00 |
+
+- (a) reproduces the baseline exactly: the new code paths cost nothing with the offset at 0.
+- **Kept tapOffsetY = -0.13** (the default now). Under the measured bias, (c) beats (b) by 1.3 pp EN and 2.0 pp AR normal (1.0 gentle), and gets AC back to the unbiased level or above. If Moe's taps had no bias, the offset would cost about 1 pp of AC (d against a: EN 1.0, AR 1.2, gentle 0.7) and 0.2 to 0.5 pp KS, about seed noise. FA stays 0 everywhere (clean taps at the key centers pay 0.04 per letter for the offset, never enough to flip a commit).
+- The limit of this comparison: the eval typist's hit rects tile each row at the key centers, while on the device each row's hit band starts 5 pt (0.09 key units) higher (SPEC 5.2). With bias -0.13 the typist types the row above more often than the device would (EN 6,222 mistyped words against 6,127 unbiased; on the device the raised bands catch most of those taps). So (b) is a little worse than the device is today and the gap from (b) to (c) a little larger than the device will see. What (c) against (b) does show is that the decoder, measuring taps against the shifted centers, ranks the intended word better for the same taps.
+- Latency (4 evals in parallel): EN candidates 0.43 / 2.80 / 3.16 ms, AR 0.52 / 4.67 / 5.94 ms, as at baseline. The offsets are applied to the key centers once, when the spatial model is built.
+
+To rerun on the Mac with the real lexicons and Moe's chats (from `Packages/KalamEngine`, defaults are Phase 12's):
+
+```bash
+swift build -c release
+K=.build/release/kalam-cli; R=../../KeyboardExtension/Resources; H=../../Tools/data/heldout
+for b in 0 -0.13; do for o in 0 -0.13; do
+  $K eval --lang en --klex $R/en.klex --heldout $H/en.txt --bias-y $b --set tapOffsetY=$o
+  $K eval --lang ar --klex $R/ar.klex --heldout $H/ar.txt --autocorrect normal --bias-y $b --set tapOffsetY=$o
+done; done
+$K eval --lang ar --klex $R/ar.klex --heldout $H/ar.txt --autocorrect gentle --bias-y -0.13
+for k in 0 1 2 3 4 5 6 7 8 9; do
+  $K eval-personal --chat <_chat.txt>... --sender "Mohamed Morad" --klex-en $R/en.klex --klex-ar $R/ar.klex --fold $k --autocorrect normal
+  $K eval-personal --chat <_chat.txt>... --sender "Mohamed Morad" --klex-en $R/en.klex --klex-ar $R/ar.klex --fold $k --autocorrect gentle
+done
+```
+
+What to expect, and to judge (Moe AR R / W over the 10 folds):
+- Synthetic: the same pattern as the proxy, (c) above (b), FA ≤ 0.5%.
+- eval-personal types at key centers with no bias, so it sees the (d) cost: AR changes may move slightly. Import typos with a one-letter far substitution seen twice now cost 2.5 instead of 5.0, so a few more of those slips get corrected. Judge every AR change right or wrong as before; the guard is that the wrong count doesn't grow. If it does, rerun with `--set learnedConfusionCost=5` to see which of the two changes it comes from.
+- Then `kalam-cli tapmap --lang en --trace <kalam-trace.log>` on a fresh device trace: if its mean dy is far from -0.13 (say beyond -0.08 or -0.18), rerun the synthetic eval with that bias and offset before changing the default.

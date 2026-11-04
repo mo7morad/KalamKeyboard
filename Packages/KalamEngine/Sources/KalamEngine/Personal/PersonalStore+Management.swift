@@ -105,7 +105,7 @@ extension PersonalStore {
 
     public func resetLearning() throws {
         try db.transaction {
-            for table in ["words", "ngrams", "corrections", "meta"] { try db.execute("DELETE FROM \(table)") }
+            for table in ["words", "ngrams", "corrections", "key_offsets", "meta"] { try db.execute("DELETE FROM \(table)") }
         }
     }
 

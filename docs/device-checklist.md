@@ -193,3 +193,14 @@ Setup: install a Debug build with Full Access on, autocorrect normal in EN. Test
 - [ ] Short words: note any 2 or 3 letter typo you expected to be fixed that now stays ____ (the stricter margin).
 - [ ] Mid-word suggestion tap: type "hello world", put the cursor between "hel" and "lo", tap a suggestion (say "help"): the whole word becomes "help", with no leftover "lo" and no double space before "world". Try it in Notes, WhatsApp and Messages: any host where the wrong characters go ____ (whether hosts count the cursor move in characters, as the keyboard assumes, is device-only). Try it in Arabic too ____.
 - [ ] Predictions never show a one-off typo: type "see yuo " once, then later type "see " and look at the bar: "yuo" never shows (it may after you use it twice in two sessions).
+
+## Phase 12: touch model
+
+Setup: install a Debug build with Full Access on, autocorrect normal. Test in Notes unless a step says otherwise. The tap offset is now -0.13 key units (7 pt up), and each key learns its own offset from words you commit and don't revert.
+
+- [ ] Trace before: first thing after installing, type a few normal EN and AR messages (2 to 3 minutes each), then tell the orchestrator to pull `kalam-trace.log` with devicectl. It runs `kalam-cli tapmap --lang en --trace kalam-trace.log` and the same with `--lang ar`. Mean dy EN ____ key units (____ pt), AR ____ (____ pt).
+- [ ] Use Kalam normally for a few days. Then back up the store (host app, Data, Backup) and send the file. The orchestrator runs `kalam-cli tapmap --lang en --personal <backup>` and `--lang ar`. Learned all-keys dy EN ____, AR ____; keys with the most taps ____; any key whose effective offset looks odd (sideways, or at the 0.3 cap) ____.
+- [ ] Trace after: the same 2 to 3 minutes of typing as before, pulled and run through tapmap again. Mean dy EN ____, AR ____. Count the corrected letters (backspaces inside a word) in both traces: before ____, after ____.
+- [ ] Feel of the top row: type "quiet", "power", "type", "ضحك", "صحيح" fast. Wrong letters from the row below or from the bar ____. Edge keys: "zap", "plop", "quip", and AR ض, ج, ش, ة, ى words: wrong letters ____.
+- [ ] Taps that land low: type with your thumb deliberately a bit low on the bottom letter row ("zxcvbnm" words like "bacon", "venom"). Does anything get worse than before ____?
+- [ ] A habitual swap gets fixed: pick a one-letter slip you make often (say "tha" for "the", a far-apart pair). Each time, delete the wrong word and type the right one within 10 s, for two different words with the same slip (e.g. "tha" then "the", "sha" then "she"). After that, the same slip in a third word is corrected (or is first in the bar) ____.

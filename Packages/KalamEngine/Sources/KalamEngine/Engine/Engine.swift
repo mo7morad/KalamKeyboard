@@ -45,14 +45,17 @@ public struct Engine {
     public let lang: Lang
     public let config: EngineConfig
     let lexicon: BaseLexicon?
-    let spatial: SpatialModel
+    let layout: Layout?
+    /// With the fixed tap offset only; a personal model supplies one with Moe's learned offsets.
+    let fixedSpatial: SpatialModel
     let personal: PersonalModel?
 
     /// A missing lexicon, or one for another language, leaves only the literal and personal candidates.
     public init(lang: Lang, lexicon: BaseLexicon?, layout: Layout?, personal: PersonalModel? = nil, config: EngineConfig = EngineConfig()) {
         self.lang = lang
         self.lexicon = lexicon?.lang == lang ? lexicon : nil
-        self.spatial = SpatialModel(layout: layout?.lang == lang ? layout : nil)
+        self.layout = layout?.lang == lang ? layout : nil
+        fixedSpatial = SpatialModel(layout: self.layout) { _ in Point(x: config.tapOffsetX, y: config.tapOffsetY) }
         self.personal = personal
         self.config = config
     }

@@ -18,6 +18,7 @@ public final class Learner {
         let context: [String]
         let commit: Commit
         let time: Double
+        var taps: [Tap] = []  // the word's taps, for the key offsets (SPEC 9.2)
     }
 
     private let store: PersonalStore?
@@ -33,6 +34,7 @@ public final class Learner {
     private var batch: LearningBatch
     private var lastWrite: Double
     private var reopened: (ident: String, kind: Token.Kind, time: Double)?  // for manual-correction learning
+    private var layouts: [Lang: Layout] = [:]  // letters pages, for aligning taps to letters
 
     public init(store: PersonalStore?, model: PersonalModel?, config: EngineConfig = EngineConfig(), clock: @escaping () -> Date = Date.init) {
         self.store = store
@@ -52,8 +54,8 @@ public final class Learner {
     }
 
     /// A word was committed after its context (up to 2 previous words, oldest first; <s> or empty
-    /// at a sentence start).
-    public func commit(_ word: String, lang: Lang, context: [String], how: Commit) {
+    /// at a sentence start), with the taps that typed it.
+    public func commit(_ word: String, lang: Lang, context: [String], how: Commit, taps: [Tap] = []) {
         guard learning else { return }
         finalizePending()
         let kind = Self.kind(of: word, lang: lang)
@@ -63,7 +65,7 @@ public final class Learner {
             batch.addCorrection(lang: kind.storeLang, typed: reopened.ident, chosen: wordIdent, rejected: false, at: now)
         }
         reopened = nil
-        pending = Event(word: word, kind: kind, context: Self.sameRun(context, kind: kind), commit: how, time: now)
+        pending = Event(word: word, kind: kind, context: Self.sameRun(context, kind: kind), commit: how, time: now, taps: taps)
         writeIfDue()
     }
 
@@ -132,10 +134,22 @@ public final class Learner {
     private func finalizePending() {
         guard let event = pending else { return }
         pending = nil
-        var explicit = false
-        if case .literal = event.commit { explicit = true }
+        var explicit = false, aligns = false
+        switch event.commit {
+        case .literal: explicit = true
+        case .typed, .autocorrect: aligns = true
+        case .suggestion: break
+        }
         batch.addWord(event.word, kind: event.kind, context: event.context, at: event.time, source: .typed,
                       session: session, explicit: explicit)
+        if aligns, let layout = letters(event.kind) { batch.addKeyOffsets(event.word, taps: event.taps, layout: layout) }
+    }
+
+    /// The letters page of a word's language, loaded once; nil for special tokens.
+    private func letters(_ kind: Token.Kind) -> Layout? {
+        guard let lang = Lang(rawValue: kind.storeLang) else { return nil }
+        if layouts[lang] == nil { layouts[lang] = Layout.bundled("\(lang.rawValue)-letters") }
+        return layouts[lang]
     }
 
     /// One transaction. On failure the batch is kept and retried with the next write.

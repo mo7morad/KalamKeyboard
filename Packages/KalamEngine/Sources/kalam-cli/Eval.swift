@@ -2,16 +2,19 @@ import CryptoKit
 import Foundation
 import KalamEngine
 
-/// kalam-cli eval --lang en|ar --klex <file> --heldout <file> [--personal <db>] [--limit N] [--seed S] [--autocorrect off|gentle|normal] [--set name=value]...
-/// Types `limit` seeded-random held-out sentences with tap noise (Gaussian, plus omissions, extra taps
-/// and swaps; see NoisyTypist) on the letters page and
-/// reports the SPEC 12 metrics plus request latency on this machine.
+/// kalam-cli eval --lang en|ar --klex <file> --heldout <file> [--personal <db>] [--limit N] [--seed S] [--autocorrect off|gentle|normal]
+///               [--bias-x X] [--bias-y Y] [--set name=value]...
+/// Types `limit` seeded-random held-out sentences with tap noise (Gaussian around the key center
+/// shifted by the bias in key units, plus omissions, extra taps and swaps; see NoisyTypist) on the
+/// letters page and reports the SPEC 12 metrics plus request latency on this machine.
 func eval(_ args: [String]) -> Int32 {
     let flags = parseFlags(args)
     guard let lang = flags["lang"]?.last.flatMap(Lang.init(rawValue:)), let klex = flags["klex"]?.last,
           let heldout = flags["heldout"]?.last, let config = parseConfig(flags), let settings = parseSettings(flags),
-          let limit = Int(flags["limit"]?.last ?? "500"), let seed = UInt64(flags["seed"]?.last ?? "1") else {
-        print("usage: kalam-cli eval --lang en|ar --klex <file> --heldout <file> [--personal <db>] [--limit N] [--seed S] [--autocorrect off|gentle|normal] [--set name=value]...")
+          let limit = Int(flags["limit"]?.last ?? "500"), let seed = UInt64(flags["seed"]?.last ?? "1"),
+          let biasX = Double(flags["bias-x"]?.last ?? "0"), let biasY = Double(flags["bias-y"]?.last ?? "0") else {
+        print("usage: kalam-cli eval --lang en|ar --klex <file> --heldout <file> [--personal <db>] [--limit N] [--seed S] "
+              + "[--autocorrect off|gentle|normal] [--bias-x X] [--bias-y Y] [--set name=value]...")
         return 2
     }
     guard let data = try? Data(contentsOf: URL(fileURLWithPath: klex), options: .alwaysMapped), let lexicon = BaseLexicon(data: data),
@@ -30,7 +33,7 @@ func eval(_ args: [String]) -> Int32 {
     let engine = Engine(lang: lang, lexicon: lexicon, layout: layout, personal: personal, config: config)
     var rng = SplitMix64(state: seed)
     let sentences = text.split(separator: "\n").map(String.init).shuffled(using: &rng).prefix(limit)
-    let noisy = NoisyTypist(layout: layout, sigma: 0.35)
+    let noisy = NoisyTypist(layout: layout, sigma: 0.35, bias: Point(x: biasX, y: biasY))
     let clean = centerTapper(lang)
     let latency = Latencies()
     var metrics = Metrics()
@@ -58,7 +61,7 @@ func eval(_ args: [String]) -> Int32 {
 
     print("eval \(lang.rawValue): \(sentences.count) sentences, \(metrics.words) words, seed \(seed), \(String(format: "%.0f", Date().timeIntervalSince(started))) s")
     print("klex sha256 \(SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined())")
-    print("params: \((flags["set"] ?? []).isEmpty ? "defaults" : (flags["set"] ?? []).joined(separator: " "))")
+    print("params: \((flags["set"] ?? []).isEmpty ? "defaults" : (flags["set"] ?? []).joined(separator: " ")), tap bias \(biasX),\(biasY)")
     metrics.report(latency)
     return 0
 }
@@ -80,7 +83,8 @@ private struct Metrics {
     }
 }
 
-/// Taps with Gaussian noise around the key centers of a letters page. A tap types the char key whose
+/// Taps with Gaussian noise around the key centers of a letters page, shifted by a systematic bias
+/// (Moe's taps land high). The shifted point is what is tapped: a tap types the char key whose
 /// hit rect is nearest to the noisy point (rects tile the rows, as in KeyGeometry); a tap that lands
 /// on a non-char key (shift, backspace, a gap) goes to the nearest char key instead.
 /// On top, per letter: a swap with the next letter, an omission, or an extra tap after it (half a
@@ -91,9 +95,10 @@ private struct NoisyTypist {
     private let halfWidths: [String: Double]
     private let neighbours: [String: [String]]  // keys whose centers are within 1.2 key units
     let sigma: Double
+    let bias: Point
     static let omissionRate = 0.015, extraRate = 0.015, swapRate = 0.005
 
-    init(layout: Layout, sigma: Double) {
+    init(layout: Layout, sigma: Double, bias: Point) {
         let centers = layout.keyCenters()
         self.centers = centers
         halfWidths = Dictionary(layout.rows.joined().filter { $0.kind == .char }.map { ($0.output, $0.width / 2) }) { a, _ in a }
@@ -101,6 +106,7 @@ private struct NoisyTypist {
             centers.filter { $0.value != c && hypot($0.value.x - c.x, $0.value.y - c.y) <= 1.2 }.keys.sorted()
         }
         self.sigma = sigma
+        self.bias = bias
     }
 
     func taps(_ word: String, using rng: inout SplitMix64) -> [Tap] {
@@ -133,7 +139,7 @@ private struct NoisyTypist {
 
     private func tap(_ output: String, upper: Bool, using rng: inout SplitMix64) -> Tap {
         let center = centers[output]!
-        let point = Point(x: center.x + sigma * rng.gaussian(), y: center.y + sigma * rng.gaussian())
+        let point = Point(x: center.x + bias.x + sigma * rng.gaussian(), y: center.y + bias.y + sigma * rng.gaussian())
         let hit = key(at: point)
         return Tap(upper ? hit.uppercased() : hit, at: point)
     }

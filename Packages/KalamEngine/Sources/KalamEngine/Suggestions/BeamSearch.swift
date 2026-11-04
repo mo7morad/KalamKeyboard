@@ -60,6 +60,8 @@ extension Engine {
     func search<T: SearchTrie>(_ taps: [SearchTap], literalLength: Int, in lexicon: T) -> [KeyMatch] {
         let maxEdits = literalLength <= config.shortLiteralLength ? config.maxEditsShortLiteral : config.maxEdits
         let allowFar = literalLength > config.noFarSubstitutionLength
+        let spatial = personal?.spatialModel(lang, layout: layout) ?? fixedSpatial
+        let confusions = personal?.confusionPairs(lang) ?? []  // typed -> intended chars Moe's corrections show
         var layers = [[Int: State]](repeating: [:], count: taps.count + 1)
         layers[0][0] = State(node: 0, edits: 0, spatial: 0, editCost: 0)
 
@@ -71,14 +73,15 @@ extension Engine {
                 if s.edits < maxEdits { relax(&layers[i + 1], s.moved(to: s.node, edit: config.insertionCost)) }
                 for child in lexicon.children(s.node) {
                     let char = lexicon.char(child)
-                    if let cost = matchCost(char, taps[i]) {
+                    if let cost = matchCost(char, taps[i], spatial) {
                         relax(&layers[i + 1], s.moved(to: child, spatial: cost))
                     } else if allowFar, s.edits < maxEdits {
-                        relax(&layers[i + 1], s.moved(to: child, edit: config.farSubstitutionCost))
+                        let learned = confusions.contains(confusionPair(taps[i].unit, char))
+                        relax(&layers[i + 1], s.moved(to: child, edit: learned ? config.learnedConfusionCost : config.farSubstitutionCost))
                     }
-                    guard i + 1 < taps.count, s.edits < maxEdits, let first = matchCost(char, taps[i + 1]) else { continue }
+                    guard i + 1 < taps.count, s.edits < maxEdits, let first = matchCost(char, taps[i + 1], spatial) else { continue }
                     for grandchild in lexicon.children(child) {
-                        if let second = matchCost(lexicon.char(grandchild), taps[i]) {
+                        if let second = matchCost(lexicon.char(grandchild), taps[i], spatial) {
                             relax(&layers[i + 2], s.moved(to: grandchild, spatial: first + second, edit: config.transpositionCost))
                         }
                     }
@@ -88,9 +91,10 @@ extension Engine {
         return matches(ending: layers[taps.count], lexicon)
     }
 
-    /// Alpha-weighted spatial cost of matching a trie char to a tap, nil when it doesn't match.
+    /// Alpha-weighted spatial cost of matching a trie char to a tap (measured to the key's offset
+    /// center), nil when it doesn't match.
     /// A point-less tap matches its exact char only, at cost 0; so does a tap whose char has no key on the page.
-    private func matchCost(_ char: UInt16, _ tap: SearchTap) -> Double? {
+    private func matchCost(_ char: UInt16, _ tap: SearchTap, _ spatial: SpatialModel) -> Double? {
         guard let point = tap.point else { return char == tap.unit ? 0 : nil }
         guard let d2 = spatial.distanceSquared(char, point) else { return char == tap.unit ? 0 : nil }  // key missing from the page
         guard d2 <= config.matchRadius * config.matchRadius else { return nil }

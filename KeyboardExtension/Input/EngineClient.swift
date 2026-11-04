@@ -191,8 +191,8 @@ final class EngineClient {
         }
     }
 
-    func commit(_ word: String, lang: Lang, context: [String], how: Learner.Commit) {
-        queue.async { [self] in learner?.commit(word, lang: lang, context: context, how: how) }
+    func commit(_ word: String, lang: Lang, context: [String], how: Learner.Commit, taps: [Tap]) {
+        queue.async { [self] in learner?.commit(word, lang: lang, context: context, how: how, taps: taps) }
     }
 
     func sentenceEnded() { queue.async { [self] in learner?.sentenceEnded() } }

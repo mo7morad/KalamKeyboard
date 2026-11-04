@@ -130,3 +130,31 @@ func manualAndLexiconWordsAreKnownAtOnce(_ source: WordSource) throws {
     try other.execute("COMMIT")
     #expect(try store.word(lang: "en", ident: "hi") == nil)
 }
+
+@Test func aVersion1StoreGainsTheKeyOffsetsTable() throws {
+    let url = temporaryStoreURL()
+    try PersonalStore(url: url).write(typed("hello", session: 1))
+    try SQLite(url: url).execute("DROP TABLE key_offsets; PRAGMA user_version = 1")
+    let store = try PersonalStore(url: url)
+    var batch = LearningBatch(halfLife: halfLife)
+    batch.keyOffsets[LearningBatch.KeyOffsetKey(lang: "en", key: "q")] = [Point(x: 0.1, y: -0.1)]
+    try store.write(batch)
+    #expect(try store.keyOffsets(lang: "en")["q"] == KeyOffset(n: 1, dx: 0.1, dy: -0.1))
+    #expect(try store.word(lang: "en", ident: "hello")?.hits.count == 1)
+}
+
+@Test func keyOffsetsKeepARunningMeanWithCappedN() throws {
+    var config = EngineConfig()
+    config.keyOffsetMaxSamples = 4
+    let store = try PersonalStore(url: temporaryStoreURL(), config: config)
+    let key = LearningBatch.KeyOffsetKey(lang: "en", key: "q")
+    for samples in [[0.0, 0.0], [0.0, 0.0], [1.0]] {
+        var batch = LearningBatch(halfLife: halfLife)
+        batch.keyOffsets[key] = samples.map { Point(x: $0, y: -$0) }
+        try store.write(batch)
+    }
+    let q = try #require(try store.keyOffsets(lang: "en")["q"])
+    #expect(q.n == 4 && abs(q.dx - 0.25) < 1e-9 && abs(q.dy + 0.25) < 1e-9)
+    try store.resetLearning()
+    #expect(try store.keyOffsets(lang: "en").isEmpty)
+}

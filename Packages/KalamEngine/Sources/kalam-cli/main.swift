@@ -30,7 +30,7 @@ func parseConfig(_ flags: [String: [String]]) -> EngineConfig? {
     return config
 }
 
-let commands: [String: ([String]) -> Int32] = ["suggest": suggest, "verify": verify, "eval-personal": evalPersonal, "eval": eval]
+let commands: [String: ([String]) -> Int32] = ["suggest": suggest, "verify": verify, "eval-personal": evalPersonal, "eval": eval, "tapmap": tapmap]
 let arguments = Array(CommandLine.arguments.dropFirst())
 guard let name = arguments.first, let command = commands[name] else {
     print("usage: kalam-cli <\(commands.keys.sorted().joined(separator: "|"))> ...")

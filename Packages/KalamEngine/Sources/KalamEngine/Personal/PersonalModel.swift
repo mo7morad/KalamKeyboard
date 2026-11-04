@@ -17,8 +17,8 @@ struct ContextCounts {
 }
 
 /// What a suggestion request needs from the personal store, held in memory (SPEC 8.2 to 8.4): the
-/// personal tries of known words, blocked words, corpus sizes and corrections are loaded once; the
-/// continuations of a context are loaded once per context. Confined to the engine queue.
+/// personal tries of known words, blocked words, corpus sizes, corrections and key offsets are loaded
+/// once; the continuations of a context are loaded once per context. Confined to the engine queue.
 /// A store error degrades to base-only suggestions and is logged.
 public final class PersonalModel {
     let store: PersonalStore?
@@ -28,6 +28,9 @@ public final class PersonalModel {
     private var blocked: [String: Set<String>] = [:]
     private var totals: [String: Hits] = [:]  // Nu
     private var corrections: Set<LearningBatch.CorrectionKey> = []
+    private var confusions: [String: Set<UInt32>] = [:]  // by store lang, from corrections
+    private var keyOffsets: [String: [String: KeyOffset]] = [:]  // by store lang, then key output
+    private var spatialModels: [Lang: SpatialModel] = [:]  // built from keyOffsets on first use
     private var contexts: [[String]: ContextCounts] = [:]
     private static let contextCacheSize = 8
 
@@ -53,10 +56,12 @@ public final class PersonalModel {
                 totals[lang] = rows.reduce(into: Hits()) { $0.add($1.hits.count, at: $1.hits.time, halfLife: config.halfLife) }
             }
             corrections = Set(try store.corrections())
+            keyOffsets = try ["en", "ar"].reduce(into: [:]) { $0[$1] = try store.keyOffsets(lang: $1) }
         } catch {
             personalLog.error("personal load failed, base-only: \(String(describing: error), privacy: .public)")
-            (tries, blocked, totals, corrections) = ([:], [:], [:], [])
+            (tries, blocked, totals, corrections, keyOffsets) = ([:], [:], [:], [], [:])
         }
+        confusions = KalamEngine.confusionPairs(corrections, minCorrections: config.learnedConfusionMinCorrections)
     }
 
     // MARK: Engine reads
@@ -76,6 +81,18 @@ public final class PersonalModel {
     func hasCorrection(_ lang: Lang, typed: String, chosen: String, rejected: Bool) -> Bool {
         corrections.contains(LearningBatch.CorrectionKey(lang: lang.rawValue, typed: typed, chosen: chosen, rejected: rejected))
     }
+
+    /// The spatial model with Moe's learned key offsets (SPEC 8.2), the fixed offset where there are none.
+    func spatialModel(_ lang: Lang, layout: Layout?) -> SpatialModel {
+        if let model = spatialModels[lang] { return model }
+        let offsets = KeyOffsets(keyOffsets[lang.rawValue] ?? [:], config: config)
+        let model = SpatialModel(layout: layout, offset: offsets.offset)
+        spatialModels[lang] = model
+        return model
+    }
+
+    /// (typed, intended) char pairs that get the learned confusion cost (SPEC 8.2).
+    func confusionPairs(_ lang: Lang) -> Set<UInt32> { confusions[lang.rawValue] ?? [] }
 
     /// Known special tokens starting with the typed text, case-insensitively.
     func tokens(withPrefix prefix: String) -> [PersonalTrie.Word] {
@@ -133,15 +150,23 @@ public final class PersonalModel {
         corrections.insert(LearningBatch.CorrectionKey(lang: lang, typed: typed, chosen: chosen, rejected: true))
     }
 
-    /// Re-reads the words a written batch touched, so the tries follow the store's state rules.
+    /// Re-reads the words and key offsets a written batch touched, so the tries follow the store's
+    /// state rules and the spatial model the new means.
     func refresh(after batch: LearningBatch) {
         contexts.removeAll()
         corrections.formUnion(batch.corrections.keys)
+        if batch.corrections.keys.contains(where: { !$0.rejected }) {
+            confusions = KalamEngine.confusionPairs(corrections, minCorrections: config.learnedConfusionMinCorrections)
+        }
         do {
             for (key, update) in batch.words {
                 totals[key.lang, default: Hits()].add(update.hits.count, at: update.hits.time, halfLife: config.halfLife)
                 guard let row = try store?.word(lang: key.lang, ident: key.ident) else { continue }
                 apply(row, lang: key.lang)
+            }
+            for lang in Set(batch.keyOffsets.keys.map(\.lang)) {
+                keyOffsets[lang] = try store?.keyOffsets(lang: lang)
+                if let lang = Lang(rawValue: lang) { spatialModels[lang] = nil }
             }
         } catch {
             personalLog.error("personal refresh failed: \(String(describing: error), privacy: .public)")

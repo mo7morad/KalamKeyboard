@@ -50,6 +50,12 @@ public final class PersonalStore {
             PRIMARY KEY(lang, typed, chosen, rejected)) WITHOUT ROWID;
         CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT) WITHOUT ROWID;
         """,
+        // SPEC 8.2: per-key running means of tap - key center, in key units; char is the key's output.
+        """
+        CREATE TABLE key_offsets(
+            lang TEXT NOT NULL, char TEXT NOT NULL, n INTEGER NOT NULL, dx REAL NOT NULL, dy REAL NOT NULL,
+            PRIMARY KEY(lang, char)) WITHOUT ROWID;
+        """,
     ]
 
     static var schemaVersion: Int { migrations.count }
@@ -120,6 +126,15 @@ public final class PersonalStore {
         return result
     }
 
+    /// The learned tap offsets of a lang (en or ar), by key output.
+    public func keyOffsets(lang: String) throws -> [String: KeyOffset] {
+        var result: [String: KeyOffset] = [:]
+        try db.query("SELECT char, n, dx, dy FROM key_offsets WHERE lang = ?", [lang]) {
+            result[$0.text(0)] = KeyOffset(n: $0.int(1), dx: $0.double(2), dy: $0.double(3))
+        }
+        return result
+    }
+
     // MARK: Writes
 
     /// Blocks a word (SPEC 5.4 "Forget"): it's never suggested again and learning can't revive it.
@@ -140,6 +155,7 @@ public final class PersonalStore {
         let rows: [() throws -> Void] = batch.words.map { key, update in { try self.writeWord(key, update) } }
             + batch.ngrams.map { key, hits in { try self.writeNgram(key, hits) } }
             + batch.corrections.map { key, hits in { try self.writeCorrection(key, hits) } }
+            + batch.keyOffsets.map { key, samples in { try self.writeKeyOffset(key, samples) } }
         for start in stride(from: 0, to: rows.count, by: chunk) {
             try db.transaction {
                 for row in rows[start..<min(start + chunk, rows.count)] { try row() }
@@ -222,6 +238,15 @@ public final class PersonalStore {
         }
         merged.add(hits.count, at: hits.time, halfLife: config.halfLife)
         try db.query("INSERT OR REPLACE INTO corrections VALUES(?, ?, ?, ?, ?, ?)", args + [merged.count, merged.time])
+    }
+
+    private func writeKeyOffset(_ key: LearningBatch.KeyOffsetKey, _ samples: [Point]) throws {
+        var offset = KeyOffset()
+        try db.query("SELECT n, dx, dy FROM key_offsets WHERE lang = ? AND char = ?", [key.lang, key.key]) {
+            offset = KeyOffset(n: $0.int(0), dx: $0.double(1), dy: $0.double(2))
+        }
+        for sample in samples { offset.add(sample, maxSamples: config.keyOffsetMaxSamples) }
+        try db.query("INSERT OR REPLACE INTO key_offsets VALUES(?, ?, ?, ?, ?)", [key.lang, key.key, offset.n, offset.dx, offset.dy])
     }
 
     // MARK: Helpers
