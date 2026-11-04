@@ -327,3 +327,27 @@ What to expect, and to judge (Moe AR R / W over the 10 folds):
 - At 0.7 every number equals Phase 12's: nothing else in Phase 13 reaches the eval. Judge the AR changes right or wrong as before; the guard is that the wrong count doesn't grow.
 - The rd-plan's weak spots are AR keystroke savings (27% against EN 38.7%) and AR next-word top-3 (15% against EN 20%). The sentence-start share is the only Phase 13 change that can move them; look at eval-personal AR NW and KS at 0.3 against 0.7. Take 0.3 only if AR NW or KS gains with EN NW down at most 0.5 pp; otherwise keep 0.7.
 - If `suggest --typed hel` still shows "he" in the middle on the real klex, note its score breakdown in docs/issues.md: with today's costs it should need an extra-tap edit.
+
+## 2026-11-04 · Phases 10 to 15 on the real data (Mac)
+
+Real lexicons (`KeyboardExtension/Resources/*.klex`), real held-out files and Moe's 3 chats (10 folds). Baseline `eea2216` (before Phase 10) vs `0124eaf` (after Phase 15), both built `-c release`, seed defaults. Synthetic runs have no tap bias unless noted.
+
+| Run | Baseline | Phases 10 to 15 |
+|---|---|---|
+| EN synthetic AC / FA / NW / KS | 55.5 / 0.02 / 22.5 / 38.2 | 48.8 / 0.01 / 22.5 / 38.1 |
+| AR normal AC / FA / KS | 30.7 / 0.00 / 28.2 | 29.6 / 0.00 / 27.9 |
+| AR gentle AC / FA | 20.8 / 0.00 | 20.2 / 0.00 |
+| EN, Moe-like taps (bias-y -0.13), offset 0 vs -0.13: AC / KS | | 49.6 / 38.0 vs 50.6 / 38.2 |
+| AR normal, Moe-like taps, offset 0 vs -0.13: AC / KS | | 31.1 / 28.0 vs 32.6 / 28.3 |
+| Moe EN, 10 folds: NW / KS / changes (normal, gentle) | 20.2 / 38.7 / 14, 6 | 20.2 / 38.7 / 14, 6 |
+| Moe AR, 10 folds: NW / KS / changes (normal, gentle) | 15.0 / 27.0 / 50, 33 | 14.8 / 26.7 / 48, 28 |
+
+Moe AR changes, judged by diffing `--samples 100` between the two builds (every change the new build makes, the baseline made too):
+- **Normal:** 3 changes dropped and 0 added. All 3 dropped changes were wrong: عمالين→عاملين (fold 4), بيسهلك→ييسرلك, العرص→العصر. So wrong ≤ 12 − 3 = 9, and right stays 39.
+- **Gentle:** 4 dropped and 0 added. All 4 were right: ثبل→قبل, يمعام→يمعلم, الجاجات→الحاجات, عذزا→عذرا. So right is 26 and wrong stays 3.
+
+Guards hold: FA ≤ 0.5% everywhere, and the wrong AR changes didn't grow (they fell in normal). Costs:
+- EN synthetic AC −6.7 pp. Most of it is the mid-sentence-capitals guard (Leipzig news capitalizes names), plus the 7 pt offset, since these taps have no bias.
+- Gentle AR loses 4 right fixes. eval-personal taps key centres, so the 7 pt offset works against it there.
+
+With Moe-like taps, the offset gains about 1 to 1.5 pp AC. Kept as is; check `kalam-cli tapmap` on a fresh device trace.
