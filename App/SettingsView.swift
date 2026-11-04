@@ -32,6 +32,11 @@ struct SettingsView: View {
                 Toggle("Eastern Arabic Digits", isOn: $settings.easternArabicDigits)
             }
             Section {
+                Toggle("Clipboard", isOn: $settings.clipboard)
+            } footer: {
+                Text("The keyboard keeps what you copy for an hour; pinned items stay until you delete them. If iOS asks before Kalam can paste, set Settings \u{203A} Apps \u{203A} Kalam \u{203A} Paste from Other Apps to Allow.")
+            }
+            Section {
                 Toggle("Pause Learning", isOn: $settings.pauseLearning)
             } footer: {
                 Text("While paused, the keyboard learns no new words.")

@@ -21,6 +21,7 @@ public struct Settings: Equatable, Sendable {
     public var easternArabicDigits = false
     public var digitHints = true
     public var pauseLearning = false
+    public var clipboard = true  // SPEC 5.5
     public var debugOverlay = false  // honored in Debug builds only
 
     public init() {}
@@ -29,7 +30,7 @@ public struct Settings: Equatable, Sendable {
         "haptics": \.haptics, "sounds": \.sounds, "autoCapitalize": \.autoCapitalize,
         "doubleSpacePeriod": \.doubleSpacePeriod, "contractionFix": \.contractionFix,
         "arabicVariantFix": \.arabicVariantFix, "easternArabicDigits": \.easternArabicDigits,
-        "digitHints": \.digitHints, "pauseLearning": \.pauseLearning, "debugOverlay": \.debugOverlay,
+        "digitHints": \.digitHints, "pauseLearning": \.pauseLearning, "clipboard": \.clipboard, "debugOverlay": \.debugOverlay,
     ]
     private static let modes: [String: WritableKeyPath<Settings, AutocorrectMode>] = [
         "autocorrectEN": \.autocorrectEN, "autocorrectAR": \.autocorrectAR,

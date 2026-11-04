@@ -18,3 +18,11 @@ To recapture, use `../harness/UITests/Kalam.swift` with the harness described in
 - `bar-ar-typing.png`: "انا" typed. The slots are mirrored (primary in the middle, alt1 on the right), and the variant أنا is offered as a suggestion.
 
 They come from `../harness/UITests/Phase5.swift` (`testTypoUndoArabic`), which also checks the field text: "teh" + space gives "the ", and one backspace gives "teh" back. `testPickPunctuationBlock` checks a suggestion tap ("hel" -> "he "), punctuation spacing ("he, ") and the "Don’t suggest" overlay.
+
+## Clipboard (SPEC 5.5, Debug build)
+
+- `clip-chip-light.png`: after a copy, the clipboard button at the bar's left edge and the chip "📋 Meet me…" in the primary slot.
+- `clip-panel-light.png`: the panel in place of the keys, three clips, newest first. The bar is its header: the selected button, "Clipboard", "Clear" and "ABC".
+- `clip-panel-ar-dark.png`: the panel over the Arabic keyboard in dark mode, the Arabic tile right-aligned.
+
+They come from `../harness/UITests/Clipboard.swift`: `testAllowPaste` sets Settings › Apps › Kalam › Paste from Other Apps to Allow (without it, iOS's "Allow Paste" prompt blocks the keyboard), and `testChipThenPanel` checks the chip paste, a tile paste with the panel staying open, Pin and Delete.

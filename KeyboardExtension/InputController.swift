@@ -33,6 +33,8 @@ final class InputController {
     private var undo: Undo?
     /// A literal restored by undo; committing it unchanged neither corrects nor learns it again.
     private var restoredLiteral: String?
+    /// The word a paste ended on; committing it unchanged neither corrects nor learns it (SPEC 5.5).
+    private var pastedWord: String?
     /// The text before the cursor after our last edit, to tell our edits from the host's.
     private var expectedBefore: String?
     private var shown: EngineClient.Result?
@@ -44,6 +46,9 @@ final class InputController {
     }
 
     private var before: String { proxy.documentContextBeforeInput ?? "" }
+
+    /// Whether a word is being typed (the clip chip shows only between words).
+    var hasWord: Bool { !taps.isEmpty }
 
     // MARK: Keys
 
@@ -127,6 +132,7 @@ final class InputController {
         insert(slot.word + " ")
         learn(slot.word, context: context, how: slot.isLiteral ? .literal : .suggestion)
         taps = []
+        pastedWord = nil
         autoSpace = true
         lastKeyWasSpace = true
         refresh()
@@ -134,6 +140,17 @@ final class InputController {
 
     func block(_ slot: BarSlot) {
         client.block(slot.ident, display: slot.word, lang: lang)
+        refresh()
+    }
+
+    // MARK: Clipboard
+
+    /// SPEC 5.5: inserts a clip as is; pasted text is never learned.
+    func paste(_ text: String) {
+        undo = nil
+        insert(text)
+        taps = resyncedTaps([], to: currentWord(before: before))
+        pastedWord = taps.isEmpty ? nil : literal
         refresh()
     }
 
@@ -151,6 +168,7 @@ final class InputController {
         autoSpace = false
         lastKeyWasSpace = false
         restoredLiteral = nil
+        pastedWord = nil
         taps = resyncedTaps(taps, to: currentWord(before: before))
         refresh()
     }
@@ -181,8 +199,8 @@ final class InputController {
         let literal = literal, taps = taps
         let context = contextWords(before: before)
         self.taps = []
-        defer { restoredLiteral = nil }
-        guard literal != restoredLiteral else { return nil }  // already learned as an explicit accept
+        defer { (restoredLiteral, pastedWord) = (nil, nil) }
+        guard literal != restoredLiteral, literal != pastedWord else { return nil }  // already learned, or pasted
         guard let target = client.resultForCommit()?.autocorrect else {
             learn(literal, context: context, how: .typed)
             return nil

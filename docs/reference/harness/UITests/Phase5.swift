@@ -1,8 +1,8 @@
 import XCTest
 
-/// Phase 5 end-to-end checks in the harness field, with Kalam picked from the globe's list.
-/// Field texts go to `base`/values.txt, bar screenshots through the watcher.
-final class Phase5: XCTestCase {
+/// The harness field with Kalam picked from the globe's list, and tap helpers in key units.
+/// Field texts go to `base`/values.txt, screenshots through the watcher.
+class KalamField: XCTestCase {
     var app: XCUIApplication!
     var keyTop: CGFloat = 0
     var kalam: XCUIElement { app.descendants(matching: .any)["kalam"] }
@@ -35,6 +35,10 @@ final class Phase5: XCTestCase {
         try? log.write(toFile: "\(base)/values.txt", atomically: true, encoding: .utf8)
     }
 
+}
+
+/// Phase 5 end-to-end checks: autocorrect and its undo, picks, punctuation spacing and blocking.
+final class Phase5: KalamField {
     /// Expect "teh" + space -> "the ", then one backspace -> "teh", then an Arabic word.
     func testTypoUndoArabic() {
         launchKalam()

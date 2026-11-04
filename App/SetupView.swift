@@ -9,6 +9,7 @@ struct SetupView: View {
         "Tap Open Settings below, then tap Keyboards.",
         "Turn on Kalam.",
         "Turn on Allow Full Access. Kalam needs it to learn your words and read these settings.",
+        "Go back to Kalam's page and set Paste from Other Apps to Allow, so the clipboard never has to ask.",
         "In any text field, tap or hold the globe key and choose Kalam.",
     ]
 

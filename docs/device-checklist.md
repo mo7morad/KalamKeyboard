@@ -98,3 +98,20 @@ Setup: install a Debug build. Keep one WhatsApp `_chat.txt` in Files (extract th
 - [ ] Restoring a random file shows "This file isn't a Kalam backup." and keeps your data.
 - [ ] Change a setting in the app; the keyboard follows it the next time it appears (needs Phase 5).
 - [ ] Leave the app in the background for a minute while you type in another app: no crash (0xdead10cc).
+
+## Clipboard (SPEC 5.5)
+
+Setup: install a Debug build with Full Access on, and Kalam > Settings > Clipboard on (the default).
+
+- [ ] Copy text in Safari, then open Kalam in Notes. Does iOS ask "Allow Paste"? The simulator does, and the keys freeze until it is answered. Set Settings > Apps > Kalam > Paste from Other Apps to Allow: the prompt stops. iOS may still show a small "Kalam pasted from …" banner at the top; say if it bothers you. Note what you saw: ____
+- [ ] Right after copying in another app, the bar's middle slot shows "📋" and the clip's first line. A tap pastes it, and the chip goes away. Copy again and type a letter instead: the chip goes too.
+- [ ] The clipboard button sits at the bar's left edge in EN and AR. It reads like a toolbar glyph, not a key. It opens the panel at the keys' height (the keyboard doesn't grow), in light and dark; the bar becomes the header (selected button, "Clipboard", "Clear", "ABC"), and "ABC" and the button both go back to the letters.
+- [ ] In the panel: a tap pastes the tile and the panel stays open. Long-press a tile: Pin moves it to the top with a pin mark, Unpin returns it, Delete removes it. "Clear" removes all but the pinned.
+- [ ] An Arabic clip's tile is right-aligned.
+- [ ] Copy something, wait an hour (or more), open the panel: unpinned items are gone, pinned ones are still there, also after restarting the phone.
+- [ ] A long clip (a few paragraphs, then something over 10,000 characters): the long one pastes whole and its tile shows 3 lines; the over-long one isn't kept. Scrolling the panel stays smooth.
+- [ ] A password copied from Passwords or a password manager doesn't show up.
+- [ ] Copy something in another app, come back and type a few words without opening the panel: the chip appears within about a second of the next keystroke or cursor move, and typing stays as fast as before.
+- [ ] Pasted words aren't learned: paste a made-up word, type space, and it isn't suggested later.
+- [ ] Full Access off: no button, no chip, no prompt, nothing crashes.
+- [ ] Clipboard setting off: no button and no chip; turn it on again and the pinned items are still there.

@@ -12,6 +12,8 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     private var isVisible = false
     private let keyboardView = KeyboardView()
     private let bar = SuggestionBar()
+    private let clipboard = Clipboard()
+    private let panel = ClipboardPanel()
     private let globeButton = UIButton(type: .custom)
     #if DEBUG
     private let overlay = DebugOverlay()
@@ -45,16 +47,30 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
             self?.refreshAutoShift()
             self?.refreshReturnKey()
         }
-        input.onSlots = { [weak self] in self?.bar.slots = $0 }
+        input.onSlots = { [weak self] in
+            self?.bar.slots = $0
+            self?.showChip()
+        }
         bar.onPick = { [weak self] in self?.input.accept($0) }
         bar.onBlock = { [weak self] in self?.input.block($0) }
+        bar.onClipboard = { [weak self] in self?.togglePanel() }
+        bar.onChip = { [weak self] in
+            guard let self, let clip = clipboard.history.chip(now: Date()) else { return }
+            paste(clip.text)
+        }
+        panel.onPaste = { [weak self] in self?.paste($0) }
+        panel.onPin = { [weak self] text, pinned in self?.changeClipboard { $0.setPinned(pinned, text: text) } }
+        panel.onDelete = { [weak self] text in self?.changeClipboard { $0.delete(text) } }
+        bar.onClear = { [weak self] in self?.changeClipboard { $0.clear() } }
+        bar.onClose = { [weak self] in self?.closePanel() }
+        panel.isHidden = true
         for name in [NSNotification.Name.NSExtensionHostWillResignActive, .NSExtensionHostDidEnterBackground] {
             NotificationCenter.default.addObserver(self, selector: #selector(hostWillHide), name: name, object: nil)
         }
         NotificationCenter.default.addObserver(self, selector: #selector(hostDidBecomeActive), name: .NSExtensionHostDidBecomeActive, object: nil)
         registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: Self, _) in self.refreshAppearance() }
         globeButton.addTarget(self, action: #selector(handleInputModeList(from:with:)), for: .allTouchEvents)
-        for subview in [bar, keyboardView, globeButton] {
+        for subview in [bar, keyboardView, globeButton, panel] {
             subview.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(subview)
         }
@@ -68,6 +84,10 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
             keyboardView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             keyboardView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             keyboardView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            panel.topAnchor.constraint(equalTo: bar.bottomAnchor),
+            panel.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            panel.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            panel.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
         #if DEBUG
         overlay.frame = CGRect(x: 28, y: 2, width: 220, height: 12)
@@ -85,8 +105,17 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         client.open()  // also picks up the host app's changes (import, forget, reset, restore)
         refreshHostState()
         input.resync()
+        closePanel()
+        if clipboardEnabled { clipboard.load() }
         importLexiconIfDue()
         writeTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.client.writeIfDue() }
+    }
+
+    /// Captured once the keys are on screen: reading the pasteboard can block main on iOS's
+    /// "Allow Paste" prompt until Moe answers it (SPEC 5.5).
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        captureClip()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -94,6 +123,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         isVisible = false
         writeTimer?.invalidate()
         client.close()
+        clipboard.flush()
     }
 
     @objc private func hostWillHide() { client.close() }
@@ -110,11 +140,13 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
         refreshHostState()
+        captureClipIfDue()
         input.hostTextChanged()
     }
 
     override func selectionDidChange(_ textInput: UITextInput?) {
         super.selectionDidChange(textInput)
+        captureClipIfDue()
         input.hostTextChanged()
     }
 
@@ -161,6 +193,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
 
     private func refreshHostState() {
         bar.hasFullAccess = hasFullAccess
+        bar.showsClipboardButton = clipboardEnabled
         let traits = fieldTraits
         if traits != input.traits {
             input.traits = traits
@@ -195,6 +228,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         let palette = dark ? Palette.dark : Palette.light
         keyboardView.palette = palette
         bar.palette = palette
+        panel.palette = palette
     }
 
     private func refreshReturnKey() {
@@ -273,6 +307,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     }
 
     func commit(_ text: String, at point: Point?) {
+        clipboard.dismissChip()  // SPEC 5.5: typing ends the chip's offer
         let output = lang == .en && shift.mode != .off ? text.uppercased() : text
         shift.letterTyped()
         input.type(output, at: page == "letters" ? point : nil)  // the engine's spatial model knows the letters page only
@@ -292,6 +327,61 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
 
     private func showLetters() {
         page = "letters"
+        reloadLayout()
+    }
+
+    // MARK: Clipboard (SPEC 5.5)
+
+    /// The App Group container and the pasteboard both need Full Access.
+    private var clipboardEnabled: Bool { hasFullAccess && settings.clipboard }
+
+    /// On appear and when the panel opens.
+    private func captureClip() {
+        if clipboardEnabled, clipboard.capture() { showNewClip() }
+    }
+
+    /// On host text and selection changes, which can come with every keystroke.
+    private func captureClipIfDue() {
+        if clipboardEnabled, clipboard.captureIfDue() { showNewClip() }
+    }
+
+    private func showNewClip() {
+        showChip()
+        if !panel.isHidden { panel.items = clipboard.history.panelItems }
+    }
+
+    private func showChip() {
+        bar.chip = clipboardEnabled && !input.hasWord ? clipboard.history.chip(now: Date())?.text : nil
+    }
+
+    private func paste(_ text: String) {
+        input.paste(text)
+        changeClipboard { $0.useChip() }
+    }
+
+    private func changeClipboard(_ edit: (inout ClipboardHistory) -> Void) {
+        clipboard.change(edit)
+        showChip()
+        if !panel.isHidden { panel.items = clipboard.history.panelItems }
+    }
+
+    private func togglePanel() {
+        guard panel.isHidden else { return closePanel() }
+        captureClip()
+        panel.items = clipboard.history.panelItems
+        panel.isHidden = false
+        keyboardView.isHidden = true
+        globeButton.isHidden = true
+        bar.isPanelOpen = true
+        view.accessibilityValue = "clipboard"
+    }
+
+    private func closePanel() {
+        guard !panel.isHidden else { return }
+        panel.isHidden = true
+        keyboardView.isHidden = false
+        globeButton.isHidden = false
+        bar.isPanelOpen = false
         reloadLayout()
     }
 }

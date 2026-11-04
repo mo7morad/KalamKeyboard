@@ -20,6 +20,7 @@ import Testing
     #expect(settings == Settings())
     #expect((settings.autocorrect(.en), settings.autocorrect(.ar)) == (.normal, .gentle))
     #expect((settings.variantFix(.en), settings.variantFix(.ar)) == (true, false))
+    #expect(settings.clipboard)
 }
 
 @Test func savedSettingsLoadBack() throws {
@@ -28,6 +29,7 @@ import Testing
     defer { defaults.removePersistentDomain(forName: suite) }
     var settings = Settings()
     (settings.haptics, settings.hapticStrength, settings.autocorrectAR, settings.pauseLearning) = (false, 0.3, .off, true)
+    settings.clipboard = false
     settings.save(to: defaults)
     #expect(Settings.load(from: defaults) == settings)
 }
