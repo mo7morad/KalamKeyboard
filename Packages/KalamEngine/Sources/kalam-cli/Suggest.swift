@@ -6,17 +6,9 @@ import KalamEngine
 func suggest(_ args: [String]) -> Int32 {
     let flags = parseFlags(args)
     guard let path = flags["klex"]?.last, let typed = flags["typed"]?.last,
-          let lang = Lang(rawValue: flags["lang"]?.last ?? "en") else {
+          let lang = Lang(rawValue: flags["lang"]?.last ?? "en"), let config = parseConfig(flags) else {
         print("usage: kalam-cli suggest --klex <path> [--lang en|ar] [--context <text>] --typed <letters> [--top N] [--set name=value]...")
         return 2
-    }
-    var config = EngineConfig()
-    for setting in flags["set"] ?? [] {
-        let parts = setting.split(separator: "=", maxSplits: 1).map(String.init)
-        guard parts.count == 2, config.set(parts[0], parts[1]) else {
-            print("bad --set \(setting); names: \(EngineConfig.names.joined(separator: ", "))")
-            return 2
-        }
     }
     let lexicon = BaseLexicon(url: URL(fileURLWithPath: path))
     if lexicon == nil { print("warning: \(path) is not a valid .klex, literal only") }

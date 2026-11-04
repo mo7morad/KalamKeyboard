@@ -1,4 +1,4 @@
-/// Every engine tunable (SPEC 8.1 to 8.3). Change these only with a logged `kalam-cli eval` run.
+/// Every engine tunable (SPEC 8 and 9). Change these only with a logged `kalam-cli eval` run.
 public struct EngineConfig: Sendable {
     // 8.2 Spatial model and edits
     public var matchRadius = 1.5  // key units
@@ -28,6 +28,33 @@ public struct EngineConfig: Sendable {
     public var correctionBoost = 3.0
     public var explicitCharBoost = 0.5  // 8.1: typed non-normalized char, e.g. a long-pressed hamza
 
+    // 8.4 Decay
+    public var decayHalfLifeDays = 60.0
+    var halfLife: Double { decayHalfLifeDays * 86_400 }  // seconds
+
+    // 8.5 Autocorrect
+    public var autocorrectThresholdNormal = 2.5  // theta: score(c*) - score(literal)
+    public var autocorrectThresholdGentle = 4.0
+    public var autocorrectMinShare = 0.5  // c*'s softmax share among the candidates
+    public var variantFixRatio = 5.0  // P_LM(c*) >= ratio * P_LM(literal)
+    public var variantFixMaxKept = 2  // no variant fix once Moe kept the literal this often
+
+    // 8.6 Predictions
+    public var predictionPoolSize = 20  // candidates taken from each source before scoring
+
+    // 9.2 Learning
+    public var knownMinUses = 2  // typed uses, across...
+    public var knownMinSessions = 2  // ...this many keyboard sessions
+    public var knownMinImports = 2
+    public var learnerFlushSeconds = 5.0
+    public var manualCorrectionSeconds = 10.0
+    public var manualCorrectionMaxDistance = 2
+    public var storeBusyTimeoutMs = 200
+
+    // 9.3 Import
+    public var undatedImportAgeDays = 30.0  // t_last for a message whose date doesn't parse
+    public var typoNeighbourRatio = 10.0  // an imported non-word is a likely typo of a word used this many times more
+
     public init() {}
 
     private static let doubles: [String: WritableKeyPath<EngineConfig, Double>] = [
@@ -38,12 +65,19 @@ public struct EngineConfig: Sendable {
         "unknownLogProb": \.unknownLogProb, "alpha": \.alpha, "trigramWeight": \.trigramWeight,
         "bigramShare": \.bigramShare, "personalContextPrior": \.personalContextPrior,
         "personalCorpusPrior": \.personalCorpusPrior, "correctionBoost": \.correctionBoost,
-        "explicitCharBoost": \.explicitCharBoost,
+        "explicitCharBoost": \.explicitCharBoost, "decayHalfLifeDays": \.decayHalfLifeDays,
+        "autocorrectThresholdNormal": \.autocorrectThresholdNormal, "autocorrectThresholdGentle": \.autocorrectThresholdGentle,
+        "autocorrectMinShare": \.autocorrectMinShare, "variantFixRatio": \.variantFixRatio,
+        "learnerFlushSeconds": \.learnerFlushSeconds, "manualCorrectionSeconds": \.manualCorrectionSeconds,
+        "undatedImportAgeDays": \.undatedImportAgeDays, "typoNeighbourRatio": \.typoNeighbourRatio,
     ]
     private static let ints: [String: WritableKeyPath<EngineConfig, Int>] = [
         "maxEdits": \.maxEdits, "maxEditsShortLiteral": \.maxEditsShortLiteral,
         "shortLiteralLength": \.shortLiteralLength, "noFarSubstitutionLength": \.noFarSubstitutionLength,
         "beamWidth": \.beamWidth, "maxCompletions": \.maxCompletions, "personalTrieCap": \.personalTrieCap,
+        "variantFixMaxKept": \.variantFixMaxKept, "predictionPoolSize": \.predictionPoolSize,
+        "knownMinUses": \.knownMinUses, "knownMinSessions": \.knownMinSessions, "knownMinImports": \.knownMinImports,
+        "manualCorrectionMaxDistance": \.manualCorrectionMaxDistance, "storeBusyTimeoutMs": \.storeBusyTimeoutMs,
     ]
 
     public static var names: [String] { (Array(doubles.keys) + Array(ints.keys)).sorted() }

@@ -28,9 +28,9 @@ public struct InputState: Sendable {
 
 /// A ranked candidate with its score breakdown (SPEC 8.3).
 public struct Suggestion: Sendable {
-    public let text: String  // display form, after the corpus casing table
+    public let text: String  // display form: Moe's casing, else the corpus casing table
     public let ident: String
-    public internal(set) var isLiteral: Bool
+    public let isLiteral: Bool
     public let lm: Double
     public let spatial: Double  // already weighted by alpha
     public let edits: Double
@@ -40,68 +40,142 @@ public struct Suggestion: Sendable {
     public var score: Double { lm - spatial - edits - completion + boosts }
 }
 
+/// Confined to the engine queue, like the PersonalModel it reads.
 public struct Engine {
     public let lang: Lang
     public let config: EngineConfig
     let lexicon: BaseLexicon?
     let spatial: SpatialModel
+    let personal: PersonalModel?
 
-    /// A missing lexicon, or one for another language, leaves only the literal candidate.
-    public init(lang: Lang, lexicon: BaseLexicon?, layout: Layout?, config: EngineConfig = EngineConfig()) {
+    /// A missing lexicon, or one for another language, leaves only the literal and personal candidates.
+    public init(lang: Lang, lexicon: BaseLexicon?, layout: Layout?, personal: PersonalModel? = nil, config: EngineConfig = EngineConfig()) {
         self.lang = lang
         self.lexicon = lexicon?.lang == lang ? lexicon : nil
         self.spatial = SpatialModel(layout: layout?.lang == lang ? layout : nil)
+        self.personal = personal
         self.config = config
     }
 
-    public func suggest(_ input: InputState, limit: Int = 3) -> [Suggestion] {
-        let literal = input.literal
-        guard !literal.isEmpty else { return [] }
-        let kind: Token.Kind = lang == .en ? .en : .ar
-        let previous = lexicon?.wordID(ident: ident(input.context.last ?? sentenceStart, kind: kind))
-        var byIdent = lexicon.map { baseCandidates(input.taps, literalLength: literal.count, after: previous, in: $0) } ?? [:]
+    var kind: Token.Kind { lang == .en ? .en : .ar }
 
-        let literalIdent = ident(literal, kind: kind)
-        if byIdent[literalIdent] != nil {
-            byIdent[literalIdent]?.isLiteral = true
-        } else {
-            let lm = lexicon.flatMap { lex in lex.wordID(ident: literalIdent).map { lmLogProb($0, after: previous, in: lex) } }
-            byIdent[literalIdent] = Suggestion(text: literal, ident: literalIdent, isLiteral: true, lm: lm ?? config.unknownLogProb,
-                                        spatial: 0, edits: 0, completion: 0, boosts: 0)
-        }
-        let ranked = byIdent.values.sorted { $0.score != $1.score ? $0.score > $1.score : $0.text < $1.text }
-        return Array(ranked.prefix(limit))
+    public func suggest(_ input: InputState, limit: Int = 3) -> [Suggestion] {
+        Array(candidates(input).prefix(limit))
     }
 
-    /// Every variant of every key the beam search reaches, best score per ident.
-    private func baseCandidates(_ input: [Tap], literalLength: Int, after previous: Int?, in lexicon: BaseLexicon) -> [String: Suggestion] {
+    /// Every candidate for the current word, best first: base and personal trie matches merged by
+    /// ident, the literal, and known special tokens it starts. Blocked words are dropped.
+    public func candidates(_ input: InputState) -> [Suggestion] {
+        let literal = input.literal
+        guard !literal.isEmpty else { return [] }
+        let context = lmContext(input.context)
+        let literalIdent = ident(literal, kind: kind)
+        let (taps, explicitChars) = searchTaps(input.taps)
+        let paths = searchBothTries(taps, literalLength: literal.count)
+
+        var results: [Suggestion] = paths.compactMap { ident, path in
+            guard ident == literalIdent || personal?.isBlocked(lang, ident) != true else { return nil }
+            let word = path.word ?? lexicon?.wordID(ident: ident)
+            let corrected = personal?.hasCorrection(lang, typed: literalIdent, chosen: ident, rejected: false) == true
+            return Suggestion(
+                text: display(ident, word), ident: ident, isLiteral: ident == literalIdent,
+                lm: lmLogProb(ident, word: word, context), spatial: path.match.spatial, edits: path.match.edits,
+                completion: path.match.completion,
+                boosts: Double(explicitChars.filter(ident.contains).count) * config.explicitCharBoost
+                    + (corrected ? config.correctionBoost : 0))
+        }
+        if paths[literalIdent] == nil {
+            results.append(Suggestion(text: literal, ident: literalIdent, isLiteral: true,
+                                      lm: lmLogProb(literalIdent, word: lexicon?.wordID(ident: literalIdent), context),
+                                      spatial: 0, edits: 0, completion: 0, boosts: 0))
+        }
+        results += tokenCandidates(literal)
+        return ranked(results)
+    }
+
+    /// Next words for an empty current word (SPEC 8.6): personal trigram and bigram continuations,
+    /// base bigrams and unigram backoff, scored by the full LM. Never the previous word or <s>.
+    public func predict(context: [String], limit: Int = 3) -> [Suggestion] {
+        let context = lmContext(context)
+        let previous = context.idents.last
+        let candidates = predictionPool(context).compactMap { ident, word -> Suggestion? in
+            guard ident != previous, ident != sentenceStart, personal?.isBlocked(lang, ident) != true else { return nil }
+            let word = word ?? lexicon?.wordID(ident: ident)
+            return Suggestion(text: display(ident, word), ident: ident, isLiteral: false, lm: lmLogProb(ident, word: word, context),
+                              spatial: 0, edits: 0, completion: 0, boosts: 0)
+        }
+        return Array(ranked(candidates).prefix(limit))
+    }
+
+    // MARK: Helpers
+
+    /// Beam search over the base and the personal trie, merged by ident: the cheapest path to each
+    /// word, with its base word id when the base trie has it.
+    private func searchBothTries(_ taps: [SearchTap], literalLength: Int) -> [String: (match: KeyMatch, word: Int?)] {
+        var paths: [String: (match: KeyMatch, word: Int?)] = [:]
+        func keep(_ ident: String, _ match: KeyMatch, _ word: Int?) {
+            let known = paths[ident]
+            if let known, known.match.cost <= match.cost { return }
+            paths[ident] = (match, word ?? known?.word)
+        }
+        if let lexicon {
+            for match in search(taps, literalLength: literalLength, in: lexicon) {
+                for word in lexicon.variants(ofKey: match.key) { keep(lexicon.surface(word), match, word) }
+            }
+        }
+        if let trie = personal?.trie(lang) {
+            for match in search(taps, literalLength: literalLength, in: trie) {
+                for ident in trie.idents(ofKey: match.key) { keep(ident, match, nil) }
+            }
+        }
+        return paths
+    }
+
+    /// Prediction candidates: the top predictionPoolSize of each source, ident -> base word id when known.
+    private func predictionPool(_ context: LMContext) -> [String: Int?] {
+        let size = config.predictionPoolSize
+        var pool: [String: Int?] = [:]
+        func top(_ counts: [String: Double]) -> [String] { counts.sorted { $0.value > $1.value }.prefix(size).map(\.key) }
+        for ident in top(context.personal.trigram) + top(context.personal.bigram) { pool[ident] = .some(nil) }
+        if let trie = personal?.trie(lang) {
+            for key in topKeys(size, in: trie) { trie.idents(ofKey: key).forEach { pool[$0] = .some(nil) } }
+        }
+        if let lexicon {
+            let bigrams = context.previous.map { Array(lexicon.bigrams(after: $0).prefix(size)) } ?? []
+            for word in bigrams + topKeys(size, in: lexicon).flatMap(lexicon.variants(ofKey:)) { pool[lexicon.surface(word)] = word }
+        }
+        return pool
+    }
+
+    private func ranked(_ suggestions: [Suggestion]) -> [Suggestion] {
+        suggestions.sorted { $0.score != $1.score ? $0.score > $1.score : $0.text < $1.text }
+    }
+
+    /// Normalized search taps, plus the typed non-normalized chars (SPEC 8.1, e.g. a long-pressed hamza).
+    private func searchTaps(_ input: [Tap]) -> ([SearchTap], Set<String>) {
         var taps: [SearchTap] = []
-        var explicitChars: Set<String> = []  // SPEC 8.1: typed non-normalized chars, e.g. a long-pressed hamza
+        var explicitChars: Set<String> = []
         for tap in input {
             let key = normalize(tap.char, lang: lang)
             if key != tap.char.lowercased() { explicitChars.insert(tap.char) }
             taps += key.utf16.map { SearchTap(unit: $0, point: tap.point) }  // empty key: skipped at zero cost
         }
-        var byIdent: [String: Suggestion] = [:]
-        for match in search(taps, literalLength: literalLength, in: lexicon) {
-            for word in lexicon.variants(ofKey: match.key) {
-                let surface = lexicon.surface(word)
-                let candidate = Suggestion(
-                    text: lexicon.casing(word) ?? surface, ident: surface, isLiteral: false,
-                    lm: lmLogProb(word, after: previous, in: lexicon),
-                    spatial: match.spatial, edits: match.edits, completion: match.completion,
-                    boosts: Double(explicitChars.filter(surface.contains).count) * config.explicitCharBoost)
-                if byIdent[surface].map({ $0.score < candidate.score }) ?? true { byIdent[surface] = candidate }
-            }
-        }
-        return byIdent
+        return (taps, explicitChars)
     }
 
-    /// Interpolated LM (SPEC 8.3) with base data only. The personal terms are 0 until Phase 4,
-    /// which leaves P = bigramShare * PB(w|b) + (1 - bigramShare) * PB(w).
-    func lmLogProb(_ word: Int, after previous: Int?, in lexicon: BaseLexicon) -> Double {
-        let bigram = previous.flatMap { lexicon.bigramLogProb($0, word) }.map(exp) ?? 0
-        let p = config.bigramShare * bigram + (1 - config.bigramShare) * exp(lexicon.logProb(word))
-        return p > 0 ? log(p) : config.unknownLogProb
+    /// Display form (SPEC 6.3): Moe's casing, then the corpus casing table, then the surface.
+    private func display(_ ident: String, _ word: Int?) -> String {
+        if let mine = personal?.display(lang, ident) { return mine }
+        guard let lexicon, let word else { return ident }
+        return lexicon.casing(word) ?? lexicon.surface(word)
+    }
+
+    /// Special tokens Moe uses (emails, handles), suggested by prefix once the literal looks like one.
+    private func tokenCandidates(_ literal: String) -> [Suggestion] {
+        guard literal.contains(where: { "@#./:".contains($0) }), let personal else { return [] }
+        return personal.tokens(withPrefix: literal).filter { $0.display != literal }.map {
+            Suggestion(text: $0.display, ident: $0.display, isLiteral: false, lm: 0, spatial: 0, edits: 0,
+                       completion: config.completionPenalty, boosts: 0)
+        }
     }
 }

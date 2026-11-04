@@ -126,12 +126,21 @@ public final class BaseLexicon {
 
     /// log P(w2 | w1) when w2 is among w1's top bigrams.
     public func bigramLogProb(_ w1: Int, _ w2: Int) -> Double? {
-        let first = Int(field(bigramIndexTable, w1, 0, UInt32.self))
-        let end = min(first + Int(field(bigramIndexTable, w1, 4, UInt32.self)), bigramTable.count)
-        for i in first..<max(first, end) where Int(field(bigramTable, i, 0, UInt32.self)) == w2 {
+        for i in bigramRange(w1) where Int(field(bigramTable, i, 0, UInt32.self)) == w2 {
             return dequantize(field(bigramTable, i, 4, UInt16.self))
         }
         return nil
+    }
+
+    /// Word ids of w1's top bigram continuations, most probable first.
+    public func bigrams(after w1: Int) -> [Int] {
+        bigramRange(w1).map { Int(field(bigramTable, $0, 0, UInt32.self)) }
+    }
+
+    private func bigramRange(_ w1: Int) -> Range<Int> {
+        let first = Int(field(bigramIndexTable, w1, 0, UInt32.self))
+        let end = min(first + Int(field(bigramIndexTable, w1, 4, UInt32.self)), bigramTable.count)
+        return first..<max(first, end)
     }
 
     /// Corpus display casing (e.g. "i" -> "I"), when it differs from the surface.

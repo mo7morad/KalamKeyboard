@@ -1,4 +1,21 @@
-/// Trie beam search with the spatial model and edits (SPEC 8.2).
+/// Trie beam search with the spatial model and edits (SPEC 8.2), over the base and the personal trie.
+
+/// The trie shape the search needs. Node 0 is the root.
+protocol SearchTrie {
+    associatedtype Children: Sequence<Int>
+    func children(_ node: Int) -> Children
+    func char(_ node: Int) -> UInt16
+    func key(_ node: Int) -> Int?
+    /// Upper bound on keyLogProb in the node's subtree. Any scale that differs from a log-prob by a
+    /// constant works: best-first order only compares items of one trie.
+    func bestLogProb(_ node: Int) -> Double
+    /// Score of the key's best word on the same scale, nil when it has none.
+    func keyLogProb(_ key: Int) -> Double?
+}
+
+extension BaseLexicon: SearchTrie {
+    func keyLogProb(_ key: Int) -> Double? { variants(ofKey: key).first.map(logProb) }
+}
 
 struct SearchTap {
     let unit: UInt16  // normalized UTF-16 unit
@@ -11,6 +28,7 @@ struct KeyMatch {
     let spatial: Double
     let edits: Double
     let completion: Double
+    var cost: Double { spatial + edits + completion }
 }
 
 private struct State {
@@ -27,12 +45,20 @@ private struct State {
 
 private let hamza: UInt16 = 0x0621
 
+/// A best-first completion frontier item.
+private struct Item {
+    let node: Int
+    let state: State
+    let isWord: Bool
+    let priority: Double
+}
+
 extension Engine {
-    func search(_ taps: [SearchTap], literalLength: Int, in lexicon: BaseLexicon) -> [KeyMatch] {
+    func search<T: SearchTrie>(_ taps: [SearchTap], literalLength: Int, in lexicon: T) -> [KeyMatch] {
         let maxEdits = literalLength <= config.shortLiteralLength ? config.maxEditsShortLiteral : config.maxEdits
         let allowFar = literalLength > config.noFarSubstitutionLength
         var layers = [[Int: State]](repeating: [:], count: taps.count + 1)
-        layers[0][BaseLexicon.root] = State(node: BaseLexicon.root, edits: 0, spatial: 0, editCost: 0)
+        layers[0][0] = State(node: 0, edits: 0, spatial: 0, editCost: 0)
 
         for i in 0...taps.count {
             addOmissions(&layers[i], maxEdits: maxEdits, lexicon)
@@ -69,7 +95,7 @@ extension Engine {
     }
 
     /// Missed letters: descend without consuming a tap, up to the edit limit.
-    private func addOmissions(_ layer: inout [Int: State], maxEdits: Int, _ lexicon: BaseLexicon) {
+    private func addOmissions<T: SearchTrie>(_ layer: inout [Int: State], maxEdits: Int, _ lexicon: T) {
         var frontier = Array(layer.values)
         while !frontier.isEmpty {
             var added: [State] = []
@@ -101,12 +127,12 @@ extension Engine {
     }
 
     /// Full words at the end states plus best-first completions below them.
-    private func matches(ending end: [Int: State], _ lexicon: BaseLexicon) -> [KeyMatch] {
+    private func matches<T: SearchTrie>(ending end: [Int: State], _ lexicon: T) -> [KeyMatch] {
         var best: [Int: KeyMatch] = [:]
         for s in end.values {
             if let key = lexicon.key(s.node) { keep(key, s, completion: 0, in: &best) }
         }
-        addCompletions(below: end, to: &best, lexicon)
+        addCompletions(below: end, limit: config.maxCompletions, to: &best, lexicon)
         return Array(best.values)
     }
 
@@ -118,24 +144,30 @@ extension Engine {
         return true
     }
 
-    /// Up to maxCompletions words strictly below the end states, found best-first on
-    /// subtree log-prob minus path cost (the max-subtree score is an exact upper bound).
-    private func addCompletions(below end: [Int: State], to best: inout [Int: KeyMatch], _ lexicon: BaseLexicon) {
-        struct Item { let node: Int; let state: State; let isWord: Bool; let priority: Double }
+    /// The most probable keys of a trie, best first (unigram backoff for predictions).
+    func topKeys<T: SearchTrie>(_ limit: Int, in trie: T) -> [Int] {
+        var best: [Int: KeyMatch] = [:]
+        addCompletions(below: [0: State(node: 0, edits: 0, spatial: 0, editCost: 0)], limit: limit, to: &best, trie)
+        return best.keys.sorted { trie.keyLogProb($0) ?? 0 > trie.keyLogProb($1) ?? 0 }
+    }
+
+    /// Up to `limit` words strictly below the end states, found best-first on subtree log-prob
+    /// minus path cost (the max-subtree score is an upper bound).
+    private func addCompletions<T: SearchTrie>(below end: [Int: State], limit: Int, to best: inout [Int: KeyMatch], _ lexicon: T) {
         func subtree(_ node: Int, _ s: State) -> Item { Item(node: node, state: s, isWord: false, priority: lexicon.bestLogProb(node) - s.cost) }
         var frontier = end.values.flatMap { s in lexicon.children(s.node).map { subtree($0, s) } }
         var expanded: Set<Int> = []  // a node's first pop has its best priority; also bounds work on a corrupt trie
         var found = 0
         // ponytail: linear max scan over the frontier; use a heap if completions show up in profiles.
-        while found < config.maxCompletions, let top = frontier.indices.max(by: { frontier[$0].priority < frontier[$1].priority }) {
+        while found < limit, let top = frontier.indices.max(by: { frontier[$0].priority < frontier[$1].priority }) {
             let item = frontier.remove(at: top)
             if item.isWord {
                 if let key = lexicon.key(item.node), keep(key, item.state, completion: config.completionPenalty, in: &best) { found += 1 }
                 continue
             }
             guard expanded.insert(item.node).inserted else { continue }
-            if let key = lexicon.key(item.node), let first = lexicon.variants(ofKey: key).first {
-                frontier.append(Item(node: item.node, state: item.state, isWord: true, priority: lexicon.logProb(first) - item.state.cost))
+            if let key = lexicon.key(item.node), let logProb = lexicon.keyLogProb(key) {
+                frontier.append(Item(node: item.node, state: item.state, isWord: true, priority: logProb - item.state.cost))
             }
             frontier += lexicon.children(item.node).map { subtree($0, item.state) }
         }
