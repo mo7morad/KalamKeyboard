@@ -37,8 +37,12 @@ final class TouchSpy: UIGestureRecognizer, UIGestureRecognizerDelegate {
         for touch in touches {
             let point = touch.location(in: nil)
             let view = touch.view.map { "\(type(of: $0))" } ?? "none"
-            trace(String(format: "spy %@ at %.1f,%.1f in %@ lag %.1f ms id %@", phase, Double(point.x), Double(point.y), view,
-                         (CACurrentMediaTime() - touch.timestamp) * 1000, "\(Unmanaged.passUnretained(touch).toOpaque())"))
+            // The other recognizers that see the touch and their states (0 possible, 3 recognized, 4 cancelled,
+            // 5 failed): one that recognizes a lost tap is what took it.
+            let others = (touch.gestureRecognizers ?? []).filter { $0 !== self }.map { "\(type(of: $0)):\($0.state.rawValue)" }
+            trace(String(format: "spy %@ at %.1f,%.1f in %@ lag %.1f ms id %@ recognizers %@", phase, Double(point.x), Double(point.y),
+                         view, (CACurrentMediaTime() - touch.timestamp) * 1000, "\(Unmanaged.passUnretained(touch).toOpaque())",
+                         others.joined(separator: ",")))
         }
     }
 

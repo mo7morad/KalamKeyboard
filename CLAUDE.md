@@ -11,6 +11,7 @@ Kalam is a personal iOS keyboard (English + Arabic) for a single user, Moe, who 
 - **Orchestrated phases.** The main session is the orchestrator. Each coding phase runs in its own subagent (Opus, medium effort) to save context.
   - The orchestrator writes the phase brief from `PROMPTS.md`, then audits the result: it reruns the tests and reviews the diff with clean-code-guard (production code), test-guard (tests) and ponytail (no over-building). It sends fixes back until the phase passes, then commits.
   - Moe delegated approvals to the orchestrator ("follow your best judgment"). A phase subagent doesn't enter plan mode or wait for an OK. It works through its brief, decides open questions itself and lists them in its report. It doesn't commit.
+- **Branches:** only `main` (stable) and `development` (where new work is tried). Commit and push to `development`, never to a new branch. Merge into `main` only when Moe says so.
 - **Locked decisions (SPEC §3).** Never change one silently. The orchestrator decides, updates SPEC, and tells Moe the reason in one line.
 - **Ask Moe only for what needs him:** his data (WhatsApp exports), his phone (device checklists) and his eyes (screenshots, feel). At most 3 questions at a time.
 - **Reports** are short and say three things:
