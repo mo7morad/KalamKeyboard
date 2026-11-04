@@ -22,7 +22,8 @@ struct ReturnKeyStyle: Equatable {
 /// One view with layer-drawn keys and raw touch handling (SPEC D1, 5.2). It covers the suggestion
 /// bar too, so popups can rise over it, but only takes touches in the key area.
 final class KeyboardView: UIView {
-    static let barHeight: CGFloat = 44
+    /// Apple's bar is 44; 40 puts Kalam's panel top at Apple's (y=546 on an iPhone 17).
+    static let barHeight: CGFloat = 40
     static let height = barHeight + KeyGeometry.height
 
     weak var delegate: KeyboardViewDelegate?
@@ -225,14 +226,16 @@ final class KeyboardView: UIView {
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for touch in touches {
-            // SPEC 5.2 rollover: a new touch commits any letter still waiting for its touch-up.
-            for press in presses where press.frame.key.kind == .char && press.strip == nil {
-                commit(press)
-                finish(press)
+        for touch in touches.sorted(by: { $0.timestamp < $1.timestamp }) {
+            // SPEC 5.2 rollover: a new touch releases any letter, space or return still waiting for
+            // its touch-up, so two thumbs keep their order ("hi there", not "hit here").
+            for press in presses where rollsOver(press) {
+                trace("rollover \(press.frame.key.id)")
+                release(press)
             }
             let point = touch.location(in: self)
             guard let frame = geometry?.key(at: point) else { continue }
+            traceTouch("began", touch, key: frame.key)
             let press = Press(touch: touch, frame: frame, start: point)
             presses.append(press)
             setPressed(frame, true)
@@ -309,6 +312,7 @@ final class KeyboardView: UIView {
     /// SPEC 5.2: the finger may slide; the popup follows it to the char key under it.
     private func slide(_ press: Press, to point: CGPoint) {
         guard let frame = geometry?.key(at: point), frame.key.kind == .char, frame.key.id != press.frame.key.id else { return }
+        trace("slide \(press.frame.key.id) -> \(frame.key.id)")
         setPressed(press.frame, false)
         press.frame = frame
         setPressed(frame, true)
@@ -324,30 +328,57 @@ final class KeyboardView: UIView {
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for touch in touches {
+        for touch in touches.sorted(by: { $0.timestamp < $1.timestamp }) {
             guard let press = presses.first(where: { $0.touch === touch }) else { continue }
-            switch press.frame.key.kind {
-            case .char: commit(press)
-            case .space where press.trackpad != nil: break
-            case .backspace, .shift, .gap, .globe: break
-            default: delegate?.keyUp(press.frame.key)
-            }
-            finish(press)
+            traceTouch("ended", touch, key: press.frame.key)
+            release(press)
         }
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
-            if let press = presses.first(where: { $0.touch === touch }) { finish(press) }
+            guard let press = presses.first(where: { $0.touch === touch }) else { continue }
+            traceTouch("cancelled", touch, key: press.frame.key)
+            finish(press)
         }
     }
 
-    private func commit(_ press: Press) {
-        if let strip = press.strip {
-            delegate?.commit(strip[press.selected], at: nil)
-        } else {
-            delegate?.commit(press.frame.key.output, at: geometry?.keyUnits(press.touch.location(in: self)))
+    private func rollsOver(_ press: Press) -> Bool {
+        switch press.frame.key.kind {
+        case .char: press.strip == nil
+        case .space: press.trackpad == nil
+        case .return: true
+        default: false
         }
+    }
+
+    /// The touch-up action: a char commits, other keys send keyUp (not a space drag, nor the keys
+    /// that act on touch-down).
+    private func release(_ press: Press) {
+        switch press.frame.key.kind {
+        case .char: commit(press)
+        case .space where press.trackpad != nil: break
+        case .backspace, .shift, .gap, .globe: break
+        default:
+            trace("keyUp \(press.frame.key.kind)")
+            delegate?.keyUp(press.frame.key)
+        }
+        finish(press)
+    }
+
+    private func commit(_ press: Press) {
+        let text = press.strip.map { $0[press.selected] } ?? press.frame.key.output
+        let point = press.strip == nil ? geometry?.keyUnits(press.touch.location(in: self)) : nil
+        trace("commit \(text.debugDescription)")
+        delegate?.commit(text, at: point)
+    }
+
+    private func traceTouch(_ phase: String, _ touch: UITouch, key: Layout.Key) {
+        trace({
+            let units = geometry?.keyUnits(touch.location(in: self)) ?? Point(x: -1, y: -1)
+            return String(format: "touch %@ %@ at %.2f,%.2f lag %.1f ms", phase, key.id, units.x, units.y,
+                          (CACurrentMediaTime() - touch.timestamp) * 1000)
+        }())
     }
 
     private func finish(_ press: Press) {
@@ -367,7 +398,11 @@ final class KeyboardView: UIView {
         return glyphs.text(text, font: base.withSize(base.pointSize * 1.35), color: palette.label)
     }
 
+    /// Combining marks (the tashkeel strip) sit on a dotted circle, like the tanween key's own label.
     private func stripImage(_ text: String) -> CGImage? {
-        glyphs.text(text, font: layout?.lang == .ar ? KeyFont.arabic : KeyFont.uppercase, color: palette.label)
+        if text.unicodeScalars.first?.properties.generalCategory == .nonspacingMark {
+            return glyphs.text("\u{25CC}" + text, font: KeyFont.tanween, color: palette.label)
+        }
+        return glyphs.text(text, font: layout?.lang == .ar ? KeyFont.arabic : KeyFont.uppercase, color: palette.label)
     }
 }

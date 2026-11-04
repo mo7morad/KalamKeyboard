@@ -115,3 +115,16 @@ Setup: install a Debug build with Full Access on, and Kalam > Settings > Clipboa
 - [ ] Pasted words aren't learned: paste a made-up word, type space, and it isn't suggested later.
 - [ ] Full Access off: no button, no chip, no prompt, nothing crashes.
 - [ ] Clipboard setting off: no button and no chip; turn it on again and the pinned items are still there.
+
+## Device round 1
+
+Setup: install a Debug build with Full Access on. Each run appends to the Debug trace, `<App Group container>/Library/Caches/kalam-trace.log` (the older half at `kalam-trace.1.log` once it passes 1 MB). Before each test, note the time; after it, the orchestrator pulls the file with devicectl.
+
+- [ ] Fast two thumbs in Notes, EN: type "the quick brown fox jumps over the lazy dog" 3 times as fast as you can, with both thumbs. Count dropped letters ____ and swapped letters or spaces ("hit here" for "hi there") ____. Then the same 3 times on Apple's keyboard for a baseline ____.
+- [ ] The same in AR with "انا رايح الشغل دلوقتي وراجع بالليل": dropped ____, swapped ____, Apple's baseline ____.
+- [ ] Edge keys fast: alternate q and p (EN), then ض and ج (AR), 20 times each, as fast as you can. Every press lands, in order, with no lag next to the middle keys. Note any miss ____.
+- [ ] Tashkeel: hold the ◌ً key (AR bottom row). The strip shows ◌ٓ ◌ٰ ـ ◌ْ ◌ِ ◌ُ ◌ّ ◌ً ◌َ ◌ٍ ◌ٌ with ◌ً selected; release without sliding types ً; slide to ◌ّ and release types ّ. The marks sit on dotted circles and the strip fits on the screen. Compare with Apple's.
+- [ ] Height: switch between Apple's keyboard and Kalam in the same field. The panel top should match Apple's; Kalam's rows sit about 3.6 pt (1 mm) higher. Say if it still looks off ____.
+- [ ] The bar at 40 pt: suggestions, dividers, the clipboard button and chip, the "Don't suggest" overlay and the clipboard panel header are not clipped.
+- [ ] Haptics: at the max strength setting, compare a few taps with Apple's keyboard (Settings > Sounds & Haptics > Keyboard Feedback > Haptic on). Kalam should feel as strong and crisp or stronger. Too strong? ____
+- [ ] Sounds: at the same ringer volume, Kalam's key, delete and modifier clicks are louder than Apple's but the same character. The silent switch mutes them. Too loud? ____

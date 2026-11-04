@@ -20,8 +20,9 @@ public struct KeyGeometry: Sendable {
     static let capTop: CGFloat = 1.1
     static let capHeight: CGFloat = 42.8
     /// Height of the key area, excluding the suggestion bar. Apple's is 226; a third-party keyboard
-    /// gets a 17 pt taller globe strip below it on iOS 27, so we keep only 3.5 pt under the bottom row.
-    public static let height: CGFloat = topInset + 3 * rowPitch + capTop + capHeight + 3.5
+    /// gets a 17 pt taller globe strip below it on iOS 27, so the area ends at the bottom row's cap
+    /// to bring the rows as low as they can go (still 3.6 pt above Apple's).
+    public static let height: CGFloat = topInset + 3 * rowPitch + capTop + capHeight
 
     public let frames: [Frame]
     /// Points per key unit, horizontally.

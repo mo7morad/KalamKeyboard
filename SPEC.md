@@ -35,7 +35,7 @@ Non-goals for v1: swipe/glide typing, dictation (no mic access in keyboard exten
 | `UIInputViewController` is recreated for each host app, and old views can stay alive. | Tear down the view hierarchy in `deinit`, deferred one main-queue turn. Leak-test with show/hide cycles. |
 | Each extra thread costs about 0.5 MB of stack. `DispatchQueue.global` spawns threads. | Use one serial engine queue. No global queues and no Swift-concurrency `Task` in the hot path. |
 | **Full Access** is required for App Group shared-container writes. Older docs say haptics and sounds need it too. | `RequestsOpenAccess = YES`. Show a banner in the keyboard if `hasFullAccess == false`. |
-| `AVAudioPlayer` goes through the media volume bus, so clicks become inaudible at low media volume. `AudioServicesPlaySystemSound` uses the ringer volume, respects the silent switch and needs no audio session. | Use system sound IDs **1104** (key), **1155** (delete), **1156** (modifier). |
+| `AVAudioPlayer` goes through the media volume bus, so clicks become inaudible at low media volume. `AudioServicesPlaySystemSound` uses the ringer volume, respects the silent switch and needs no audio session. | Register louder copies of Apple's key sounds with `AudioServicesCreateSystemSoundID` (5.3), falling back to system IDs **1104** (key), **1155** (delete), **1156** (modifier). |
 | iOS forces the system keyboard in secure fields and phone-pad fields. Some apps block third-party keyboards. Extensions get no microphone. | Accept these limits; don't try to work around them. |
 | A keyboard runs only while it's shown, so it can't watch the clipboard in the background. Reading another app's clipboard text shows iOS's "Allow Paste" prompt unless the app is set to Allow (Settings › Apps › Kalam › Paste from Other Apps; the simulator shows both the prompt and the setting for Kalam's keyboard, and the read blocks the keyboard's main thread until the prompt is answered). `changeCount`, `hasStrings` and `types` are metadata and never prompt. A keyboard can only insert text, not images. | The clipboard history (5.5) captures text when Kalam appears or the clipboard changes while it's shown. Moe sets Paste from Other Apps to Allow once. The capture on appear runs in `viewDidAppear`, so the keys are drawn before any prompt. |
 | `documentContextBeforeInput` is partial and can be nil. | Engine context = the last 2 words from it. The keyboard keeps its own word state and resyncs on `textDidChange`. |
@@ -111,14 +111,15 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
   - `kind` ∈ char | shift | backspace | space | return | globe | lang | page.
 - The keyboard computes frames at runtime. The engine gets key centers in **key units** (1.0 = one standard key width or height), never points.
 - Built from the screenshots in `docs/reference/`, then compared side by side with them.
-- Arabic alternates must include at least: ا → أ إ آ ء, ي → ى ئ, و → ؤ, ه → ة. Arabic punctuation: ، ؛ ؟. English alternates follow Apple's accents.
+- Arabic alternates must include at least: ا → أ إ آ ء, ي → ى ئ, و → ؤ, ه → ة. Arabic punctuation: ، ؛ ؟.
+- The AR bottom row is `[١٢٣] [EN] [space] [◌ً] [return]`. Holding the tanween key ◌ً opens Apple's tashkeel strip, visual left to right: ◌ٓ ◌ٰ ـ ◌ْ ◌ِ ◌ُ ◌ّ [◌ً] ◌َ ◌ٍ ◌ٌ (fathatan selected). Marks draw on a dotted circle; the output is the bare mark. English alternates follow Apple's accents.
 - Gboard-style long-press digits on the top row (q→1 … p→0; Arabic top row → digits, Western or Eastern per setting), with small hint labels (setting, default on). This also helps typing Franco words like "3ashan".
 
 ### 5.2 Touch model
 
 - **Hit-testing:** every touch point maps to a key (nearest key, no dead zones).
 - **Haptic and sound fire on touch-down.** A letter is output on touch-up, at the key under the finger. The finger may slide, and the popup follows it.
-- **Rollover:** a new touch-down immediately commits any pending letter touch.
+- **Rollover:** a new touch-down immediately commits any pending letter, space (unless in trackpad mode) or return touch, through the same touch-up path. Touches that arrive together are handled in timestamp order.
 - **Tap recording:** record the commit point of every letter tap (in key units) as a `Tap`.
 - **Popups:** a key popup appears on press (except on bottom-row keys).
   - A long-press of 0.35 s opens the alternates strip. Slide to select, and release to insert.
@@ -127,7 +128,7 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
   - Touch-down deletes 1 character.
   - Holding for 0.45 s starts repeat deletion every 0.09 s.
   - After 15 repeats, it switches to whole-word deletion.
-  - Sound 1155 plays on each deletion.
+  - The delete sound plays on each deletion.
 - **Space:**
   - A tap inserts a space, which is also the autocorrect commit.
   - A horizontal drag of more than 12 pt, or a long-press of 0.4 s, enters trackpad mode: key labels hide, and the cursor moves via `adjustTextPosition` at about 1 character per 9 pt. Releasing exits.
@@ -139,18 +140,18 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
   - When it's true: `[123] [globe] [EN/AR] [space] [return]`. The globe uses `handleInputModeList(from:with:)`: a tap goes to the next system keyboard, and a long-press opens the list.
   - The EN/AR key toggles the layout and the engine language. The last-used language is remembered.
 - **Appearance:** light and dark follow `textDocumentProxy.keyboardAppearance` and the trait collection. Match the screenshots for key color, corner radius, shadow, font, keyboard height per device, and suggestion bar height.
-  - iOS 27 puts a taller globe/dictation strip under third-party keyboards than under Apple's, so Kalam sits about 7 pt higher than Apple's keyboard. The extension can't change that (Phase 1).
+  - iOS 27 puts a 75 pt globe/dictation strip under third-party keyboards (Apple's is 58 pt). Kalam's bar is 40 pt (Apple's 44) and the key area ends at the bottom row's cap, so the panel top matches Apple's and the rows sit 3.6 pt higher. Nothing in the extension can bring them lower (device round 1).
 
 ### 5.3 Feedback
 
 There is a single `FeedbackPlayer`, called on touch-down for every key.
 
 - **Haptic:**
-  - One `UIImpactFeedbackGenerator(style: .light)`.
+  - One `UIImpactFeedbackGenerator(style: .rigid)` (stronger and crisper than `.light`, device round 1).
   - Call `prepare()` on keyboard appear and after each fire.
   - `impactOccurred(intensity:)` with the intensity setting (0.3 to 1.0, default 0.7).
-- **Sound:** `AudioServicesPlaySystemSound`.
-  - Letters, digits and punctuation → 1104; backspace → 1155; shift, 123, EN/AR, globe, return and space → 1156.
+- **Sound:** Apple's own `key_press_click`, `key_press_delete` and `key_press_modifier` sounds, peak-normalized to -1 dBFS (about +7.5 dB, `docs/reference/harness/sounds.md`) and bundled as `.caf`. Each is registered once with `AudioServicesCreateSystemSoundID` and played with `AudioServicesPlaySystemSound`. If one fails to load, its system ID plays instead and the failure is logged.
+  - Letters, digits and punctuation → click (1104); backspace → delete (1155); shift, 123, EN/AR, globe, return and space → modifier (1156).
   - Verify this mapping by ear against Apple's keyboard on the device and adjust the table if needed.
 - Never use `AVAudioPlayer` or `AVAudioSession` in the extension.
 - Phase 7 experiment: a Core Haptics transient (intensity 0.6, sharpness 0.8). Keep it only if it starts reliably inside the extension and feels closer to Apple's.

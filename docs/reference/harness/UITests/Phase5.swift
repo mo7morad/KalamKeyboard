@@ -20,7 +20,7 @@ class KalamField: XCTestCase {
             app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Kalam'")).firstMatch.tap()
         }
         XCTAssertTrue(kalam.waitForExistence(timeout: 5))
-        keyTop = kalam.frame.minY + 44
+        keyTop = kalam.frame.minY + 40
         if pageID.hasPrefix("ar") { tap(2.0625, 3, units: 11) }
         tap(0.65, 2)  // shift off
     }

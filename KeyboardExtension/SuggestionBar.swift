@@ -120,7 +120,7 @@ final class SuggestionBar: UIView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
-    /// Divider geometry from the captures: 1 pt wide, 10 pt in from the bar's top and bottom.
+    /// Divider geometry from the captures: 1 pt wide and 24 pt tall, centered in the bar.
     /// The slots share the width right of the clipboard button, when it shows.
     private var slotsStart: CGFloat { showsClipboardButton ? Self.clipboardButtonWidth : 0 }
     private var slotWidth: CGFloat { (bounds.width - slotsStart) / 3 }
@@ -129,7 +129,7 @@ final class SuggestionBar: UIView {
         super.layoutSubviews()
         let start = slotsStart, slot = slotWidth
         for (i, label) in labels.enumerated() { label.frame = CGRect(x: start + CGFloat(i) * slot + 4, y: 0, width: slot - 8, height: bounds.height) }
-        for (i, divider) in dividers.enumerated() { divider.frame = CGRect(x: start + CGFloat(i + 1) * slot - 0.5, y: 10, width: 1, height: bounds.height - 20) }
+        for (i, divider) in dividers.enumerated() { divider.frame = CGRect(x: start + CGFloat(i + 1) * slot - 0.5, y: bounds.midY - 12, width: 1, height: 24) }
         clipboardButton.frame = CGRect(x: 4, y: 6, width: Self.clipboardButtonWidth - 8, height: bounds.height - 12)
         panelTitle.frame = CGRect(x: Self.clipboardButtonWidth + 6, y: 0, width: 120, height: bounds.height)
         closeButton.frame = CGRect(x: bounds.width - 60, y: 0, width: 56, height: bounds.height)

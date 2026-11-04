@@ -30,6 +30,7 @@ Every capture has a `-light.png` and a `-dark.png` version.
 | `popup-i`, `popup-o`, `popup-s`, `popup-y`, `popup-z`, `popup-l` | More EN alternates (Phase 5, light only, cropped to the keyboard top; `harness/UITests/Accents.swift`) |
 | `popup-alef`, `popup-yeh`, `popup-waw`, `popup-heh` | AR long-press alternates for ا ي و ه |
 | `popup-kaf` | AR ك held down. It turned out to have an alternate (گ). |
+| `popup-tashkeel` | AR tanween key ◌ً held down: the tashkeel strip (device round 1, light only, cropped to the keyboard) |
 | `keypress-f` | Key-press preview bubble: finger down on `f`, which has no alternates |
 | `keypress-q` | Key-press preview on the left edge key `q`. The bubble is clipped to the screen edge, not shifted. |
 | `suggestions-en` | Next-word predictions after "I am going to the " (store, gym, grocery) |
@@ -144,6 +145,7 @@ On iOS 27 the alternates open as a single rounded strip above the key, with the 
 | c | [c] ç ć č ċ |
 | k | ķ [k] (seen in an exploration run) |
 | ا | آ إ أ [ا] (in RTL reading order: ا أ إ آ) |
+| ◌ً | ◌ٓ ◌ٰ ـ ◌ْ ◌ِ ◌ُ ◌ّ [◌ً] ◌َ ◌ٍ ◌ٌ: maddah U+0653, superscript alef U+0670, tatweel U+0640, sukun, kasra, damma, shadda, fathatan, fatha, kasratan, dammatan (U+0652 U+0650 U+064F U+0651 U+064B U+064E U+064D U+064C). Read from the image; the second mark is a short vertical stroke, so superscript alef, not hamza above. |
 | ي | [ي] ئ |
 | و | ؤ [و] |
 | ه | هـ [ه] (the alternate looks like ه with a tatweel, the initial form. The exact code points weren't readable from the image.) |

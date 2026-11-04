@@ -45,7 +45,8 @@
   {"id": "numbers", "label": "١٢٣", "kind": "page", "output": "numbers", "width": 1.375},
   {"id": "lang", "label": "EN", "kind": "lang", "width": 1.375},
   {"id": "space", "label": "", "kind": "space", "output": " ", "width": 4.125},
-  {"id": "tanween", "label": "◌ً", "output": "ً", "popup": false, "width": 1.375},
+  {"id": "tanween", "label": "◌ً", "output": "ً", "popup": false, "width": 1.375,
+   "alternates": ["\u0653", "\u0670", "\u0640", "\u0652", "\u0650", "\u064F", "\u0651", "\u064B", "\u064E", "\u064D", "\u064C"]},
   {"id": "return", "label": "", "kind": "return", "output": "\n", "width": 2.75}
  ]
  ]

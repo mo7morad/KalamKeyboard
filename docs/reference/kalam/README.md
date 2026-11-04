@@ -5,9 +5,11 @@ Each sheet shows four screenshots, left to right: Apple light, Kalam light, Appl
 What to look for:
 
 - Keys, gaps, corners, colors and label sizes match Apple's within about 1 pt.
-- Kalam sits about 7 pt higher, with a panel about 7 pt taller. iOS 27 gives third-party keyboards a 75 pt globe strip at the bottom (Apple's own is 58 pt), so Kalam's rows can't go as low as Apple's.
+- The panel tops match (y=546 pt). iOS 27 gives third-party keyboards a 75 pt globe strip at the bottom (Apple's own is 58 pt), so Kalam's rows can't go as low as Apple's: its bottom-row caps end at 798.7 pt against Apple's 803.0 (the cap tops at 756.3 and 760.0, so 3.7 pt higher). Kalam's bar is 40 pt and its key area ends at the bottom row's caps to get there (device round 1; before, the panel top was at 538.6 and the rows 7.1 pt higher).
 - Kalam's bar is empty for now (Phase 5 fills it), the EN/AR key replaces the emoji key, and the top row carries small digit hints.
 - Popups can't rise above the keyboard in a third-party keyboard, so top-row popups (`popup-e`, `keypress-q`) are pushed down over the top row. `keypress-q` shows Kalam's long-press strip, because the capture held q long enough to open it.
+
+`en-letters.png` and `ar-letters.png` were retaken in device round 1 with a Debug build (Debug overlay off). `popup-tashkeel-light.png` is Kalam's tashkeel strip, to compare with `../popup-tashkeel-light.png` (`../harness/UITests/Round1.swift`).
 
 To recapture, use `../harness/UITests/Kalam.swift` with the harness described in `../README.md` (`testEnableFullAccess` once, then `testPages` per appearance).
 

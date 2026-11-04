@@ -116,6 +116,18 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         captureClip()
+        stopDelayingTouches()
+    }
+
+    /// The system gesture gate on the keyboard's window delays touchesBegan near the screen edges,
+    /// which can hold back and reorder fast edge keys (device round 1).
+    private func stopDelayingTouches() {
+        for view in sequence(first: view as UIView, next: \.superview) {
+            for recognizer in view.gestureRecognizers ?? [] {
+                trace("gesture \(type(of: view)) \(type(of: recognizer)) delaysTouchesBegan \(recognizer.delaysTouchesBegan)")
+                recognizer.delaysTouchesBegan = false
+            }
+        }
     }
 
     override func viewWillDisappear(_ animated: Bool) {

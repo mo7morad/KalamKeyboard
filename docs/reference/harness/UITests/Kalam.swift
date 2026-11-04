@@ -3,7 +3,7 @@ import XCTest
 /// Captures Kalam's pages in the same host field as Apple's reference captures.
 final class KalamCapture: XCTestCase {
     var app: XCUIApplication!
-    /// Top of Kalam's key area on screen (view top + 44 pt bar); set from the element frame.
+    /// Top of Kalam's key area on screen (view top + 40 pt bar); set from the element frame.
     var keyTop: CGFloat = 583
 
     func launch() {
@@ -21,7 +21,7 @@ final class KalamCapture: XCTestCase {
             sleep(1)
         }
         XCTAssertTrue(kalam.exists)
-        keyTop = kalam.frame.minY + 44
+        keyTop = kalam.frame.minY + 40
     }
 
     func at(_ x: CGFloat, row: Int) -> XCUICoordinate {

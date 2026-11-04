@@ -159,7 +159,11 @@ final class InputController {
     /// textDidChange / selectionDidChange: if the text before the cursor isn't what our last edit
     /// left (the cursor moved, the host edited), the current word is rebuilt from it.
     func hostTextChanged() {
-        if before != expectedBefore { resync() }
+        let match = before == expectedBefore
+        trace("host \(match ? "match" : "MISMATCH") before \(String(before.suffix(16)).debugDescription) expected \(expectedBefore.map { String($0.suffix(16)).debugDescription } ?? "nil")")
+        guard !match else { return }
+        resync()
+        trace("resync literal \(literal.debugDescription)")
     }
 
     /// Rebuilds the current word from the text before the cursor (also on appear).
@@ -200,12 +204,17 @@ final class InputController {
         let context = contextWords(before: before)
         self.taps = []
         defer { (restoredLiteral, pastedWord) = (nil, nil) }
-        guard literal != restoredLiteral, literal != pastedWord else { return nil }  // already learned, or pasted
+        guard literal != restoredLiteral, literal != pastedWord else {  // already learned, or pasted
+            trace("commitWord \(literal.debugDescription) restored or pasted, delete 0")
+            return nil
+        }
         guard let target = client.resultForCommit()?.autocorrect else {
+            trace("commitWord \(literal.debugDescription) delete 0")
             learn(literal, context: context, how: .typed)
             return nil
         }
         let replacement = cased(target.text, capitalized: literal.first?.isUppercase == true)
+        trace("commitWord \(literal.debugDescription) -> \(replacement.debugDescription) delete \(literal.count)")
         delete(literal.count)
         insert(replacement)
         learn(replacement, context: context, how: .autocorrect(from: literal))
