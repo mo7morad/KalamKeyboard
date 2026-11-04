@@ -138,6 +138,7 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
   - When it's true: `[123] [globe] [EN/AR] [space] [return]`. The globe uses `handleInputModeList(from:with:)`: a tap goes to the next system keyboard, and a long-press opens the list.
   - The EN/AR key toggles the layout and the engine language. The last-used language is remembered.
 - **Appearance:** light and dark follow `textDocumentProxy.keyboardAppearance` and the trait collection. Match the screenshots for key color, corner radius, shadow, font, keyboard height per device, and suggestion bar height.
+  - iOS 27 puts a taller globe/dictation strip under third-party keyboards than under Apple's, so Kalam sits about 7 pt higher than Apple's keyboard. The extension can't change that (Phase 1).
 
 ### 5.3 Feedback
 
@@ -162,7 +163,7 @@ There is a single `FeedbackPlayer`, called on touch-down for every key.
   - Otherwise, alt1 shows the 2nd candidate and alt2 the 3rd.
 - **With an empty current word:** the bar shows 3 next-word predictions.
 - **Tapping a suggestion** replaces the current word (or inserts the prediction) and adds an auto-space. Tapping the literal is an explicit accept, so the word is learned.
-- **Forgetting a word:** long-press a suggestion to open a small in-keyboard overlay, "Forget ‘x’". This blocks the word. Use no alerts, since extensions can't show them.
+- **Blocking a word:** long-press a suggestion to open a small in-keyboard overlay, "Don't suggest ‘x’". This blocks the word (the host app lists it as Blocked; there, "Forget" deletes a word's learned data instead). Use no alerts, since extensions can't show them.
 - **Without Full Access:** the bar shows "Turn on Full Access for learning, haptics and sounds".
 
 ## 6. Text processing (engine)
