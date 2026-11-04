@@ -92,6 +92,17 @@ public final class PersonalStore {
         return uses
     }
 
+    /// Raw uses + imports of a word, and whether corrections holds it as a typo (a non-rejected pair
+    /// with it as typed): SPEC 8.5 rule 2. One statement over the two primary keys.
+    func usage(lang: String, ident: String) throws -> (uses: Int, recordedTypo: Bool) {
+        var usage = (uses: 0, recordedTypo: false)
+        try db.query("""
+            SELECT uses + imports, EXISTS(SELECT 1 FROM corrections WHERE lang = ? AND typed = ? AND rejected = 0)
+            FROM words WHERE lang = ? AND ident = ?
+            """, [lang, ident, lang, ident]) { usage = ($0.int(0), $0.int(1) != 0) }
+        return usage
+    }
+
     /// Continuations of a context: w1 = "" for the bigram context (b), w1 = a for (a, b).
     func continuations(lang: String, w1: String, w2: String) throws -> [String: Hits] {
         var result: [String: Hits] = [:]

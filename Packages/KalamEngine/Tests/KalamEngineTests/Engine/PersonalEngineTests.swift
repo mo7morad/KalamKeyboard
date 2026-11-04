@@ -37,6 +37,12 @@ import Testing
     #expect(!idents.contains("ha") && !idents.contains(sentenceStart) && !idents.isEmpty)
 }
 
+@Test func predictionsSkipAPendingWord() throws {
+    let engine = try personalEngine(.en, ["see yuo"] + Array(repeating: "see ya", count: 2))  // yuo: one use, pending
+    let idents = engine.predict(context: ["see"], limit: 50).map(\.ident)
+    #expect(idents.contains("ya") && idents.contains("you") && !idents.contains("yuo"))
+}
+
 @Test func predictionsBackOffToUnigrams() throws {
     let idents = try fixtureEngine(.en).predict(context: ["zzz"]).map(\.ident)
     #expect(idents == ["the", "and", "to"])  // and / to tie, broken alphabetically

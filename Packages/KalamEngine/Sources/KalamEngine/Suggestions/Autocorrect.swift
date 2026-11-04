@@ -10,7 +10,15 @@ struct AutocorrectFacts {
     var literalKnown: Bool  // a known personal word: never corrected
     var keptCount: Int  // times Moe kept the literal as typed
     var bestRejected: Bool  // Moe undid literal -> best before
+    var inToken = false  // the literal ends a URL, path, domain, email or emoji run (rule 3)
+    var sentenceStart = true  // the context is a sentence start
+    /// The literal's raw uses + imports, and whether corrections holds it as a typo (rule 2). Called
+    /// only for a correction about to happen, since it reads the store.
+    var usage: () -> (uses: Int, recordedTypo: Bool) = { (0, false) }
 }
+
+/// D8: lazy spellings that are common words too, so the variant fix never applies them (its -> it's).
+let ambiguousContractions: Set<String> = ["its", "were", "ill", "well", "hell", "id", "shell", "wed", "shed", "lets"]
 
 /// SPEC 8.5: the candidate that replaces the typed literal on commit, or nil to keep it.
 /// `ranked` is every candidate, best first, including the literal.
@@ -19,35 +27,54 @@ func autocorrectTarget(literal: String, ranked: [Suggestion], facts: Autocorrect
     guard let best = ranked.first, !best.isLiteral, let typed = ranked.first(where: \.isLiteral),
           facts.mode != .off, facts.traits.allowsAutocorrect,  // rule 1
           !facts.literalKnown,  // rule 2, personal half
-          !isSpecial(literal), !isSpecial(best.text), !literal.contains(where: \.isNumber),  // rule 3
+          !facts.inToken, !isSpecial(literal), !isSpecial(best.text), !literal.contains(where: \.isNumber),  // rule 3
           !(lang == .en && literal.dropFirst().contains(where: \.isUppercase)),  // OMG, LLMs, iOS, PhD
+          !isMixedScript(literal),
           !facts.bestRejected  // rule 4
     else { return nil }
     let typedKey = normalize(literal, lang: lang), bestKey = normalize(best.ident, lang: lang)
+    let sameKey = typedKey == bestKey
     let addedLetters = bestKey.unicodeScalars.count - typedKey.unicodeScalars.count
     // Gentle fixes slips only: neighbour keys (spatial cost), plus edits up to one omission or swap.
     guard best.completion == 0 || addedLetters <= config.autocorrectMaxAddedLetters,  // goin -> going, not يحبيب -> يحبيبتي
           facts.mode != .gentle || best.edits <= config.gentleMaxEditCost
     else { return nil }
-    if typedKey == bestKey {
+    if sameKey {
         // Variant fix: replaces rule 2 for spellings of one key, valid or not (D8 keeps AR variants off).
         // Lazy spellings only: an apostrophe or hamza that normalization would drop or map was typed on purpose.
         let lazySpelling = typedKey == literal.lowercased()
-        guard facts.variantFix, lazySpelling, exp(best.lm) >= config.variantFixRatio * exp(typed.lm), facts.keptCount < config.variantFixMaxKept
+        guard facts.variantFix, lazySpelling, !(lang == .en && ambiguousContractions.contains(typedKey)),
+              exp(best.lm) >= config.variantFixRatio * exp(typed.lm), facts.keptCount < config.variantFixMaxKept
         else { return nil }
     } else if facts.literalValid {
         return nil  // rule 2, base half
+    } else if lang == .en, literal.first?.isUppercase == true, !facts.sentenceStart {
+        return nil  // rule 3: Moe pressed shift mid-sentence, so it's a name
     }
     // AR normal counts c*'s edit cost twice: in Moe's chats an extra tap, a far key or a swap is more often a dialect word than a slip.
     let normal = config.autocorrectThresholdNormal + (lang == .ar ? best.edits : 0)
-    let threshold = facts.mode == .gentle ? config.autocorrectThresholdGentle : normal
+    let short = (1...3).contains(typedKey.unicodeScalars.count) ? config.autocorrectShortWordMargin : 0
+    let threshold = (facts.mode == .gentle ? config.autocorrectThresholdGentle : normal) + short
     let share = 1 / ranked.reduce(0) { $0 + exp($1.score - best.score) }  // softmax share of best
-    return best.score - typed.score >= threshold && share >= config.autocorrectMinShare ? best : nil  // rule 5
+    guard best.score - typed.score >= threshold, share >= config.autocorrectMinShare else { return nil }  // rule 5
+    if !sameKey {
+        let usage = facts.usage()  // rule 2: a word Moe used, unless it's a recorded typo
+        if usage.uses >= config.protectMinUses, !usage.recordedTypo { return nil }
+    }
+    return best
+}
+
+/// Rule 3: a word with both Arabic-script and other letters.
+func isMixedScript(_ word: String) -> Bool {
+    let scripts = Set(word.unicodeScalars.compactMap(strongDirection))
+    return scripts.count == 2
 }
 
 extension Engine {
     /// The autocorrect for a commit (SPEC 8.5), from the request's full candidate list.
-    public func autocorrection(_ input: InputState, ranked: [Suggestion], traits: FieldTraits, settings: Settings) -> Suggestion? {
+    /// `inToken`: the keyboard's insideNonWordToken for the text before the literal.
+    public func autocorrection(_ input: InputState, ranked: [Suggestion], traits: FieldTraits, settings: Settings,
+                               inToken: Bool = false) -> Suggestion? {
         let literal = input.literal
         let literalIdent = ident(literal, kind: kind)
         guard let best = ranked.first else { return nil }
@@ -57,7 +84,9 @@ extension Engine {
             literalValid: isValidBaseWord(literalIdent) || isCliticForm(literalIdent),
             literalKnown: personal?.isKnown(lang, literalIdent) ?? false,
             keptCount: sameKey && !best.isLiteral ? personal?.uses(lang, literalIdent) ?? 0 : 0,
-            bestRejected: personal?.hasCorrection(lang, typed: literalIdent, chosen: best.ident, rejected: true) ?? false)
+            bestRejected: personal?.hasCorrection(lang, typed: literalIdent, chosen: best.ident, rejected: true) ?? false,
+            inToken: inToken, sentenceStart: input.context.last.map { $0 == sentenceStart } ?? true,
+            usage: { [personal, lang] in personal?.usage(lang, literalIdent) ?? (0, false) })
         return autocorrectTarget(literal: literal, ranked: ranked, facts: facts, config: config)
     }
 

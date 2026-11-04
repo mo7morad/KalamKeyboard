@@ -98,13 +98,16 @@ public struct Engine {
     }
 
     /// Next words for an empty current word (SPEC 8.6): personal trigram and bigram continuations,
-    /// base bigrams and unigram backoff, scored by the full LM. Never the previous word or <s>.
+    /// base bigrams and unigram backoff, scored by the full LM. Never the previous word or <s>, and
+    /// only valid base words or known personal words.
     public func predict(context: [String], limit: Int = 3) -> [Suggestion] {
         let context = lmContext(context)
         let previous = context.idents.last
         let candidates = predictionPool(context).compactMap { ident, word -> Suggestion? in
             guard ident != previous, ident != sentenceStart, personal?.isBlocked(lang, ident) != true else { return nil }
             let word = word ?? lexicon?.wordID(ident: ident)
+            // A personal continuation that is still pending (a one-off typo) isn't a word yet.
+            guard validWord(word) != nil || personal?.isKnown(lang, ident) == true else { return nil }
             return Suggestion(text: display(ident, word), ident: ident, isLiteral: false, lm: lmLogProb(ident, word: word, context),
                               spatial: 0, edits: 0, completion: 0, boosts: 0)
         }

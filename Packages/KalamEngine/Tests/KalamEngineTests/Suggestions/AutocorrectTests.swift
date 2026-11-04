@@ -70,6 +70,30 @@ private let cases: [PolicyCase] = [
     PolicyCase(name: "email field", literal: "teh", best: "the", bestLM: -4, change: { $0.traits.keyboardType = .email }, corrects: false),
     PolicyCase(name: "password field", literal: "teh", best: "the", bestLM: -4, change: { $0.traits.contentType = .password }, corrects: false),
     PolicyCase(name: "one-time code", literal: "teh", best: "the", bestLM: -4, change: { $0.traits.contentType = .oneTimeCode }, corrects: false),
+    // Rule 2: words Moe used, typed or imported.
+    PolicyCase(name: "word used twice is kept", literal: "tgem", best: "them", bestLM: -4, change: { $0.usage = { (2, false) } }, corrects: false),
+    PolicyCase(name: "word used once is corrected", literal: "tgem", best: "them", bestLM: -4, change: { $0.usage = { (1, false) } }, corrects: true),
+    PolicyCase(name: "word used twice but a recorded typo is corrected", literal: "tgem", best: "them", bestLM: -4,
+               change: { $0.usage = { (2, true) } }, corrects: true),
+    PolicyCase(name: "variant fix keeps its own kept rule", literal: "dont", best: "don't", bestLM: -6, literalLM: -9.9,
+               change: { $0.literalValid = true; $0.usage = { (5, false) } }, corrects: true),
+    // Rule 3 guards.
+    PolicyCase(name: "inside a URL, path, domain or email", literal: "goo", best: "good", bestLM: -4, bestCompletion: 1,
+               change: { $0.inToken = true }, corrects: false),
+    PolicyCase(name: "mixed script", literal: "helloمر", best: "hello", bestLM: -4, corrects: false),
+    PolicyCase(name: "capital at a sentence start", literal: "Tgem", best: "Them", bestLM: -4, corrects: true),
+    PolicyCase(name: "mid-sentence capital is a name", literal: "Tgem", best: "Them", bestLM: -4,
+               change: { $0.sentenceStart = false }, corrects: false),
+    PolicyCase(name: "mid-sentence capital still gets the contraction fix", literal: "Im", best: "I'm", bestLM: -6, literalLM: -9.9,
+               change: { $0.literalValid = true; $0.sentenceStart = false }, corrects: true),
+    PolicyCase(name: "AR has no capitals rule", literal: "مايون", best: "مليون", bestLM: -12.5,
+               change: { $0.lang = .ar; $0.sentenceStart = false }, corrects: true),
+    PolicyCase(name: "short word needs the extra margin", literal: "teh", best: "the", bestLM: -12.5, corrects: false),
+    PolicyCase(name: "four letters get the normal threshold", literal: "tgem", best: "them", bestLM: -12.5, corrects: true),
+    // D8: lazy spellings that are words too stay suggestions.
+    PolicyCase(name: "its stays", literal: "its", best: "it's", bestLM: -6, literalLM: -9.9, change: { $0.literalValid = true }, corrects: false),
+    PolicyCase(name: "Were stays", literal: "Were", best: "We're", bestLM: -6, literalLM: -9.9, change: { $0.literalValid = true }, corrects: false),
+    PolicyCase(name: "im still fixes", literal: "im", best: "I'm", bestLM: -6, literalLM: -9.9, change: { $0.literalValid = true }, corrects: true),
 ]
 
 @Test(arguments: cases)
@@ -79,6 +103,27 @@ func autocorrectPolicy(_ c: PolicyCase) {
     let ranked = [candidate(c.best, lm: c.bestLM, edits: c.bestEdits, completion: c.bestCompletion), candidate(c.literal, lm: c.literalLM, literal: true)]
     let result = autocorrectTarget(literal: c.literal, ranked: ranked, facts: facts, config: EngineConfig())
     #expect((result?.text == c.best) == c.corrects)
+}
+
+private let contractions = ["its": "it's", "were": "we're", "ill": "I'll", "well": "we'll", "hell": "he'll", "id": "I'd",
+                            "shell": "she'll", "wed": "we'd", "shed": "she'd", "lets": "let's"]
+
+@Test(arguments: contractions.sorted { $0.key < $1.key }.map { ($0.key, $0.value) })
+func ambiguousContractionIsNeverAutoApplied(_ word: String, _ contraction: String) {
+    let ranked = [candidate(contraction, lm: -3), candidate(word, lm: -12, literal: true)]
+    var facts = normalFacts
+    facts.literalValid = true
+    #expect(autocorrectTarget(literal: word, ranked: ranked, facts: facts, config: EngineConfig()) == nil)
+}
+
+@Test func usageIsReadOnlyForACorrectionAboutToHappen() {
+    var facts = normalFacts
+    facts.usage = {
+        Issue.record("store read for a commit that keeps the literal")
+        return (0, false)
+    }
+    let ranked = [candidate("them", lm: -13.5), candidate("tgem", lm: -14, literal: true)]
+    #expect(autocorrectTarget(literal: "tgem", ranked: ranked, facts: facts, config: EngineConfig()) == nil)
 }
 
 @Test func lowSoftmaxShareKeepsTheLiteral() {
@@ -91,12 +136,38 @@ func autocorrectPolicy(_ c: PolicyCase) {
     #expect(autocorrectTarget(literal: "teh", ranked: ranked, facts: normalFacts, config: EngineConfig()) == nil)
 }
 
-@Test(arguments: [("teh", "the"), ("dont", "don't")])
+@Test(arguments: [("teh", "the"), ("dont", "don't"), ("im", "i'm")])
 func engineAutocorrectsWithDefaultSettings(_ typed: String, _ expected: String) throws {
     let engine = try fixtureEngine(.en)
     let input = InputState(context: [], taps: taps(typed))
     let result = engine.autocorrection(input, ranked: engine.candidates(input), traits: FieldTraits(), settings: Settings())
     #expect(result?.ident == expected)
+}
+
+@Test(arguments: [("Teh", [sentenceStart], "the"), ("Teh", ["see"], nil), ("Im", ["see"], "i'm")] as [(String, [String], String?)])
+func engineLeavesMidSentenceCapitals(_ typed: String, _ context: [String], _ expected: String?) throws {
+    let engine = try fixtureEngine(.en)
+    let input = InputState(context: context, taps: taps(typed))
+    #expect(engine.autocorrection(input, ranked: engine.candidates(input), traits: FieldTraits(), settings: Settings())?.ident == expected)
+}
+
+@Test func engineKeepsTheLiteralInsideAToken() throws {
+    let engine = try fixtureEngine(.en)
+    let input = InputState(context: [], taps: taps("teh"))
+    #expect(engine.autocorrection(input, ranked: engine.candidates(input), traits: FieldTraits(), settings: Settings(), inToken: true) == nil)
+}
+
+/// "teh" typed twice in one session: pending, but used twice. A recorded typo of "the" is corrected anyway.
+@Test(arguments: [false, true])
+func engineNeverCorrectsAWordUsedTwice(_ recordedTypo: Bool) throws {
+    let engine = try personalEngine(.en, []) {
+        for _ in 0..<2 { $0.addWord("teh", kind: .en, context: [], at: 0, source: .typed, session: 1) }
+        if recordedTypo { $0.addCorrection(lang: "en", typed: "teh", chosen: "the", rejected: false, at: 0) }
+    }
+    #expect(engine.personal?.isKnown(.en, "teh") == false)
+    let input = InputState(context: [], taps: taps("teh"))
+    #expect(engine.autocorrection(input, ranked: engine.candidates(input), traits: FieldTraits(), settings: Settings())?.ident
+        == (recordedTypo ? "the" : nil))
 }
 
 @Test func engineNeverCorrectsAPersonalWord() throws {

@@ -189,3 +189,47 @@ Moe's device examples (`suggest --chat` with the 3 chats, normal, key-center tap
 - عانلة stays as typed, which is right: on device, عائلة ranks first by 0.99 with a 0.38 share, and fixing it would give the wrong word. With no context, the CLI fixes it to عاملة.
 - دولوثت (an extra tap plus a slip, margin 0.8) and عليهاه (an extra tap, margin 1.9, and it also reads as عليها + ه) stay as typed. In Moe's chats, extra-tap fixes at such margins are mostly real words (بعتتلي, اتطمنت, عاوزينا).
 - تينيتنن has no candidate within the edit limits. الاخيار is the valid word الأخيار (rule 2).
+
+## 2026-11-04 · Phase 11: autocorrect you can trust (proxy lexicons)
+
+Proxy lexicons, not comparable with earlier rows: the real klex can't be built in this session, so `/proxy/en.klex` and `/proxy/ar.klex` hold the same wordfreq 3.1.1 unigrams, EN bigrams and held-out sentences from the Brown corpus, and AR pseudo-sentences sampled from wordfreq's Arabic unigrams (AR NW and KS mean nothing here; AR AC and FA do). git: `0ac0d27` plus the Phase 11 working tree. klex sha256: EN `4dc43a49ae710a53d47366ba361222c67ca27a834242dd8ffecb4d04d44bad86`, AR `5e3e099b9be89b65d80ef65127487a53afc064061826d5c5bfe065fa46f768d7`. Seed 1, 500 sentences.
+
+```bash
+K=.build/release/kalam-cli
+$K eval --lang en --klex /proxy/en.klex --heldout /proxy/heldout/en.txt [--set autocorrectShortWordMargin=M]
+$K eval --lang ar --klex /proxy/ar.klex --heldout /proxy/heldout/ar.txt --autocorrect normal|gentle [--set autocorrectShortWordMargin=M]
+```
+
+| Run | EN AC / FA / NW / KS | AR normal AC / FA | AR gentle AC / FA | Verdict |
+|---|---|---|---|---|
+| baseline `0ac0d27` | 52.4 / 0.00 / 23.2 / 37.4 | 22.9 / 0.00 | 7.4 / 0.00 | |
+| Phase 11 rules, short-word margin 0 | 48.1 / 0.00 / 23.2 / 37.4 | 22.9 / 0.00 | 7.4 / 0.00 | EN cost is the mid-sentence capitals rule alone (see below) |
+| margin 0.5 | 48.1 / 0.00 | 22.9 / 0.00 | 7.0 / 0.00 | |
+| **margin 1.0** | **48.1 / 0.00 / 23.2 / 37.4** | **22.8 / 0.00** | **6.7 / 0.00** | **kept** (no EN cost) |
+| margin 2.0 | 48.1 / 0.00 | 22.7 / 0.00 | 5.6 / 0.00 | |
+
+- The short-word margin costs no EN AC at any value tried, so it stays at 1.0 as planned. Its cost is AR gentle 0.7 pp (7.4 to 6.7) and AR normal 0.1 pp. The proxy's FA is 0 throughout, so it can't show what the margin buys; on device it should stop 1 to 3 letter slips into other short words (Moe's Franco and dialect fragments).
+- The mid-sentence capitals rule (a capital literal outside a sentence start is never corrected, the variant fix aside) costs 4.3 pp of EN AC on the proxy: with it disabled the run gives 52.4 again. Brown is news text, and 7.4% of its words are capitalized mid-sentence (State, Senate, County, Department, John), which the noisy typist mistypes with shift held. Moe's chats capitalize mid-sentence mostly for names, which is what the rule protects, so the rule is kept as specified. A narrower variant that still corrects when c* itself displays with a capital (a known name, Jphn to John) gives 50.5 on the proxy; it wasn't taken, because it would also turn a friend's name into another name.
+- The other rules don't move the proxy: no personal store (rule 2 protection, retype and tap reverts), the eval passes `inToken: false`, Brown has no mixed-script words, and its apostrophes are exact taps, so the ambiguous contractions never come up.
+- Predictions: NW and KS are unchanged; the eval has no personal n-grams, which is where pending words were coming from.
+- Latency (3 evals in parallel): EN candidates 0.44 / 2.86 / 3.20 ms, AR 0.52 / 4.70 / 5.99 ms, as at baseline. The rule 2 store read happens only for a correction about to happen.
+
+To rerun on the Mac with the real lexicons and Moe's chats (from `Packages/KalamEngine`, defaults are Phase 11's):
+
+```bash
+swift build -c release
+K=.build/release/kalam-cli; R=../../KeyboardExtension/Resources; H=../../Tools/data/heldout
+$K eval --lang en --klex $R/en.klex --heldout $H/en.txt
+$K eval --lang ar --klex $R/ar.klex --heldout $H/ar.txt --autocorrect normal
+$K eval --lang ar --klex $R/ar.klex --heldout $H/ar.txt --autocorrect gentle
+for k in 0 1 2 3 4 5 6 7 8 9; do
+  $K eval-personal --chat <_chat.txt>... --sender "Mohamed Morad" --klex-en $R/en.klex --klex-ar $R/ar.klex --fold $k --autocorrect normal
+  $K eval-personal --chat <_chat.txt>... --sender "Mohamed Morad" --klex-en $R/en.klex --klex-ar $R/ar.klex --fold $k --autocorrect gentle
+done
+```
+
+What to expect, and to judge (Moe AR R / W over the 10 folds):
+- EN synthetic AC drops (the capitals rule, as above; Leipzig news capitalizes like Brown). FA stays ≤ 0.5%.
+- AR synthetic AC drops a little (the short-word margin), FA stays 0.
+- eval-personal AR changes should fall a little, mostly through the short-word margin (short dialect words) and mixed-script words. Rule 2's new protection adds little here: a word imported twice was already known, and imports that `markLikelyTypos` or `keepLazySpellingsPending` zero out don't count. It matters for live typing (a word typed twice in one session). Judge every AR change right or wrong as in Device round 2 (normal 39 / 12, gentle 30 / 3); the guard is that the wrong count doesn't grow.
+- EN eval-personal changes should fall (capitals, ambiguous contractions, words used twice); next-word top-3 may move slightly, since pending one-off words no longer get predicted.

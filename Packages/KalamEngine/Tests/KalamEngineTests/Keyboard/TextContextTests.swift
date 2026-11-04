@@ -121,3 +121,77 @@ func autocorrectUndoStepsBackThroughItsTail(tails: [String], deleting: Int, text
     let slot = AutocorrectUndo(literal: "teh", taps: [], replacement: "the")
     #expect(slot.typed(",", deleting: 1) == nil)
 }
+
+@Test(arguments: [
+    ("lo world", "lo"),
+    ("lo", "lo"),
+    (" world", ""),
+    ("", ""),
+    ("'t go", "'t"),
+    ("s' are", "s"),
+    ("lo.", "lo"),
+])
+func currentWordTailAfterCursor(text: String, expected: String) {
+    #expect(currentWordTail(after: text) == expected)
+}
+
+@Test(arguments: [
+    ("go to www.goo", true),
+    ("see a/b", true),
+    ("e.g", true),
+    ("mail x@y", true),
+    ("time 10:3", true),
+    ("C:\\Users\\mo", true),
+    ("😂teh", true),
+    ("❤️teh", true),
+    ("hello teh", false),
+    ("(teh", false),
+    ("I don't", false),
+    ("teh", false),
+    ("www.x.com teh", false),
+    ("انا رايح", false),
+])
+func nonWordTokenBeforeTheCursor(text: String, inside: Bool) {
+    #expect(insideNonWordToken(before: text) == inside)
+}
+
+@Test func retypingALiteralWhereItWasCorrectedMatches() {
+    var recent = RecentAutocorrects()
+    recent.add(literal: "teh", replacement: "the", before: "I saw ")
+    #expect(recent.retyped("teh", before: "I saw ")?.replacement == "the")
+    #expect(recent.retyped("teh", before: "you saw ") == nil)  // another spot
+    #expect(recent.retyped("tge", before: "I saw ") == nil)
+}
+
+@Test func retypeMatchComparesOnlyTheLast32Characters() {
+    var recent = RecentAutocorrects()
+    let long = String(repeating: "x", count: 40) + " I saw "
+    recent.add(literal: "teh", replacement: "the", before: long)
+    #expect(recent.retyped("teh", before: "older text " + long.suffix(32)) != nil)
+}
+
+@Test func revertMemoryKeepsTheLastTen() {
+    var recent = RecentAutocorrects()
+    for i in 0..<11 { recent.add(literal: "teh\(i)", replacement: "the", before: "") }
+    #expect(recent.retyped("teh0", before: "") == nil)
+    #expect(recent.retyped("teh1", before: "") != nil)
+    let last = recent.retyped("teh10", before: "")!
+    recent.remove(last)
+    #expect(recent.retyped("teh10", before: "") == nil)
+}
+
+/// "teh" was corrected to "the" after "I saw "; the cursor then moves into or after it.
+@Test(arguments: [
+    ("I saw the", " cat", true),  // right after the word
+    ("I saw th", "e cat", true),  // inside it
+    ("I saw t", "he", true),
+    ("I saw ", "the cat", false),  // before it
+    ("I saw the ", "cat", false),
+    ("I saw them", "", false),  // another word
+    ("You saw the", "", false),  // another spot
+])
+func correctedWordAroundTheCursor(before: String, after: String, offered: Bool) {
+    var recent = RecentAutocorrects()
+    recent.add(literal: "teh", replacement: "the", before: "I saw ")
+    #expect((recent.corrected(before: before, after: after)?.literal == "teh") == offered)
+}

@@ -13,6 +13,7 @@ final class EngineClient {
         var taps: [Tap]  // empty: next-word predictions
         var traits: FieldTraits
         var settings: Settings
+        var inToken: Bool  // SPEC 8.5 rule 3: insideNonWordToken for the text before the cursor
     }
 
     struct Result {
@@ -114,7 +115,8 @@ final class EngineClient {
         } else {
             let input = InputState(context: request.context, taps: request.taps)
             candidates = engine.candidates(input)
-            autocorrect = engine.autocorrection(input, ranked: candidates, traits: request.traits, settings: request.settings)
+            autocorrect = engine.autocorrection(input, ranked: candidates, traits: request.traits, settings: request.settings,
+                                                inToken: request.inToken)
             if request.traits.keyboardType == .other, request.traits.contentType == .other {
                 emoji = EmojiIndex.shared.emoji(for: input.literal, lang: request.lang).first
             }
@@ -196,6 +198,10 @@ final class EngineClient {
     func sentenceEnded() { queue.async { [self] in learner?.sentenceEnded() } }
     func backspaced(into word: String, lang: Lang) { queue.async { [self] in learner?.backspaced(into: word, lang: lang) } }
     func undoAutocorrect() { queue.async { [self] in learner?.undoAutocorrect() } }
+
+    func revertAutocorrect(_ literal: String, replacement: String, lang: Lang, context: [String]) {
+        queue.async { [self] in learner?.revertAutocorrect(literal, replacement: replacement, lang: lang, context: context) }
+    }
     func writeIfDue() { queue.async { [self] in learner?.writeIfDue() } }
     func addLexiconEntries(_ entries: [String]) { queue.async { [self] in learner?.addLexiconEntries(entries) } }
 

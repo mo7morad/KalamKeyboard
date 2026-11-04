@@ -25,8 +25,12 @@ final class InputController {
     private var lastKeyWasSpace = false
     /// An autocorrect the next backspaces can undo (SPEC 8.5).
     private var undo: AutocorrectUndo?
-    /// A literal restored by undo; committing it unchanged neither corrects nor learns it again.
+    /// A literal restored by undo (or put back by a bar tap); committing it unchanged neither corrects nor learns it again.
     private var restoredLiteral: String?
+    /// This controller's recent autocorrects (SPEC 8.5 revert memory), and the one the bar offers to
+    /// revert while the cursor is in or right after its replacement (SPEC 5.4).
+    private var recent = RecentAutocorrects()
+    private var revertOffer: RecentAutocorrects.Entry?
     /// The word a paste ended on; committing it unchanged neither corrects nor learns it (SPEC 5.5).
     private var pastedWord: String?
     /// The text before the cursor after our last edit, to tell our edits from the host's.
@@ -169,17 +173,32 @@ final class InputController {
 
     // MARK: Suggestion bar
 
-    /// A tap replaces the current word (or inserts the prediction) and adds an auto-space.
+    /// A tap replaces the whole word around the cursor (or inserts the prediction) and adds an
+    /// auto-space, unless text follows the word. A revert slot puts back an autocorrect's literal
+    /// and rejects the autocorrect (SPEC 5.4).
     func accept(_ slot: BarSlot) {
+        let offer = revertOffer
         dropUndo()
         let context = contextWords(before: before)
-        delete(literal.count)
-        insert(slot.word + " ")
-        learn(slot.word, context: context, how: slot.isLiteral ? .literal : .suggestion)  // an emoji has no letter: not learned
-        taps = []
+        let after = proxy.documentContextAfterInput ?? ""
+        let tail = literal.isEmpty ? "" : currentWordTail(after: after)
+        // Hosts are expected to count this offset in Characters (device-only, unverified).
+        if !tail.isEmpty { proxy.adjustTextPosition(byCharacterOffset: tail.count) }
+        delete(literal.count + tail.count)
+        let followed = !literal.isEmpty && !after.dropFirst(tail.count).isEmpty
+        insert(followed ? slot.word : slot.word + " ")
+        if slot.isRevert, let offer {
+            recent.remove(offer)
+            client.revertAutocorrect(offer.literal, replacement: offer.replacement, lang: lang, context: context)
+        } else {
+            learn(slot.word, context: context, how: slot.isLiteral ? .literal : .suggestion)  // an emoji has no letter: not learned
+        }
+        // Followed by text, the cursor stays at the word's end: it is the current word, already learned.
+        taps = followed ? resyncedTaps([], to: currentWord(before: slot.word)) : []
+        restoredLiteral = taps.isEmpty ? nil : literal
         pastedWord = nil
-        autoSpace = true
-        lastKeyWasSpace = true
+        autoSpace = !followed
+        lastKeyWasSpace = !followed
         refresh()
     }
 
@@ -219,13 +238,15 @@ final class InputController {
         restoredLiteral = nil
         pastedWord = nil
         taps = resyncedTaps(taps, to: currentWord(before: before))
+        revertOffer = recent.corrected(before: before, after: proxy.documentContextAfterInput ?? "")
         refresh()
     }
 
     /// Asks for suggestions for the current state (also on appear and language switches).
     func refresh() {
         expectedBefore = before
-        client.request(EngineClient.Request(lang: lang, context: contextWords(before: before), taps: taps, traits: traits, settings: settings))
+        client.request(EngineClient.Request(lang: lang, context: contextWords(before: before), taps: taps, traits: traits,
+                                            settings: settings, inToken: insideNonWordToken(before: before)))
     }
 
     /// Re-renders the bar from the latest result, e.g. after shift changes the casing.
@@ -236,21 +257,32 @@ final class InputController {
     private func show(_ result: EngineClient.Result) {
         shown = result
         let capitalized = isShifted() || literal.first?.isUppercase == true
-        onSlots?(barSlots(result.candidates, autocorrect: result.autocorrect, literal: literal, lang: lang, capitalized: capitalized, emoji: result.emoji))
+        // A literal retyped where it was autocorrected commits as typed, so it shows no pending autocorrect.
+        let retyping = recent.retyped(literal, before: String(before.dropLast(literal.count))) != nil
+        onSlots?(barSlots(result.candidates, autocorrect: retyping ? nil : result.autocorrect, literal: literal, lang: lang,
+                          capitalized: capitalized, emoji: result.emoji, revert: revertOffer?.literal))
     }
 
     // MARK: Commit
 
     /// Commits the current word before a space, punctuation or return: autocorrects it when the
-    /// current result says so (SPEC 8.5) and tells the learner. Returns the replacement, if any.
+    /// current result says so (SPEC 8.5) and tells the learner. A literal retyped where it was
+    /// autocorrected is kept, and the autocorrect rejected. Returns the replacement, if any.
     @discardableResult
     private func commitWord() -> String? {
         let literal = literal, taps = taps
         let context = contextWords(before: before)
+        let prefix = String(before.dropLast(literal.count))
         self.taps = []
         defer { (restoredLiteral, pastedWord) = (nil, nil) }
         guard literal != restoredLiteral, literal != pastedWord else {  // already learned, or pasted
             trace("commitWord \(literal.debugDescription) restored or pasted, delete 0")
+            return nil
+        }
+        if let retyped = recent.retyped(literal, before: prefix) {
+            trace("commitWord \(literal.debugDescription) retyped, delete 0")
+            recent.remove(retyped)
+            client.revertAutocorrect(literal, replacement: retyped.replacement, lang: lang, context: context)
             return nil
         }
         guard let target = client.resultForCommit()?.autocorrect else {
@@ -264,14 +296,16 @@ final class InputController {
         insert(replacement)
         learn(replacement, context: context, how: .autocorrect(from: literal))
         undo = AutocorrectUndo(literal: literal, taps: taps, replacement: replacement)
+        recent.add(literal: literal, replacement: replacement, before: prefix)
         return replacement
     }
 
-    /// Ends the undo slot. Once backspace took its punctuation the cursor is back in the corrected
-    /// word, so the learner now hears what a plain backspace there would have told it.
+    /// Ends the undo slot and the revert offer. Once backspace took its punctuation the cursor is back
+    /// in the corrected word, so the learner now hears what a plain backspace there would have told it.
     private func dropUndo() {
         if let undo, undo.tail.isEmpty { client.backspaced(into: undo.replacement, lang: lang) }
         undo = nil
+        revertOffer = nil
     }
 
     /// Numbers and stray marks aren't words (SPEC 6.2), so the learner only sees words with a letter.

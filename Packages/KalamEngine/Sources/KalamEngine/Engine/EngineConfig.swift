@@ -43,6 +43,8 @@ public struct EngineConfig: Sendable {
     public var autocorrectMaxAddedLetters = 1  // a completion as c* adds at most this many letters past the taps
     public var variantFixRatio = 5.0  // P_LM(c*) >= ratio * P_LM(literal)
     public var variantFixMaxKept = 2  // no variant fix once Moe kept the literal this often
+    public var protectMinUses = 2  // rule 2: a literal with this many raw uses + imports is never corrected, unless a recorded typo
+    public var autocorrectShortWordMargin = 1.0  // added to theta for literals of 1 to 3 letters (eval-log Phase 11)
 
     // 8.6 Predictions
     public var predictionPoolSize = 20  // candidates taken from each source before scoring
@@ -72,7 +74,7 @@ public struct EngineConfig: Sendable {
         "personalCorpusPrior": \.personalCorpusPrior, "correctionBoost": \.correctionBoost,
         "explicitCharBoost": \.explicitCharBoost, "decayHalfLifeDays": \.decayHalfLifeDays,
         "autocorrectThresholdNormal": \.autocorrectThresholdNormal, "autocorrectThresholdGentle": \.autocorrectThresholdGentle,
-        "autocorrectMinShare": \.autocorrectMinShare, "gentleMaxEditCost": \.gentleMaxEditCost, "variantFixRatio": \.variantFixRatio,
+        "autocorrectMinShare": \.autocorrectMinShare, "autocorrectShortWordMargin": \.autocorrectShortWordMargin, "gentleMaxEditCost": \.gentleMaxEditCost, "variantFixRatio": \.variantFixRatio,
         "learnerFlushSeconds": \.learnerFlushSeconds, "manualCorrectionSeconds": \.manualCorrectionSeconds,
         "undatedImportAgeDays": \.undatedImportAgeDays, "typoNeighbourRatio": \.typoNeighbourRatio,
     ]
@@ -80,7 +82,7 @@ public struct EngineConfig: Sendable {
         "maxEdits": \.maxEdits, "maxEditsShortLiteral": \.maxEditsShortLiteral,
         "shortLiteralLength": \.shortLiteralLength, "noFarSubstitutionLength": \.noFarSubstitutionLength,
         "beamWidth": \.beamWidth, "maxCompletions": \.maxCompletions, "personalTrieCap": \.personalTrieCap,
-        "variantFixMaxKept": \.variantFixMaxKept, "autocorrectMaxAddedLetters": \.autocorrectMaxAddedLetters, "predictionPoolSize": \.predictionPoolSize,
+        "variantFixMaxKept": \.variantFixMaxKept, "protectMinUses": \.protectMinUses, "autocorrectMaxAddedLetters": \.autocorrectMaxAddedLetters, "predictionPoolSize": \.predictionPoolSize,
         "knownMinUses": \.knownMinUses, "knownMinSessions": \.knownMinSessions, "knownMinImports": \.knownMinImports,
         "manualCorrectionMaxDistance": \.manualCorrectionMaxDistance, "storeBusyTimeoutMs": \.storeBusyTimeoutMs,
     ]

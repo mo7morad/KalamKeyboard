@@ -21,6 +21,23 @@ public func currentWord(before text: String) -> String {
     return String(word.drop { $0 == "'" || $0 == "\u{2019}" })
 }
 
+/// The rest of the word after the cursor: the leading run of word characters, without a closing
+/// apostrophe (SPEC 5.4: a suggestion tap replaces the whole word around the cursor).
+public func currentWordTail(after text: String) -> String {
+    var tail = String(text.prefix { continuesWord(String($0), word: "a") })
+    while tail.last == "'" || tail.last == "\u{2019}" { tail.removeLast() }
+    return tail
+}
+
+/// SPEC 8.5 rule 3: whether the whitespace-delimited run that ends at the cursor has @ / . : \ or
+/// an emoji before the word's last letters (www.goo, a/b, e.g, x@y), so the word is no word to correct.
+public func insideNonWordToken(before text: String) -> Bool {
+    let run = text.reversed().prefix { !$0.isWhitespace }
+    return run.drop { $0.isLetter || $0.isNumber }.contains { c in
+        "@/.:\\".contains(c) || c.unicodeScalars.contains { $0.properties.isEmojiPresentation || $0 == "\u{FE0F}" }
+    }
+}
+
 /// Engine context for the text before the cursor: the last 2 words before the current word,
 /// with <s> after . ! ? ؟, a newline or at an empty field.
 public func contextWords(before text: String) -> [String] {
@@ -73,7 +90,7 @@ public func textIsRightToLeft(before: String?, after: String?) -> Bool? {
 }
 
 /// True for an Arabic-script letter, false for any other letter, nil otherwise.
-private func strongDirection(_ scalar: Unicode.Scalar) -> Bool? {
+func strongDirection(_ scalar: Unicode.Scalar) -> Bool? {
     switch scalar.properties.generalCategory {
     case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter:
         let arabic: [ClosedRange<UInt32>] = [0x0600...0x06FF, 0x0750...0x077F, 0x08A0...0x08FF, 0xFB50...0xFDFF, 0xFE70...0xFEFF]
@@ -120,5 +137,48 @@ public struct AutocorrectUndo: Sendable {
         if tail.isEmpty || tail == " " { return .revert(delete: replacement.count + tail.count, insert: literal) }
         tail.removeLast()
         return .delete
+    }
+}
+
+/// SPEC 8.5 revert memory: the session's recent autocorrects, each with the text before the word it
+/// replaced (its last contextLength characters), so that retyping the literal there, or tapping the
+/// corrected word for its original (5.4), reverts it.
+public struct RecentAutocorrects: Sendable {
+    public struct Entry: Equatable, Sendable {
+        public let literal: String
+        public let replacement: String
+        let before: String
+    }
+
+    static let capacity = 10
+    static let contextLength = 32
+    private var entries: [Entry] = []
+
+    public init() {}
+
+    /// `literal` was autocorrected to `replacement`, with `before` the text before it.
+    public mutating func add(literal: String, replacement: String, before: String) {
+        entries.append(Entry(literal: literal, replacement: replacement, before: String(before.suffix(Self.contextLength))))
+        if entries.count > Self.capacity { entries.removeFirst() }
+    }
+
+    /// The autocorrect that a commit of `literal` after `before` retypes.
+    public func retyped(_ literal: String, before: String) -> Entry? {
+        let before = String(before.suffix(Self.contextLength))
+        return entries.last { $0.literal == literal && $0.before == before }
+    }
+
+    /// The autocorrect whose replacement is the whole word around the cursor, with `before` and
+    /// `after` the text on each side of it. Nil unless the cursor is in or right after a word.
+    public func corrected(before: String, after: String) -> Entry? {
+        let head = currentWord(before: before)
+        guard !head.isEmpty else { return nil }
+        let word = head + currentWordTail(after: after)
+        let prefix = String(before.dropLast(head.count).suffix(Self.contextLength))
+        return entries.last { $0.replacement == word && $0.before == prefix }
+    }
+
+    public mutating func remove(_ entry: Entry) {
+        entries.removeAll { $0 == entry }
     }
 }

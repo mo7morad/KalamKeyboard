@@ -79,6 +79,19 @@ private final class Rig {
     #expect(try rig.state("teh") == .known && rig.state("the") == nil)
 }
 
+/// Moe deleted "the" (backspacing into it) and retyped "teh", or tapped "teh" in the bar.
+@Test(arguments: [true, false])
+func revertingALaterAutocorrectRejectsItAtOnceAndKeepsTheLiteral(_ stillPending: Bool) throws {
+    let rig = try Rig()
+    rig.learner.commit("the", lang: .en, context: [], how: .autocorrect(from: "teh"))
+    if !stillPending { rig.learner.backspaced(into: "the", lang: .en) }
+    rig.learner.revertAutocorrect("teh", replacement: "the", lang: .en, context: [])
+    #expect(rig.model.hasCorrection(.en, typed: "teh", chosen: "the", rejected: true))
+    rig.learner.flush()
+    #expect(try rig.state("teh") == .known && rig.state("the") == nil)
+    #expect(!rig.model.hasCorrection(.en, typed: "the", chosen: "teh", rejected: false))  // not a manual correction
+}
+
 @Test(arguments: [
     ("hello", 9.0, true),  // edit distance 1, inside 10 s
     ("hello", 11.0, false),  // too late

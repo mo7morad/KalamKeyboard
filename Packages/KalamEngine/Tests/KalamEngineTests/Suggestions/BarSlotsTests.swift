@@ -27,3 +27,13 @@ private func suggestion(_ text: String, literal: Bool = false) -> Suggestion {
     #expect(slots.map { $0?.label } == [nil, "أنا", "انا"])
     #expect(barSlots([], autocorrect: nil, literal: "", lang: .en, capitalized: false) == [nil, nil, nil])
 }
+
+@Test func revertTakesThePrimaryAsTheQuotedLiteral() {
+    let ranked = [suggestion("the", literal: true), suggestion("then"), suggestion("they")]
+    for lang in [Lang.en, .ar] {
+        let slots = barSlots(ranked, autocorrect: nil, literal: "the", lang: lang, capitalized: false, revert: "teh")
+        #expect(slots[1]?.label == "\u{201C}teh\u{201D}")
+        #expect(slots[1]?.word == "teh")
+        #expect(slots[1]?.isRevert == true && slots[1]?.isLiteral == true)
+    }
+}

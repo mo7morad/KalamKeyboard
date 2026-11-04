@@ -57,7 +57,7 @@ Sources: dev.to "The three hard constraints of an iOS keyboard extension" (TBDS)
 - **D7 One extension serves both languages** (`PrimaryLanguage = mul`). A dedicated EN/AR key switches between them internally.
 - **D8 Variant auto-fix defaults.**
   - The Arabic spelling-variant auto-fix (انا→أنا) is **off** by default, but variants still appear as suggestions. In wordfreq, انا (7.9e-4) is as common as أنا (7.8e-4), and dialect الي collides with إلى.
-  - The English contraction fix (dont→don't, im→I'm) is **on** by default.
+  - The English contraction fix (dont→don't, im→I'm) is **on** by default. It never auto-applies a lazy spelling that is a common word too (its, were, ill, well, hell, id, shell, wed, shed, lets): those keep the contraction as a suggestion only (8.5).
 - **D9 Personal seed:** Moe imports his own WhatsApp messages (exported `.txt`) through the host app. This is the main way to cover Egyptian dialect, because the base Arabic data is mostly MSA.
 - **D10 No third-party dependencies** without asking. Python may use `wordfreq` and `pytest` only.
 - **D11 Concurrency.** The engine is confined to one serial `DispatchQueue`, and the package uses Swift 5 language mode in v1 to avoid strict-concurrency churn.
@@ -180,7 +180,8 @@ There is a single `FeedbackPlayer`, called on touch-down for every key.
   - Otherwise, alt1 shows the 2nd candidate and alt2 the 3rd.
 - **Emoji (5.6):** when the current word, normalized, is an emoji keyword in the current language, its best emoji takes alt2 (rightmost in EN, leftmost in AR), as Apple's does, with or without a pending autocorrect. Not in URL, email, password or one-time-code fields. A tap replaces the typed word with the emoji plus the auto-space. It is never an autocorrect, never learned, and long-press doesn't offer "Don't suggest".
 - **With an empty current word:** the bar shows 3 next-word predictions.
-- **Tapping a suggestion** replaces the current word (or inserts the prediction) and adds an auto-space. Tapping the literal is an explicit accept, so the word is learned.
+- **Tapping a suggestion** replaces the whole word around the cursor (the part before it plus the word characters after it; the cursor first moves to the word's end) or inserts the prediction, and adds an auto-space unless text follows the word. Tapping the literal is an explicit accept, so the word is learned.
+- **Tap to revert:** when the cursor moves into or right after a word (a host change) and the whole word is the replacement of one of this session's autocorrects (8.5 revert memory) with the same text before it, the primary slot shows the original literal in quotes. A tap puts the literal back in place of the whole word, records the rejection at once and learns the literal as an explicit accept. Long-press never offers to block it.
 - **Blocking a word:** long-press a suggestion to open a small in-keyboard overlay, "Don't suggest ‘x’". This blocks the word (the host app lists it as Blocked; there, "Forget" deletes a word's learned data instead). Use no alerts, since extensions can't show them.
 - **Without Full Access:** the bar shows "Turn on Full Access for learning, haptics and sounds", and autocorrect is off, since it couldn't be seen pending.
 
@@ -376,10 +377,14 @@ Replace the literal ℓ with the top candidate c* only if all of the following h
 
 1. Autocorrect is on for this language, `autocorrectionType != .no`, `keyboardType` is not `.URL` or `.emailAddress`, and `textContentType` is not `.password` or `.oneTimeCode`.
 2. ℓ is not known: it's neither a `valid` base variant nor a `known` personal word.
+   - Nor a word Moe used: its raw `uses + imports` is below `protectMinUses` (2), unless corrections holds a non-rejected pair with ℓ as `typed` (a recorded typo). This is one store read, made only when a correction would otherwise happen. The variant fix keeps its own rule (Moe kept ℓ 2 or more times).
    - In AR, a known word plus one clitic counts as known too (Egyptian forms the MSA base lacks). Prefixes: و ف ب ل ك ه ح ال لل ي (a fused يا). Suffixes: ه ها هم ك كم ني نا ي ش لي له لك لها لهم لنا وا. The stem has at least 2 letters. The negation م…ش around a known stem counts too, when the word has at least 5 letters.
 3. ℓ is not a special token and contains no digits. In EN, it has no capital after its first letter (OMG, LLMs, iOS).
+   - ℓ is not inside a non-word token: the whitespace-delimited run that ends at the cursor has no `@ / . : \` or emoji before ℓ's last letters (www.goo, a/b, e.g, x@y). The keyboard decides this from the text before the cursor and sends it with the request.
+   - ℓ doesn't mix Arabic-script and other letters.
+   - In EN, ℓ doesn't start with a capital when the context is not a sentence start (Moe pressed shift: a name). The variant fix still applies (Im → I'm, Dont → Don't).
 4. There is no recorded rejection of (ℓ → c*).
-5. `score(c*) − score(ℓ) ≥ θ`, where θ is 4.0 for "gentle" and 1.0 for "normal". In AR, normal adds c*'s edit cost to θ (so an edit counts twice: in Moe's chats an extra tap, a far key or a swap is more often a dialect word than a slip). Also, c*'s softmax share among the candidates must be ≥ 0.5.
+5. `score(c*) − score(ℓ) ≥ θ`, where θ is 4.0 for "gentle" and 1.0 for "normal", plus `autocorrectShortWordMargin` (1.0) when ℓ has 1 to 3 letters (normalized). In AR, normal adds c*'s edit cost to θ (so an edit counts twice: in Moe's chats an extra tap, a far key or a swap is more often a dialect word than a slip). Also, c*'s softmax share among the candidates must be ≥ 0.5.
    - Defaults: EN normal, AR gentle (dialect words are often missing from the base data).
 6. c* fixes a slip, not a different word:
    - as a completion, it adds at most 1 letter past the taps (goin → going, never tomo → tomorrow);
@@ -392,6 +397,7 @@ Replace the literal ℓ with the top candidate c* only if all of the following h
 - The setting allows it (EN contractions on; AR variants off by default).
 - `P_LM(c*|ctx) ≥ 5 · P_LM(ℓ|ctx)`.
 - Moe hasn't kept ℓ 2 or more times.
+- In EN, ℓ is not one of the ambiguous lazy spellings of D8 (its, were, ill, well, hell, id, shell, wed, shed, lets).
 
 **Undo**
 
@@ -399,6 +405,12 @@ Replace the literal ℓ with the top candidate c* only if all of the following h
 - After a commit by punctuation or return ("teh," shown as "the,"; also . ? ! and "\n"), the first backspace deletes the punctuation as usual and keeps the slot; the next restores ℓ in one go. When punctuation took an auto-space's place (8.7), the slot covers what it inserted (", ") the same way. Any other key, a repeat backspace, a host text change or a cursor move ends the slot.
 - A pending autocorrect stays pending through the sentence end its punctuation or return makes, so the undo can still reject it.
 - Record the rejection (ℓ → c*) and mark ℓ as explicitly accepted (known), on the restoring backspace only.
+
+**Revert memory**
+
+- The keyboard remembers its last 10 autocorrects of the session: ℓ, the replacement and the last 32 characters of the text before the replaced word.
+- **Retype:** when Moe deletes a corrected word (backspaces or the swipe) and commits ℓ again after the same text, the commit keeps ℓ (the bar shows no pending autocorrect for it), records the rejection (ℓ → c*) at once and learns ℓ as an explicit accept.
+- **Tap:** the bar offers ℓ for a corrected word under the cursor (5.4), with the same effect.
 
 **Timing**
 
@@ -408,6 +420,7 @@ Replace the literal ℓ with the top candidate c* only if all of the following h
 ### 8.6 Predictions and casing
 
 - **Empty current word:** show the top 3 next words, drawn from personal trigrams and bigrams, base bigrams and unigram backoff. Exclude a repeat of the previous word and `<s>`.
+- A prediction is a valid base word or a known personal word. A pending word (a typo used once) is never predicted, even from Moe's n-grams.
 - After `. ! ? ؟`, a newline or an empty field, the context is `<s>`. First-word-of-message predictions are personal and valuable.
 - **Auto-shift (EN):** at the start of the field, after a sentence end + space, and after a newline, when `autocapitalizationType` allows it.
 - **Display casing** follows 6.3. When shift is active, capitalize the first letter of every suggestion.
@@ -439,6 +452,7 @@ Add indexes that match the query patterns. Writes from both the keyboard and the
 ### 9.2 Learning rules
 
 - **Commit events:** typed + space/punctuation, suggestion tap, autocorrect, revert, manual correction.
+  - A revert is the one-backspace undo, retyping ℓ where it was corrected, or tapping ℓ in the bar (8.5). Each records the rejection at once and makes ℓ an explicit accept. Retyping is not a manual correction (replacement → ℓ).
 - **Commit buffer:**
   - An event becomes final when another word is committed after it, or at sentence end, or when the keyboard is dismissed.
   - Backspacing into a pending word drops its event.

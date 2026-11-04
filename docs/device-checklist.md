@@ -175,3 +175,21 @@ Setup: install a Debug build with Full Access on. Test in Notes unless a step sa
 - [ ] Undo after punctuation: type "teh," : it shows "the,". Backspace deletes the ","; the next backspace turns "the" back into "teh". Same with "teh." , "teh?" , "teh!" and "teh" + return. Then type "teh," again: it is not corrected this time.
 - [ ] Undo after a space then punctuation: type "teh" + space (shows "the ") then ",": shows "the, ". Backspaces go " ", then ",", then "the" becomes "teh".
 - [ ] Holding backspace after "the," deletes characters normally (it doesn't revert "the" mid-repeat).
+
+## Phase 11: autocorrect you can trust
+
+Setup: install a Debug build with Full Access on, autocorrect normal in EN. Test in Notes unless a step says otherwise. Use made-up words that aren't in your store yet (say "teh", "tgem").
+
+- [ ] Retype after deleting a correction: type "I saw teh " (shows "the "), type "cat", then backspace through "cat", the space and "the". Type "teh" + space: it stays "teh", and the bar showed no bold suggestion while you typed it. Type "teh " again later in a new sentence: never corrected again.
+- [ ] Same with the backspace swipe: type "I saw tgem " (shows "them "), swipe back over that word, retype "tgem" + space: it stays.
+- [ ] Tap to revert in Notes: type "I saw teh cat " ("the cat"). Tap right after "the" (between "e" and the space): the middle slot shows “teh”. Tap it: "the" becomes "teh", no extra space, the cursor stays right after it. Tap inside "the" (between "t" and "h"): same result. Long-press the “teh” slot: no "Don't suggest".
+- [ ] Tap to revert in WhatsApp: same steps in a chat. Does the slot appear ____? Is the whole word replaced, with nothing left over or deleted from the next word ____?
+- [ ] A word used twice stays: type a made-up word like "kalamo" + space twice in the same chat (not corrected the first time? note it ____). From then on it is never corrected, even in a new session the same day.
+- [ ] URLs and domains: in a normal text field, type "www.goo" + space, "a/b " , "e.g " , "x@y " and "😂teh ": none of them changes.
+- [ ] Mixed script: type "helloمر" + space (switch layouts mid-word): it stays as typed.
+- [ ] Names mid-sentence: type "I met Jphn " with shift pressed for the "J": it stays "Jphn". "Teh " at the start of a sentence (auto-shift) still becomes "The ".
+- [ ] Ambiguous contractions stay: type "its ", "were ", "well ", "ill ", "lets ": none changes, and "it's", "we're", "we'll", "I'll", "let's" show in the bar while you type them.
+- [ ] Contractions still fix: "im " becomes "I'm ", "dont " becomes "don't ", "cant " becomes "can't ", also mid-sentence with shift ("Im " → "I'm ").
+- [ ] Short words: note any 2 or 3 letter typo you expected to be fixed that now stays ____ (the stricter margin).
+- [ ] Mid-word suggestion tap: type "hello world", put the cursor between "hel" and "lo", tap a suggestion (say "help"): the whole word becomes "help", with no leftover "lo" and no double space before "world". Try it in Notes, WhatsApp and Messages: any host where the wrong characters go ____ (whether hosts count the cursor move in characters, as the keyboard assumes, is device-only). Try it in Arabic too ____.
+- [ ] Predictions never show a one-off typo: type "see yuo " once, then later type "see " and look at the bar: "yuo" never shows (it may after you use it twice in two sessions).

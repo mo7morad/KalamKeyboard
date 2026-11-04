@@ -93,6 +93,17 @@ public final class PersonalModel {
         }
     }
 
+    /// Raw uses + imports of a word and whether it's a recorded typo: one store read, made only for
+    /// an autocorrect about to happen (SPEC 8.5 rule 2).
+    func usage(_ lang: Lang, _ ident: String) -> (uses: Int, recordedTypo: Bool) {
+        do {
+            return try store?.usage(lang: lang.rawValue, ident: ident) ?? (0, false)
+        } catch {
+            personalLog.error("usage read failed: \(String(describing: error), privacy: .public)")
+            return (0, false)
+        }
+    }
+
     /// Continuations of (a, b) and of (b), loaded from the store once per context.
     func context(_ lang: Lang, _ idents: [String]) -> ContextCounts {
         let key = [lang.rawValue] + idents

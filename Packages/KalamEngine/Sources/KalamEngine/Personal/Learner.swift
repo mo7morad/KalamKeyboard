@@ -87,10 +87,26 @@ public final class Learner {
     /// keeps the literal as an explicit accept.
     public func undoAutocorrect() {
         guard let event = pending, case .autocorrect(let literal) = event.commit else { return }
-        let typed = ident(literal, kind: event.kind), chosen = ident(event.word, kind: event.kind)
-        model?.addRejection(lang: event.kind.storeLang, typed: typed, chosen: chosen)
-        batch.addCorrection(lang: event.kind.storeLang, typed: typed, chosen: chosen, rejected: true, at: now)
+        reject(literal, event.word, kind: event.kind)
         pending = Event(word: literal, kind: event.kind, context: event.context, commit: .literal, time: event.time)
+    }
+
+    /// A later revert of an autocorrect: Moe retyped the literal where it was corrected, or tapped
+    /// it in the bar (SPEC 8.5). Records the rejection at once and commits the literal as an explicit accept.
+    public func revertAutocorrect(_ literal: String, replacement: String, lang: Lang, context: [String]) {
+        guard learning else { return }
+        if let event = pending, case .autocorrect(let from) = event.commit, from == literal, event.word == replacement {
+            pending = nil  // the corrected word wasn't final yet
+        }
+        reject(literal, replacement, kind: Self.kind(of: literal, lang: lang))
+        reopened = nil  // deleting the replacement to retype the literal is not a manual correction
+        commit(literal, lang: lang, context: context, how: .literal)
+    }
+
+    private func reject(_ literal: String, _ replacement: String, kind: Token.Kind) {
+        let typed = ident(literal, kind: kind), chosen = ident(replacement, kind: kind)
+        model?.addRejection(lang: kind.storeLang, typed: typed, chosen: chosen)
+        batch.addCorrection(lang: kind.storeLang, typed: typed, chosen: chosen, rejected: true, at: now)
     }
 
     /// On dismiss (viewWillDisappear): everything pending becomes final and is written.
