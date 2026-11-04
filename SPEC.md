@@ -96,7 +96,7 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
                     └─ Learner       (commit buffer → batched writes)
 ```
 
-- Results carry a generation number, and stale results are dropped. The engine checks the generation cooperatively inside its loops and bails out early.
+- Results carry a generation number, and stale results are dropped. A request that is already stale when the engine queue reaches it is skipped. There is no in-loop cancellation, since candidates take 2.6 ms at p95 on a Mac (Phase 3b). Add it if the device p99 calls for it.
 - Layout JSON lives in the engine package resources, so the keyboard UI, the spatial model and the CLI's typing simulator share one geometry.
 - `.klex` files are bundled only in the extension target. The CLI and tests take file paths; tests use a small fixture.
 
