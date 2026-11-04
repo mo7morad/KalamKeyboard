@@ -5,10 +5,12 @@ import UIKit
 /// long-press offers "Don't suggest ‘x’" in place of the slots (extensions can't show alerts).
 /// SPEC 5.5 adds the clipboard button at the left edge and the clip chip in the primary slot;
 /// while the clipboard panel is open, the bar is its header: "Clipboard", "Clear" and "ABC".
+/// SPEC 5.6 adds the emoji button right of it, shown always; the emoji panel hides the slots.
 final class SuggestionBar: UIView {
     var onPick: ((BarSlot) -> Void)?
     var onBlock: ((BarSlot) -> Void)?
     var onClipboard: (() -> Void)?
+    var onEmoji: (() -> Void)?
     var onChip: (() -> Void)?
     var onClear: (() -> Void)?
     var onClose: (() -> Void)?
@@ -18,13 +20,14 @@ final class SuggestionBar: UIView {
     private let banner = UILabel()
     private let blockButton = UIButton(type: .system)
     private let clipboardButton = UIButton(type: .custom)
+    private let emojiButton = UIButton(type: .custom)
     private let panelTitle = UILabel()
     private let clearButton = UIButton(type: .system)
     private let closeButton = UIButton(type: .system)
     private var blocking: BarSlot?
 
     private static let primary = 1
-    private static let clipboardButtonWidth: CGFloat = 44
+    private static let buttonWidth: CGFloat = 44
 
     /// Visual left to right; nil is an empty slot.
     var slots: [BarSlot?] = [nil, nil, nil] {
@@ -56,11 +59,21 @@ final class SuggestionBar: UIView {
         }
     }
 
+    var isEmojiOpen = false {
+        didSet {
+            hideBlock()
+            emojiButton.backgroundColor = isEmojiOpen ? palette.key : nil
+            showSlots()
+        }
+    }
+
     var palette = Palette.light {
         didSet {
             (labels + [banner]).forEach { $0.textColor = palette.barText }
             blockButton.setTitleColor(palette.barText, for: .normal)
             clipboardButton.tintColor = palette.barText
+            emojiButton.tintColor = palette.barText
+            emojiButton.backgroundColor = isEmojiOpen ? palette.key : nil
             clipboardButton.backgroundColor = isPanelOpen ? palette.key : nil
             panelTitle.textColor = palette.barText
             [clearButton, closeButton].forEach { $0.setTitleColor(palette.barText, for: .normal) }
@@ -102,6 +115,11 @@ final class SuggestionBar: UIView {
         clipboardButton.accessibilityLabel = "Clipboard"
         clipboardButton.isHidden = true
         clipboardButton.addTarget(self, action: #selector(clipboardTapped), for: .touchUpInside)
+        emojiButton.setImage(UIImage(systemName: "face.smiling", withConfiguration: glyph), for: .normal)
+        emojiButton.layer.cornerRadius = 8
+        emojiButton.accessibilityLabel = "Emoji"
+        emojiButton.addTarget(self, action: #selector(emojiTapped), for: .touchUpInside)
+        addSubview(emojiButton)
         panelTitle.text = "Clipboard"
         panelTitle.font = KeyFont.barBold
         for (button, name, action) in [(clearButton, "Clear", #selector(clearTapped)), (closeButton, "ABC", #selector(closeTapped))] {
@@ -121,8 +139,8 @@ final class SuggestionBar: UIView {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
     /// Divider geometry from the captures: 1 pt wide and 24 pt tall, centered in the bar.
-    /// The slots share the width right of the clipboard button, when it shows.
-    private var slotsStart: CGFloat { showsClipboardButton ? Self.clipboardButtonWidth : 0 }
+    /// The slots share the width right of the clipboard (when it shows) and emoji buttons.
+    private var slotsStart: CGFloat { (showsClipboardButton ? 2 : 1) * Self.buttonWidth }
     private var slotWidth: CGFloat { (bounds.width - slotsStart) / 3 }
 
     override func layoutSubviews() {
@@ -130,11 +148,12 @@ final class SuggestionBar: UIView {
         let start = slotsStart, slot = slotWidth
         for (i, label) in labels.enumerated() { label.frame = CGRect(x: start + CGFloat(i) * slot + 4, y: 0, width: slot - 8, height: bounds.height) }
         for (i, divider) in dividers.enumerated() { divider.frame = CGRect(x: start + CGFloat(i + 1) * slot - 0.5, y: bounds.midY - 12, width: 1, height: 24) }
-        clipboardButton.frame = CGRect(x: 4, y: 6, width: Self.clipboardButtonWidth - 8, height: bounds.height - 12)
-        panelTitle.frame = CGRect(x: Self.clipboardButtonWidth + 6, y: 0, width: 120, height: bounds.height)
+        clipboardButton.frame = CGRect(x: 4, y: 6, width: Self.buttonWidth - 8, height: bounds.height - 12)
+        emojiButton.frame = CGRect(x: slotsStart - Self.buttonWidth + 4, y: 6, width: Self.buttonWidth - 8, height: bounds.height - 12)
+        panelTitle.frame = CGRect(x: start + 6, y: 0, width: 120, height: bounds.height)
         closeButton.frame = CGRect(x: bounds.width - 60, y: 0, width: 56, height: bounds.height)
         clearButton.frame = CGRect(x: closeButton.frame.minX - 60, y: 0, width: 60, height: bounds.height)
-        banner.frame = bounds.insetBy(dx: 12, dy: 0)
+        banner.frame = CGRect(x: start + 8, y: 0, width: bounds.width - start - 20, height: bounds.height)
         blockButton.frame = bounds
     }
 
@@ -154,7 +173,7 @@ final class SuggestionBar: UIView {
 
     /// The slot index under the gesture, if the slots are showing.
     private func slotIndex(at gesture: UIGestureRecognizer) -> Int? {
-        guard hasFullAccess, !isPanelOpen, slotWidth > 0 else { return nil }
+        guard hasFullAccess, !isPanelOpen, !isEmojiOpen, slotWidth > 0 else { return nil }
         let x = gesture.location(in: self).x - slotsStart
         let index = x < 0 ? -1 : Int(x / slotWidth)
         return slots.indices.contains(index) ? index : nil
@@ -172,7 +191,7 @@ final class SuggestionBar: UIView {
 
     @objc private func longPressed(_ gesture: UILongPressGestureRecognizer) {
         guard gesture.state == .began, let index = slotIndex(at: gesture), !(index == Self.primary && chip != nil),
-              let slot = slots[index], !slot.isLiteral else { return }
+              let slot = slots[index], !slot.isLiteral, !slot.isEmoji else { return }
         blocking = slot
         blockButton.setTitle("Don\u{2019}t suggest \u{2018}\(slot.word)\u{2019}", for: .normal)
         blockButton.isHidden = false
@@ -180,6 +199,7 @@ final class SuggestionBar: UIView {
     }
 
     @objc private func clipboardTapped() { onClipboard?() }
+    @objc private func emojiTapped() { onEmoji?() }
     @objc private func clearTapped() { onClear?() }
     @objc private func closeTapped() { onClose?() }
 
@@ -196,6 +216,6 @@ final class SuggestionBar: UIView {
     }
 
     private func showSlots() {
-        (labels + dividers).forEach { $0.isHidden = !hasFullAccess || isPanelOpen || blocking != nil }
+        (labels + dividers).forEach { $0.isHidden = !hasFullAccess || isPanelOpen || isEmojiOpen || blocking != nil }
     }
 }

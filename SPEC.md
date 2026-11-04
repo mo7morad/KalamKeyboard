@@ -173,6 +173,7 @@ There is a single `FeedbackPlayer`, called on touch-down for every key.
   - The primary slot shows the best candidate.
   - If an autocorrect is pending, the primary is **bold** and alt1 shows the literal in quotes (“teh”).
   - Otherwise, alt1 shows the 2nd candidate and alt2 the 3rd.
+- **Emoji (5.6):** when the current word, normalized, is an emoji keyword in the current language, its best emoji takes alt2 (rightmost in EN, leftmost in AR), as Apple's does, with or without a pending autocorrect. Not in URL, email, password or one-time-code fields. A tap replaces the typed word with the emoji plus the auto-space. It is never an autocorrect, never learned, and long-press doesn't offer "Don't suggest".
 - **With an empty current word:** the bar shows 3 next-word predictions.
 - **Tapping a suggestion** replaces the current word (or inserts the prediction) and adds an auto-space. Tapping the literal is an explicit accept, so the word is learned.
 - **Blocking a word:** long-press a suggestion to open a small in-keyboard overlay, "Don't suggest ‘x’". This blocks the word (the host app lists it as Blocked; there, "Forget" deletes a word's learned data instead). Use no alerts, since extensions can't show them.
@@ -200,6 +201,21 @@ There is a single `FeedbackPlayer`, called on touch-down for every key.
 - **Paste:** `insertText` of the clip. The input state resyncs afterwards, and pasted text is never learned.
 - **Images can't be inserted:** a keyboard only inserts text (`UITextDocumentProxy` has no image API, checked in the iOS 27.1 SDK). So a tap on an image tile does what Gboard does on iPhone: it puts the original bytes back on `UIPasteboard.general` with their type, stores the new `changeCount` (so Kalam doesn't capture its own write), and shows "Copied. Hold the text field and tap Paste." for 2 seconds. Moe pastes with the field's own Paste.
 - **Off switch:** the Clipboard setting. When it's off there's no capture, no button and no chip; pinned items stay stored.
+
+### 5.6 Emoji (Gboard-style panel with Apple's glyphs)
+
+iOS gives third-party keyboards no way to open Apple's emoji keyboard, so Kalam draws its own panel with the system font, which renders Apple's emoji.
+
+- **Data:** `KalamEngine/Resources/emoji.json`, built by `Tools/emoji/build_emoji.py` (stdlib only) from Unicode's `emoji-test.txt` (Emoji 17.0) and CLDR annotations (en, ar, plus derived ones for flags). Rerun it for a new emoji version.
+  - Categories in Apple's order: Smileys & People (Unicode's Smileys & Emotion plus People & Body), Animals & Nature, Food & Drink, Activity, Travel & Places, Objects, Symbols, Flags. Fully-qualified emoji only, no skin-tone variants, no components.
+  - Keyword index per language: normalized word (6.1) to at most 5 emoji, best first. Ranked by: the emoji's whole CLDR name, the name's head noun, a single-word keyword or other name word, then a word inside a longer keyword; ties go to older emoji, then fewer keywords, then panel order. A short list of Apple's picks overrides the top for common words (love, ❤️). Function words (the, on, و, في) have no emoji.
+  - `EmojiIndex.shared` loads it once on first use (about 280 KB of JSON, a couple of MB parsed).
+- **Bar button:** a face (`face.smiling`) right of the clipboard button, in both languages, with or without Full Access or the Clipboard setting. It toggles the panel; while open, the slots hide and the button shows as selected.
+- **Panel:** in place of the keys, the same height.
+  - A small header with the current category's name, then a grid of 5 rows that scrolls horizontally, column by column, as Apple's does. Cells are reused labels, so only the visible emoji are drawn.
+  - Bottom strip: "ABC" (back to the letters), one icon per section (a tap jumps there; the current one is highlighted while scrolling) and backspace (holds repeat like the key).
+  - Recents comes first: the 30 most recently tapped emoji, newest first, in App Group defaults (`emojiRecents`). A tap updates the list; the grid shows it the next time the panel opens, so nothing shifts under the finger.
+- **Tap:** inserts the emoji through the input controller like a paste (the state resyncs, nothing is learned) and ends the clip chip's offer. The panel stays open.
 
 ## 6. Text processing (engine)
 

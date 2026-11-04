@@ -7,13 +7,16 @@ public struct BarSlot: Equatable, Sendable {
     public let ident: String
     public let bold: Bool
     public let isLiteral: Bool
+    /// SPEC 5.6: replaces the word but is never learned, blocked or autocorrected to.
+    public var isEmoji = false
 }
 
 /// The three bar slots in visual left-to-right order: EN [alt1] [primary] [alt2], AR mirrored.
 /// With a pending autocorrect, the primary is it, in bold, and alt1 is the quoted literal;
-/// otherwise the slots hold the first three candidates (or predictions). Nil is an empty slot.
+/// otherwise the slots hold the first three candidates (or predictions). An emoji for the word
+/// takes alt2, as Apple's does (SPEC 5.6). Nil is an empty slot.
 public func barSlots(_ candidates: [Suggestion], autocorrect: Suggestion?, literal: String, lang: Lang,
-                     capitalized: Bool) -> [BarSlot?] {
+                     capitalized: Bool, emoji: String? = nil) -> [BarSlot?] {
     func slot(_ s: Suggestion, bold: Bool = false) -> BarSlot {
         let word = cased(s.text, capitalized: capitalized)
         return BarSlot(word: word, label: word, ident: s.ident, bold: bold, isLiteral: s.isLiteral)
@@ -28,6 +31,9 @@ public func barSlots(_ candidates: [Suggestion], autocorrect: Suggestion?, liter
     } else {
         let top = unique.prefix(3).map { slot($0) }
         (primary, alt1, alt2) = (top.first, top.dropFirst().first, top.dropFirst(2).first)
+    }
+    if let emoji {
+        alt2 = BarSlot(word: emoji, label: emoji, ident: emoji, bold: false, isLiteral: false, isEmoji: true)
     }
     return lang == .en ? [alt1, primary, alt2] : [alt2, primary, alt1]
 }

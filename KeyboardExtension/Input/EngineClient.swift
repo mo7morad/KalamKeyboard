@@ -19,6 +19,7 @@ final class EngineClient {
         let generation: Int
         let candidates: [Suggestion]  // ranked best first; predictions when the request had no taps
         let autocorrect: Suggestion?  // the commit's replacement for the literal, from the same list
+        let emoji: String?  // SPEC 5.6: the best emoji for the current word, never an autocorrect
         let latencyMs: Double
     }
 
@@ -107,19 +108,22 @@ final class EngineClient {
         #endif
         let start = DispatchTime.now().uptimeNanoseconds
         let engine = engine(request.lang)
-        var candidates: [Suggestion], autocorrect: Suggestion?
+        var candidates: [Suggestion], autocorrect: Suggestion?, emoji: String?
         if request.taps.isEmpty {
             candidates = engine.predict(context: request.context)
         } else {
             let input = InputState(context: request.context, taps: request.taps)
             candidates = engine.candidates(input)
             autocorrect = engine.autocorrection(input, ranked: candidates, traits: request.traits, settings: request.settings)
+            if request.traits.keyboardType == .other, request.traits.contentType == .other {
+                emoji = EmojiIndex.shared.emoji(for: input.literal, lang: request.lang).first
+            }
         }
         let latency = Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000
         #if DEBUG
         latencies.append(latency)
         #endif
-        return Result(generation: generation, candidates: candidates, autocorrect: autocorrect, latencyMs: latency)
+        return Result(generation: generation, candidates: candidates, autocorrect: autocorrect, emoji: emoji, latencyMs: latency)
     }
 
     /// The engine for a language, built on first use. The lexicon is mapped once and kept.

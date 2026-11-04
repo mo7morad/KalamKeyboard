@@ -166,7 +166,7 @@ final class InputController {
         let context = contextWords(before: before)
         delete(literal.count)
         insert(slot.word + " ")
-        learn(slot.word, context: context, how: slot.isLiteral ? .literal : .suggestion)
+        learn(slot.word, context: context, how: slot.isLiteral ? .literal : .suggestion)  // an emoji has no letter: not learned
         taps = []
         pastedWord = nil
         autoSpace = true
@@ -181,7 +181,7 @@ final class InputController {
 
     // MARK: Clipboard
 
-    /// SPEC 5.5: inserts a clip as is; pasted text is never learned.
+    /// SPEC 5.5, 5.6: inserts a clip or a panel emoji as is; it is never learned.
     func paste(_ text: String) {
         undo = nil
         insert(text)
@@ -227,7 +227,7 @@ final class InputController {
     private func show(_ result: EngineClient.Result) {
         shown = result
         let capitalized = isShifted() || literal.first?.isUppercase == true
-        onSlots?(barSlots(result.candidates, autocorrect: result.autocorrect, literal: literal, lang: lang, capitalized: capitalized))
+        onSlots?(barSlots(result.candidates, autocorrect: result.autocorrect, literal: literal, lang: lang, capitalized: capitalized, emoji: result.emoji))
     }
 
     // MARK: Commit

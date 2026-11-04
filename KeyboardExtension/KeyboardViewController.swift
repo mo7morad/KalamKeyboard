@@ -14,6 +14,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     private let bar = SuggestionBar()
     private let clipboard = ClipboardStore()
     private let panel = ClipboardPanel()
+    private let emojiPanel = EmojiPanel()
     private let globeButton = UIButton(type: .custom)
 
     private var lang = lastLanguage
@@ -65,13 +66,22 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         bar.onClear = { [weak self] in self?.changeClipboard { $0.clear() } }
         bar.onClose = { [weak self] in self?.closePanel() }
         panel.isHidden = true
+        bar.onEmoji = { [weak self] in self?.toggleEmoji() }
+        emojiPanel.onEmoji = { [weak self] in self?.typeEmoji($0) }
+        emojiPanel.onABC = { [weak self] in self?.closePanel() }
+        emojiPanel.onBackspace = { [weak self] in
+            self?.feedback.touchDown(.delete)
+            self?.input.backspace(1)
+        }
+        emojiPanel.onBackspaceRepeat = { [weak self] in self?.backspaceRepeated($0) }
+        emojiPanel.isHidden = true
         for name in [NSNotification.Name.NSExtensionHostWillResignActive, .NSExtensionHostDidEnterBackground] {
             NotificationCenter.default.addObserver(self, selector: #selector(hostWillHide), name: name, object: nil)
         }
         NotificationCenter.default.addObserver(self, selector: #selector(hostDidBecomeActive), name: .NSExtensionHostDidBecomeActive, object: nil)
         registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: Self, _) in self.refreshAppearance() }
         globeButton.addTarget(self, action: #selector(handleInputModeList(from:with:)), for: .allTouchEvents)
-        for subview in [bar, keyboardView, globeButton, panel] {
+        for subview in [bar, keyboardView, globeButton, panel, emojiPanel] {
             subview.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(subview)
         }
@@ -89,6 +99,10 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
             panel.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             panel.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             panel.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            emojiPanel.topAnchor.constraint(equalTo: bar.bottomAnchor),
+            emojiPanel.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            emojiPanel.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            emojiPanel.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
         reloadLayout()
     }
@@ -239,6 +253,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         keyboardView.palette = palette
         bar.palette = palette
         panel.palette = palette
+        emojiPanel.palette = palette
     }
 
     private func refreshReturnKey() {
@@ -394,6 +409,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
 
     private func togglePanel() {
         guard panel.isHidden else { return closePanel() }
+        closePanel()  // the emoji panel, if open
         captureClip()
         panel.items = clipboard.history.panelItems
         panel.isHidden = false
@@ -403,12 +419,35 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         view.accessibilityValue = "clipboard"
     }
 
+    /// Back to the keys from either panel.
     private func closePanel() {
-        guard !panel.isHidden else { return }
+        guard !panel.isHidden || !emojiPanel.isHidden else { return }
         panel.isHidden = true
+        emojiPanel.isHidden = true
+        bar.isEmojiOpen = false
         keyboardView.isHidden = false
         globeButton.isHidden = false
         bar.isPanelOpen = false
         reloadLayout()
+    }
+
+    // MARK: Emoji (SPEC 5.6)
+
+    private func toggleEmoji() {
+        guard emojiPanel.isHidden else { return closePanel() }
+        closePanel()  // the clipboard panel, if open
+        emojiPanel.reload()
+        emojiPanel.isHidden = false
+        keyboardView.isHidden = true
+        globeButton.isHidden = true
+        bar.isEmojiOpen = true
+        view.accessibilityValue = "emoji"
+    }
+
+    /// Typed like a key (it ends the clip chip's offer) but inserted like a paste: never learned.
+    private func typeEmoji(_ emoji: String) {
+        feedback.touchDown(.key)
+        clipboard.dismissChip()
+        input.paste(emoji)
     }
 }

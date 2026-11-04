@@ -9,7 +9,7 @@ let package = Package(
         .executable(name: "kalam-cli", targets: ["kalam-cli"]),
     ],
     targets: [
-        .target(name: "KalamEngine", resources: [.copy("Resources/Layouts")]),
+        .target(name: "KalamEngine", resources: [.copy("Resources/Layouts"), .copy("Resources/emoji.json")]),
         .executableTarget(name: "kalam-cli", dependencies: ["KalamEngine"]),
         .testTarget(name: "KalamEngineTests", dependencies: ["KalamEngine"], exclude: ["Fixtures"]),
     ],

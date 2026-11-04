@@ -146,3 +146,16 @@ Setup: install a Debug build. Test in Notes, EN and AR.
 - [ ] Swipe down to hide: a quick, straight swipe down starting on a top-row or middle-row letter hides the keyboard and types nothing. A slow drag, a diagonal drag, or a swipe starting on z..m does not.
 - [ ] Fast two-thumb typing for a minute in EN and AR: the keyboard never hides by itself, no letters missing. Long-press strips (hold "e" and pick an accent) never hide it.
 - [ ] Rollover, slide between letters, long-press strips and the space trackpad all feel exactly as before.
+
+## Phase 9: emoji (SPEC 5.6)
+
+- [ ] The face button sits right of the clipboard button in EN and AR, and also shows with Full Access off (then at the left edge, the banner beside it).
+- [ ] Tap it: the keys give way to the emoji grid, same height, 5 rows, starting at Smileys & People (or Recents once you have some). Light and dark mode both look right.
+- [ ] Scroll sideways: smooth, and the header name and highlighted strip icon follow the category at the left edge. Tap each strip icon: it jumps to that category.
+- [ ] Tap a few emoji in WhatsApp: each one is inserted, the panel stays open, each tap clicks and buzzes like a key. Reopen the panel: they lead Recents, newest first.
+- [ ] Backspace in the strip deletes one emoji per tap (not half of one); holding it repeats, then goes word by word, like the key.
+- [ ] ABC, or the face button again, returns to the letters. The clipboard button while the emoji panel is open switches straight to the clipboard panel.
+- [ ] Any emoji that draws as an empty box or a "?" (the phone lacks it) ____.
+- [ ] Type "pizza", "love", "coffee", "قهوة", "حب": the bar offers the emoji in the right slot (left slot in Arabic). Tap it: the word becomes the emoji plus a space. Type "teh pizza": the emoji is never put in on space by autocorrect.
+- [ ] Long-press the emoji slot: no "Don't suggest" overlay. Note any word whose emoji pick looks wrong next to Apple's ____.
+- [ ] Memory: open the panel and fling through all categories twice. The logged footprint ____ MB, and Kalam isn't killed.
