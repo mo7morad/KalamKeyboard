@@ -1,0 +1,16 @@
+[01/03/24, 09:15:02] Test Group: ‎Messages and calls are end-to-end encrypted. No one outside of this chat can read them.
+[01/03/24, 09:15:30] Moe: see you tomorrow
+[01/03/24, 09:16:00] Sara Test 💙: ok habibi
+[13/03/24, 20.53.01] Moe: first line
+second line of the same message
+‎[13/03/24, 20.54.00] Moe: ‎image omitted
+[3/14/24, 9:05:12 PM] Moe: month first with pm
+[15/03/2024, 07:00] Sara Test 💙: four digit year no seconds
+‎[16/03/24, 10:00:00] Moe: ‎This message was deleted
+[16/03/24, 10:01:00] Moe: fixed wording <This message was edited>
+[16/03/24, 10:02:00] Moe: ‏انا عايز اروح‏
+[16/03/24, 10:03:00] Moe: ‎audio omitted
+[16/03/24, 10:04:00] Moe: ‎<attached: 00000012-PHOTO-2024-03-16.jpg>
+[16/03/24, 10:05:00] Moe: ‎sticker omitted
+[16/03/24, 10:06:00] Sara Test 💙: You deleted this message
+[01/02/30, 10:00:00] Moe: future date

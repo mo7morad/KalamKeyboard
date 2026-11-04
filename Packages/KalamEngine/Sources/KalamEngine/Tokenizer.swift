@@ -68,7 +68,7 @@ private func endSentence(_ tokens: inout [Token]) {
     if let last = tokens.last, last.kind != .sentenceEnd { tokens.append(Token("", .sentenceEnd)) }
 }
 
-private func isSpecial(_ s: String) -> Bool {
+func isSpecial(_ s: String) -> Bool {
     if s.count > 1, s.first == "@" || s.first == "#" {
         return s.dropFirst().allSatisfy { $0.isLetter || $0.isNumber || $0 == "_" }
     }

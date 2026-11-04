@@ -1,0 +1,520 @@
+[01/03/26, 08.00.30] Moe: انا مش فاضي
+[01/03/26, 08.01.00] Friend: where are you
+[01/03/26, 08.01.30] Moe: see you later habibi
+[01/03/26, 08.02.30] Moe: ok 3ashan kda
+[01/03/26, 08.03.30] Moe: see you tomorow
+[01/03/26, 08.04.30] Moe: I'm goign home now
+[01/03/26, 08.05.00] Friend: ok
+[01/03/26, 08.05.30] Moe: والله مش عارف
+[01/03/26, 08.06.30] Moe: I'm on my way
+[01/03/26, 08.07.00] Friend: ok
+[01/03/26, 08.07.30] Moe: see you tomorow
+[01/03/26, 08.08.30] Moe: I'm going home now
+[01/03/26, 08.09.30] Moe: شكرا يا حبيبي
+[01/03/26, 08.10.00] Friend: ok
+[01/03/26, 08.10.30] Moe: السلام عليكم
+[01/03/26, 08.11.30] Moe: ايه ده
+[01/03/26, 08.12.00] Friend: call me
+[01/03/26, 08.12.30] Moe: wait for me
+[01/03/26, 08.13.30] Moe: tamam ya basha
+[01/03/26, 08.14.00] Friend: ok
+[01/03/26, 08.14.30] Moe: don't wait for me
+[01/03/26, 08.15.00] Friend: تمام
+[01/03/26, 08.15.30] Moe: hello there
+[01/03/26, 08.16.30] Moe: ok 3ashan kda
+[01/03/26, 08.17.00] Friend: call me
+[01/03/26, 08.17.30] Moe: hello there
+[01/03/26, 08.18.00] Friend: call me
+[01/03/26, 08.18.30] Moe: شكرا يا حبيبي
+[01/03/26, 08.19.00] Friend: تمام
+[01/03/26, 08.19.30] Moe: ok tamam
+[01/03/26, 08.20.30] Moe: wait for me
+[01/03/26, 08.21.00] Friend: where are you
+[01/03/26, 08.21.30] Moe: let me see
+[01/03/26, 08.22.30] Moe: I'm goign home now
+[01/03/26, 08.23.30] Moe: شكرا يا حبيبي
+[01/03/26, 08.24.30] Moe: I'm on my way
+[01/03/26, 08.25.30] Moe: wait for me
+[01/03/26, 08.26.30] Moe: let me see
+[01/03/26, 08.27.00] Friend: تمام
+[01/03/26, 08.27.30] Moe: don't wait for me
+[01/03/26, 08.28.30] Moe: let me see
+[01/03/26, 08.29.00] Friend: call me
+[01/03/26, 08.29.30] Moe: yalla bina
+[01/03/26, 08.30.30] Moe: السلام عليكم
+[01/03/26, 08.31.30] Moe: ok tamam
+[01/03/26, 08.32.30] Moe: don't wait for me
+[01/03/26, 08.33.00] Friend: ok
+[01/03/26, 08.33.30] Moe: شكرا يا حبيبي
+[01/03/26, 08.34.00] Friend: call me
+[01/03/26, 08.34.30] Moe: let me check
+[01/03/26, 08.35.30] Moe: tamam ya bsha
+[01/03/26, 08.36.30] Moe: hello there
+[01/03/26, 08.37.30] Moe: انا عايز اروح
+[01/03/26, 08.38.30] Moe: see you later habibi
+[01/03/26, 08.39.30] Moe: شكرا يا حبيبي
+[02/03/26, 08.40.30] Moe: I'm on my way
+[02/03/26, 08.41.30] Moe: I'm on my way
+[02/03/26, 08.42.00] Friend: where are you
+[02/03/26, 08.42.30] Moe: wait for me
+[02/03/26, 08.43.00] Friend: تمام
+[02/03/26, 08.43.30] Moe: I'm going home now
+[02/03/26, 08.44.00] Friend: ok
+[02/03/26, 08.44.30] Moe: ok tamam
+[02/03/26, 08.45.30] Moe: see you tomorow
+[02/03/26, 08.46.30] Moe: yalla bina
+[02/03/26, 08.47.30] Moe: let me see
+[02/03/26, 08.48.00] Friend: call me
+[02/03/26, 08.48.30] Moe: wait for me
+[02/03/26, 08.49.30] Moe: I'm going to the gym
+[02/03/26, 08.50.00] Friend: تمام
+[02/03/26, 08.50.30] Moe: let me see
+[02/03/26, 08.51.30] Moe: see you tomorrow
+[02/03/26, 08.52.00] Friend: تمام
+[02/03/26, 08.52.30] Moe: السلام عليكم
+[02/03/26, 08.53.30] Moe: tamam ya basha
+[02/03/26, 08.54.30] Moe: ماشي يا عم
+[02/03/26, 08.55.30] Moe: let me check
+[02/03/26, 08.56.30] Moe: السلام عليكم
+[02/03/26, 08.57.30] Moe: don't wait for me
+[02/03/26, 08.58.30] Moe: let me know
+[02/03/26, 08.59.30] Moe: don't wait for me
+[02/03/26, 09.00.00] Friend: call me
+[02/03/26, 09.00.30] Moe: see you tomorrow
+[02/03/26, 09.01.30] Moe: let me see
+[02/03/26, 09.02.30] Moe: ok tamam
+[02/03/26, 09.03.30] Moe: ok tamam
+[02/03/26, 09.04.30] Moe: don't wait for me
+[02/03/26, 09.05.00] Friend: call me
+[02/03/26, 09.05.30] Moe: let me know
+[02/03/26, 09.06.30] Moe: ايه ده
+[02/03/26, 09.07.30] Moe: انا مش فاضي
+[02/03/26, 09.08.30] Moe: شكرا يا حبيبي
+[02/03/26, 09.09.00] Friend: call me
+[02/03/26, 09.09.30] Moe: let me know
+[02/03/26, 09.10.30] Moe: انا مش فاضي
+[02/03/26, 09.11.30] Moe: I'm on my way
+[02/03/26, 09.12.30] Moe: ok 3ashan kda
+[02/03/26, 09.13.30] Moe: I'm going to the gym
+[02/03/26, 09.14.00] Friend: call me
+[02/03/26, 09.14.30] Moe: I'm going to the gym
+[02/03/26, 09.15.30] Moe: let me see
+[02/03/26, 09.16.30] Moe: السلام عليكم
+[02/03/26, 09.17.30] Moe: I'm goign home now
+[02/03/26, 09.18.30] Moe: I'm going to the gym
+[02/03/26, 09.19.30] Moe: let me know
+[03/03/26, 09.20.00] Friend: ok
+[03/03/26, 09.20.30] Moe: don't wait for me
+[03/03/26, 09.21.30] Moe: السلام عليكم
+[03/03/26, 09.22.30] Moe: ok tamam
+[03/03/26, 09.23.30] Moe: انا عايز اروح
+[03/03/26, 09.24.30] Moe: انا عايز اروح
+[03/03/26, 09.25.00] Friend: ok
+[03/03/26, 09.25.30] Moe: see you tomorrow
+[03/03/26, 09.26.30] Moe: ايه ده
+[03/03/26, 09.27.00] Friend: ok
+[03/03/26, 09.27.30] Moe: let me see
+[03/03/26, 09.28.30] Moe: see you later habibi
+[03/03/26, 09.29.30] Moe: السلام عليكم
+[03/03/26, 09.30.30] Moe: السلام عليكم
+[03/03/26, 09.31.00] Friend: ok
+[03/03/26, 09.31.30] Moe: I'm going home now
+[03/03/26, 09.32.30] Moe: ok 3ashan kda
+[03/03/26, 09.33.30] Moe: انا عايز اروح
+[03/03/26, 09.34.30] Moe: yalla bina
+[03/03/26, 09.35.30] Moe: let me see
+[03/03/26, 09.36.30] Moe: انا عايز اروح
+[03/03/26, 09.37.30] Moe: yalla bina
+[03/03/26, 09.38.30] Moe: let me know
+[03/03/26, 09.39.30] Moe: I'm going home now
+[03/03/26, 09.40.30] Moe: شكرا يا حبيبي
+[03/03/26, 09.41.00] Friend: where are you
+[03/03/26, 09.41.30] Moe: tamam ya basha
+[03/03/26, 09.42.30] Moe: I'm going to the gym
+[03/03/26, 09.43.30] Moe: ok tamam
+[03/03/26, 09.44.00] Friend: ok
+[03/03/26, 09.44.30] Moe: don't wait for me
+[03/03/26, 09.45.30] Moe: let me see
+[03/03/26, 09.46.00] Friend: ok
+[03/03/26, 09.46.30] Moe: see you at the gym
+[03/03/26, 09.47.30] Moe: see you at the gym
+[03/03/26, 09.48.00] Friend: تمام
+[03/03/26, 09.48.30] Moe: ok tamam
+[03/03/26, 09.49.00] Friend: call me
+[03/03/26, 09.49.30] Moe: see you tomorrow
+[03/03/26, 09.50.30] Moe: tamam ya basha
+[03/03/26, 09.51.30] Moe: see you tomorow
+[03/03/26, 09.52.30] Moe: yalla bina
+[03/03/26, 09.53.30] Moe: let me check
+[03/03/26, 09.54.30] Moe: see you at the gym
+[03/03/26, 09.55.30] Moe: yalla bina
+[03/03/26, 09.56.30] Moe: انا عايز اروح
+[03/03/26, 09.57.30] Moe: ok 3ashan kda
+[03/03/26, 09.58.30] Moe: let me check
+[03/03/26, 09.59.30] Moe: see you tomorow
+[04/03/26, 10.00.30] Moe: ok 3ashan kda
+[04/03/26, 10.01.30] Moe: yalla bina
+[04/03/26, 10.02.30] Moe: hello there
+[04/03/26, 10.03.30] Moe: yalla bina
+[04/03/26, 10.04.30] Moe: I'm goign home now
+[04/03/26, 10.05.00] Friend: where are you
+[04/03/26, 10.05.30] Moe: yalla bina
+[04/03/26, 10.06.00] Friend: ok
+[04/03/26, 10.06.30] Moe: انا مش فاضي
+[04/03/26, 10.07.30] Moe: tamam ya basha
+[04/03/26, 10.08.30] Moe: yalla bina
+[04/03/26, 10.09.30] Moe: tamam ya bsha
+[04/03/26, 10.10.00] Friend: where are you
+[04/03/26, 10.10.30] Moe: السلام عليكم
+[04/03/26, 10.11.30] Moe: don't wait for me
+[04/03/26, 10.12.30] Moe: انا مش فاضي
+[04/03/26, 10.13.30] Moe: I'm on my way
+[04/03/26, 10.14.30] Moe: let me know
+[04/03/26, 10.15.30] Moe: ماشي يا عم
+[04/03/26, 10.16.30] Moe: ok tamam
+[04/03/26, 10.17.30] Moe: see you tomorrow
+[04/03/26, 10.18.00] Friend: تمام
+[04/03/26, 10.18.30] Moe: see you later habibi
+[04/03/26, 10.19.00] Friend: call me
+[04/03/26, 10.19.30] Moe: شكرا يا حبيبي
+[04/03/26, 10.20.30] Moe: ماشي يا عم
+[04/03/26, 10.21.30] Moe: let me check
+[04/03/26, 10.22.30] Moe: tamam ya bsha
+[04/03/26, 10.23.30] Moe: السلام عليكم
+[04/03/26, 10.24.30] Moe: tamam ya bsha
+[04/03/26, 10.25.00] Friend: ok
+[04/03/26, 10.25.30] Moe: tamam ya bsha
+[04/03/26, 10.26.00] Friend: تمام
+[04/03/26, 10.26.30] Moe: let me know
+[04/03/26, 10.27.00] Friend: where are you
+[04/03/26, 10.27.30] Moe: ok 3ashan kda
+[04/03/26, 10.28.00] Friend: where are you
+[04/03/26, 10.28.30] Moe: tamam ya basha
+[04/03/26, 10.29.30] Moe: والله مش عارف
+[04/03/26, 10.30.30] Moe: I'm going to the gym
+[04/03/26, 10.31.30] Moe: ايه ده
+[04/03/26, 10.32.30] Moe: let me see
+[04/03/26, 10.33.00] Friend: ok
+[04/03/26, 10.33.30] Moe: I'm goign home now
+[04/03/26, 10.34.30] Moe: ماشي يا عم
+[04/03/26, 10.35.30] Moe: انا عايز اروح
+[04/03/26, 10.36.30] Moe: see you tomorrow
+[04/03/26, 10.37.30] Moe: ماشي يا عم
+[04/03/26, 10.38.30] Moe: don't wait for me
+[04/03/26, 10.39.00] Friend: where are you
+[04/03/26, 10.39.30] Moe: ok tamam
+[05/03/26, 10.40.30] Moe: wait for me
+[05/03/26, 10.41.30] Moe: انا مش فاضي
+[05/03/26, 10.42.30] Moe: yalla bina
+[05/03/26, 10.43.00] Friend: where are you
+[05/03/26, 10.43.30] Moe: انا عايز اروح
+[05/03/26, 10.44.30] Moe: انا عايز اروح
+[05/03/26, 10.45.00] Friend: call me
+[05/03/26, 10.45.30] Moe: ok 3ashan kda
+[05/03/26, 10.46.30] Moe: let me know
+[05/03/26, 10.47.00] Friend: call me
+[05/03/26, 10.47.30] Moe: I'm on my way
+[05/03/26, 10.48.00] Friend: تمام
+[05/03/26, 10.48.30] Moe: ايه ده
+[05/03/26, 10.49.30] Moe: ايه ده
+[05/03/26, 10.50.00] Friend: تمام
+[05/03/26, 10.50.30] Moe: ماشي يا عم
+[05/03/26, 10.51.30] Moe: see you tomorrow
+[05/03/26, 10.52.30] Moe: شكرا يا حبيبي
+[05/03/26, 10.53.00] Friend: ok
+[05/03/26, 10.53.30] Moe: tamam ya basha
+[05/03/26, 10.54.30] Moe: wait for me
+[05/03/26, 10.55.30] Moe: السلام عليكم
+[05/03/26, 10.56.00] Friend: where are you
+[05/03/26, 10.56.30] Moe: see you tomorrow
+[05/03/26, 10.57.30] Moe: I'm goign home now
+[05/03/26, 10.58.30] Moe: yalla bina
+[05/03/26, 10.59.30] Moe: let me know
+[05/03/26, 11.00.00] Friend: where are you
+[05/03/26, 11.00.30] Moe: انا عايز اروح
+[05/03/26, 11.01.30] Moe: ايه ده
+[05/03/26, 11.02.30] Moe: I'm going home now
+[05/03/26, 11.03.30] Moe: let me see
+[05/03/26, 11.04.30] Moe: let me see
+[05/03/26, 11.05.30] Moe: I'm going to the gym
+[05/03/26, 11.06.30] Moe: I'm going home now
+[05/03/26, 11.07.30] Moe: tamam ya bsha
+[05/03/26, 11.08.30] Moe: let me know
+[05/03/26, 11.09.30] Moe: tamam ya basha
+[05/03/26, 11.10.30] Moe: tamam ya bsha
+[05/03/26, 11.11.30] Moe: ok tamam
+[05/03/26, 11.12.30] Moe: see you later habibi
+[05/03/26, 11.13.30] Moe: I'm goign home now
+[05/03/26, 11.14.30] Moe: don't wait for me
+[05/03/26, 11.15.30] Moe: hello there
+[05/03/26, 11.16.00] Friend: تمام
+[05/03/26, 11.16.30] Moe: see you at the gym
+[05/03/26, 11.17.30] Moe: انا مش فاضي
+[05/03/26, 11.18.30] Moe: السلام عليكم
+[05/03/26, 11.19.30] Moe: see you later habibi
+[06/03/26, 11.20.30] Moe: ايه ده
+[06/03/26, 11.21.30] Moe: tamam ya basha
+[06/03/26, 11.22.30] Moe: السلام عليكم
+[06/03/26, 11.23.00] Friend: call me
+[06/03/26, 11.23.30] Moe: tamam ya basha
+[06/03/26, 11.24.30] Moe: انا مش فاضي
+[06/03/26, 11.25.30] Moe: tamam ya basha
+[06/03/26, 11.26.30] Moe: I'm going home now
+[06/03/26, 11.27.00] Friend: ok
+[06/03/26, 11.27.30] Moe: I'm goign home now
+[06/03/26, 11.28.30] Moe: don't wait for me
+[06/03/26, 11.29.30] Moe: wait for me
+[06/03/26, 11.30.30] Moe: don't wait for me
+[06/03/26, 11.31.00] Friend: تمام
+[06/03/26, 11.31.30] Moe: hello there
+[06/03/26, 11.32.00] Friend: تمام
+[06/03/26, 11.32.30] Moe: let me know
+[06/03/26, 11.33.30] Moe: see you at the gym
+[06/03/26, 11.34.30] Moe: let me know
+[06/03/26, 11.35.30] Moe: see you later habibi
+[06/03/26, 11.36.30] Moe: ok tamam
+[06/03/26, 11.37.00] Friend: ok
+[06/03/26, 11.37.30] Moe: don't wait for me
+[06/03/26, 11.38.30] Moe: see you at the gym
+[06/03/26, 11.39.30] Moe: see you tomorrow
+[06/03/26, 11.40.00] Friend: call me
+[06/03/26, 11.40.30] Moe: let me see
+[06/03/26, 11.41.30] Moe: ok 3ashan kda
+[06/03/26, 11.42.30] Moe: انا عايز اروح
+[06/03/26, 11.43.30] Moe: don't wait for me
+[06/03/26, 11.44.30] Moe: I'm going to the gym
+[06/03/26, 11.45.30] Moe: ماشي يا عم
+[06/03/26, 11.46.30] Moe: wait for me
+[06/03/26, 11.47.00] Friend: where are you
+[06/03/26, 11.47.30] Moe: see you tomorow
+[06/03/26, 11.48.00] Friend: where are you
+[06/03/26, 11.48.30] Moe: tamam ya basha
+[06/03/26, 11.49.30] Moe: انا عايز اروح
+[06/03/26, 11.50.30] Moe: I'm going home now
+[06/03/26, 11.51.00] Friend: تمام
+[06/03/26, 11.51.30] Moe: والله مش عارف
+[06/03/26, 11.52.00] Friend: تمام
+[06/03/26, 11.52.30] Moe: ايه ده
+[06/03/26, 11.53.00] Friend: تمام
+[06/03/26, 11.53.30] Moe: yalla bina
+[06/03/26, 11.54.30] Moe: don't wait for me
+[06/03/26, 11.55.30] Moe: don't wait for me
+[06/03/26, 11.56.00] Friend: call me
+[06/03/26, 11.56.30] Moe: tamam ya basha
+[06/03/26, 11.57.00] Friend: ok
+[06/03/26, 11.57.30] Moe: شكرا يا حبيبي
+[06/03/26, 11.58.30] Moe: don't wait for me
+[06/03/26, 11.59.30] Moe: don't wait for me
+[07/03/26, 12.00.30] Moe: ماشي يا عم
+[07/03/26, 12.01.30] Moe: let me know
+[07/03/26, 12.02.00] Friend: تمام
+[07/03/26, 12.02.30] Moe: انا عايز اروح
+[07/03/26, 12.03.00] Friend: call me
+[07/03/26, 12.03.30] Moe: tamam ya basha
+[07/03/26, 12.04.30] Moe: wait for me
+[07/03/26, 12.05.00] Friend: تمام
+[07/03/26, 12.05.30] Moe: ايه ده
+[07/03/26, 12.06.30] Moe: don't wait for me
+[07/03/26, 12.07.30] Moe: see you later habibi
+[07/03/26, 12.08.30] Moe: I'm on my way
+[07/03/26, 12.09.00] Friend: where are you
+[07/03/26, 12.09.30] Moe: I'm going to the gym
+[07/03/26, 12.10.30] Moe: let me check
+[07/03/26, 12.11.30] Moe: hello there
+[07/03/26, 12.12.30] Moe: let me check
+[07/03/26, 12.13.30] Moe: انا عايز اروح
+[07/03/26, 12.14.30] Moe: I'm goign home now
+[07/03/26, 12.15.30] Moe: hello there
+[07/03/26, 12.16.30] Moe: ok 3ashan kda
+[07/03/26, 12.17.30] Moe: I'm going home now
+[07/03/26, 12.18.30] Moe: I'm on my way
+[07/03/26, 12.19.30] Moe: see you at the gym
+[07/03/26, 12.20.00] Friend: call me
+[07/03/26, 12.20.30] Moe: السلام عليكم
+[07/03/26, 12.21.30] Moe: ok tamam
+[07/03/26, 12.22.30] Moe: انا مش فاضي
+[07/03/26, 12.23.30] Moe: I'm on my way
+[07/03/26, 12.24.00] Friend: where are you
+[07/03/26, 12.24.30] Moe: see you later habibi
+[07/03/26, 12.25.30] Moe: ايه ده
+[07/03/26, 12.26.30] Moe: ايه ده
+[07/03/26, 12.27.00] Friend: تمام
+[07/03/26, 12.27.30] Moe: tamam ya basha
+[07/03/26, 12.28.00] Friend: where are you
+[07/03/26, 12.28.30] Moe: see you tomorow
+[07/03/26, 12.29.00] Friend: call me
+[07/03/26, 12.29.30] Moe: I'm on my way
+[07/03/26, 12.30.30] Moe: let me see
+[07/03/26, 12.31.00] Friend: call me
+[07/03/26, 12.31.30] Moe: tamam ya basha
+[07/03/26, 12.32.30] Moe: ايه ده
+[07/03/26, 12.33.00] Friend: تمام
+[07/03/26, 12.33.30] Moe: ايه ده
+[07/03/26, 12.34.00] Friend: ok
+[07/03/26, 12.34.30] Moe: let me check
+[07/03/26, 12.35.00] Friend: where are you
+[07/03/26, 12.35.30] Moe: let me see
+[07/03/26, 12.36.30] Moe: see you at the gym
+[07/03/26, 12.37.30] Moe: yalla bina
+[07/03/26, 12.38.30] Moe: see you at the gym
+[07/03/26, 12.39.30] Moe: wait for me
+[08/03/26, 12.40.00] Friend: ok
+[08/03/26, 12.40.30] Moe: ايه ده
+[08/03/26, 12.41.30] Moe: السلام عليكم
+[08/03/26, 12.42.30] Moe: I'm going home now
+[08/03/26, 12.43.30] Moe: yalla bina
+[08/03/26, 12.44.30] Moe: yalla bina
+[08/03/26, 12.45.00] Friend: ok
+[08/03/26, 12.45.30] Moe: don't wait for me
+[08/03/26, 12.46.00] Friend: ok
+[08/03/26, 12.46.30] Moe: I'm on my way
+[08/03/26, 12.47.30] Moe: انا عايز اروح
+[08/03/26, 12.48.00] Friend: where are you
+[08/03/26, 12.48.30] Moe: see you later habibi
+[08/03/26, 12.49.00] Friend: call me
+[08/03/26, 12.49.30] Moe: don't wait for me
+[08/03/26, 12.50.30] Moe: see you later habibi
+[08/03/26, 12.51.30] Moe: see you later habibi
+[08/03/26, 12.52.00] Friend: ok
+[08/03/26, 12.52.30] Moe: ok tamam
+[08/03/26, 12.53.30] Moe: ايه ده
+[08/03/26, 12.54.30] Moe: see you tomorrow
+[08/03/26, 12.55.00] Friend: تمام
+[08/03/26, 12.55.30] Moe: ok tamam
+[08/03/26, 12.56.30] Moe: tamam ya bsha
+[08/03/26, 12.57.00] Friend: ok
+[08/03/26, 12.57.30] Moe: hello there
+[08/03/26, 12.58.30] Moe: ايه ده
+[08/03/26, 12.59.30] Moe: let me see
+[08/03/26, 13.00.30] Moe: see you tomorow
+[08/03/26, 13.01.30] Moe: I'm going to the gym
+[08/03/26, 13.02.30] Moe: let me check
+[08/03/26, 13.03.30] Moe: tamam ya basha
+[08/03/26, 13.04.30] Moe: see you later habibi
+[08/03/26, 13.05.30] Moe: ok tamam
+[08/03/26, 13.06.30] Moe: tamam ya bsha
+[08/03/26, 13.07.30] Moe: I'm on my way
+[08/03/26, 13.08.00] Friend: where are you
+[08/03/26, 13.08.30] Moe: let me check
+[08/03/26, 13.09.30] Moe: I'm on my way
+[08/03/26, 13.10.30] Moe: let me check
+[08/03/26, 13.11.00] Friend: where are you
+[08/03/26, 13.11.30] Moe: انا مش فاضي
+[08/03/26, 13.12.30] Moe: والله مش عارف
+[08/03/26, 13.13.30] Moe: انا عايز اروح
+[08/03/26, 13.14.00] Friend: تمام
+[08/03/26, 13.14.30] Moe: انا عايز اروح
+[08/03/26, 13.15.00] Friend: where are you
+[08/03/26, 13.15.30] Moe: let me see
+[08/03/26, 13.16.30] Moe: let me know
+[08/03/26, 13.17.30] Moe: see you later habibi
+[08/03/26, 13.18.30] Moe: see you later habibi
+[08/03/26, 13.19.30] Moe: ok 3ashan kda
+[09/03/26, 13.20.30] Moe: let me check
+[09/03/26, 13.21.30] Moe: ايه ده
+[09/03/26, 13.22.30] Moe: let me see
+[09/03/26, 13.23.00] Friend: ok
+[09/03/26, 13.23.30] Moe: I'm goign home now
+[09/03/26, 13.24.00] Friend: تمام
+[09/03/26, 13.24.30] Moe: don't wait for me
+[09/03/26, 13.25.30] Moe: let me know
+[09/03/26, 13.26.00] Friend: where are you
+[09/03/26, 13.26.30] Moe: hello there
+[09/03/26, 13.27.00] Friend: call me
+[09/03/26, 13.27.30] Moe: انا مش فاضي
+[09/03/26, 13.28.30] Moe: tamam ya basha
+[09/03/26, 13.29.30] Moe: شكرا يا حبيبي
+[09/03/26, 13.30.30] Moe: let me check
+[09/03/26, 13.31.00] Friend: call me
+[09/03/26, 13.31.30] Moe: wait for me
+[09/03/26, 13.32.30] Moe: wait for me
+[09/03/26, 13.33.30] Moe: I'm on my way
+[09/03/26, 13.34.00] Friend: ok
+[09/03/26, 13.34.30] Moe: ok tamam
+[09/03/26, 13.35.00] Friend: call me
+[09/03/26, 13.35.30] Moe: شكرا يا حبيبي
+[09/03/26, 13.36.00] Friend: ok
+[09/03/26, 13.36.30] Moe: hello there
+[09/03/26, 13.37.30] Moe: see you later habibi
+[09/03/26, 13.38.30] Moe: انا مش فاضي
+[09/03/26, 13.39.30] Moe: ok 3ashan kda
+[09/03/26, 13.40.30] Moe: I'm going home now
+[09/03/26, 13.41.00] Friend: call me
+[09/03/26, 13.41.30] Moe: let me check
+[09/03/26, 13.42.30] Moe: don't wait for me
+[09/03/26, 13.43.00] Friend: تمام
+[09/03/26, 13.43.30] Moe: yalla bina
+[09/03/26, 13.44.00] Friend: تمام
+[09/03/26, 13.44.30] Moe: wait for me
+[09/03/26, 13.45.00] Friend: call me
+[09/03/26, 13.45.30] Moe: yalla bina
+[09/03/26, 13.46.30] Moe: ok tamam
+[09/03/26, 13.47.00] Friend: ok
+[09/03/26, 13.47.30] Moe: انا مش فاضي
+[09/03/26, 13.48.30] Moe: I'm on my way
+[09/03/26, 13.49.00] Friend: تمام
+[09/03/26, 13.49.30] Moe: انا عايز اروح
+[09/03/26, 13.50.00] Friend: تمام
+[09/03/26, 13.50.30] Moe: wait for me
+[09/03/26, 13.51.30] Moe: I'm going home now
+[09/03/26, 13.52.30] Moe: I'm on my way
+[09/03/26, 13.53.30] Moe: I'm on my way
+[09/03/26, 13.54.30] Moe: ok tamam
+[09/03/26, 13.55.30] Moe: don't wait for me
+[09/03/26, 13.56.00] Friend: where are you
+[09/03/26, 13.56.30] Moe: انا عايز اروح
+[09/03/26, 13.57.30] Moe: والله مش عارف
+[09/03/26, 13.58.30] Moe: see you tomorrow
+[09/03/26, 13.59.30] Moe: tamam ya basha
+[10/03/26, 14.00.30] Moe: انا عايز اروح
+[10/03/26, 14.01.30] Moe: tamam ya bsha
+[10/03/26, 14.02.00] Friend: where are you
+[10/03/26, 14.02.30] Moe: see you tomorow
+[10/03/26, 14.03.30] Moe: انا عايز اروح
+[10/03/26, 14.04.30] Moe: والله مش عارف
+[10/03/26, 14.05.30] Moe: ok tamam
+[10/03/26, 14.06.30] Moe: I'm going to the gym
+[10/03/26, 14.07.00] Friend: ok
+[10/03/26, 14.07.30] Moe: wait for me
+[10/03/26, 14.08.00] Friend: ok
+[10/03/26, 14.08.30] Moe: yalla bina
+[10/03/26, 14.09.30] Moe: see you tomorrow
+[10/03/26, 14.10.00] Friend: تمام
+[10/03/26, 14.10.30] Moe: والله مش عارف
+[10/03/26, 14.11.30] Moe: let me see
+[10/03/26, 14.12.00] Friend: where are you
+[10/03/26, 14.12.30] Moe: I'm goign home now
+[10/03/26, 14.13.00] Friend: ok
+[10/03/26, 14.13.30] Moe: see you later habibi
+[10/03/26, 14.14.30] Moe: ايه ده
+[10/03/26, 14.15.30] Moe: I'm going to the gym
+[10/03/26, 14.16.30] Moe: انا مش فاضي
+[10/03/26, 14.17.30] Moe: ايه ده
+[10/03/26, 14.18.00] Friend: تمام
+[10/03/26, 14.18.30] Moe: I'm goign home now
+[10/03/26, 14.19.00] Friend: call me
+[10/03/26, 14.19.30] Moe: see you tomorrow
+[10/03/26, 14.20.30] Moe: wait for me
+[10/03/26, 14.21.00] Friend: call me
+[10/03/26, 14.21.30] Moe: I'm going home now
+[10/03/26, 14.22.30] Moe: I'm going home now
+[10/03/26, 14.23.30] Moe: ماشي يا عم
+[10/03/26, 14.24.30] Moe: see you later habibi
+[10/03/26, 14.25.30] Moe: see you at the gym
+[10/03/26, 14.26.30] Moe: yalla bina
+[10/03/26, 14.27.30] Moe: let me know
+[10/03/26, 14.28.00] Friend: where are you
+[10/03/26, 14.28.30] Moe: don't wait for me
+[10/03/26, 14.29.30] Moe: let me check
+[10/03/26, 14.30.30] Moe: I'm on my way
+[10/03/26, 14.31.30] Moe: انا مش فاضي
+[10/03/26, 14.32.30] Moe: السلام عليكم
+[10/03/26, 14.33.30] Moe: ماشي يا عم
+[10/03/26, 14.34.00] Friend: where are you
+[10/03/26, 14.34.30] Moe: don't wait for me
+[10/03/26, 14.35.30] Moe: let me know
+[10/03/26, 14.36.30] Moe: والله مش عارف
+[10/03/26, 14.37.30] Moe: see you tomorrow
+[10/03/26, 14.38.00] Friend: ok
+[10/03/26, 14.38.30] Moe: I'm going to the gym
+[10/03/26, 14.39.30] Moe: see you tomorow
