@@ -71,6 +71,13 @@ final class KeyboardView: UIView {
     override init(frame: CGRect) {
         super.init(frame: frame)
         isMultipleTouchEnabled = true
+        let touches = KeyTouchRecognizer(target: nil, action: nil)
+        touches.onBegan = { [weak self] in self?.began($0) }
+        touches.onMoved = { [weak self] in self?.moved($0) }
+        touches.onEnded = { [weak self] in self?.ended($0) }
+        touches.onCancelled = { [weak self] in self?.cancelled($0) }
+        touches.onReset = { [weak self] in self?.dropPresses() }
+        addGestureRecognizer(touches)
         layer.addSublayer(popups.bubble)
         layer.addSublayer(popups.strip)
         registerForTraitChanges([UITraitDisplayScale.self]) { (self: Self, _) in self.rebuild() }
@@ -92,24 +99,6 @@ final class KeyboardView: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         if bounds.width != builtWidth { rebuild() }
-    }
-
-    override func didMoveToWindow() {
-        super.didMoveToWindow()
-        stopDelayingTouches()
-    }
-
-    /// A gesture recognizer above the keys that delays touchesBegan holds each touch back until it
-    /// fails, and a touch it claims never reaches the keys: no haptic, no letter (device rounds 1
-    /// and 3). The keyboard window's system recognizers do this. In case iOS adds or resets one
-    /// after the keyboard appears, every touch-down checks again; it is a few property reads.
-    func stopDelayingTouches() {
-        for view in sequence(first: self as UIView, next: \.superview) {
-            for recognizer in view.gestureRecognizers ?? [] where recognizer.delaysTouchesBegan {
-                trace("gesture \(type(of: view)) \(type(of: recognizer)) delayed touches, now off")
-                recognizer.delaysTouchesBegan = false
-            }
-        }
     }
 
     // MARK: Drawing
@@ -282,8 +271,14 @@ final class KeyboardView: UIView {
         }
     }
 
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        stopDelayingTouches()
+    // KeyTouchRecognizer handles the keys' touches; the view's own copies stop here, as before.
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {}
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {}
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {}
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {}
+
+    /// From KeyTouchRecognizer, as are the moves, ends and cancels below.
+    private func began(_ touches: Set<UITouch>) {
         for touch in touches.sorted(by: { $0.timestamp < $1.timestamp }) {
             // SPEC 5.2 rollover: a new touch releases any letter, space or return still waiting for
             // its touch-up, so two thumbs keep their order ("hi there", not "hit here").
@@ -350,7 +345,7 @@ final class KeyboardView: UIView {
         Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { _ in action() }
     }
 
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+    private func moved(_ touches: Set<UITouch>) {
         for touch in touches {
             guard let press = presses.first(where: { $0.touch === touch }) else { continue }
             let point = touch.location(in: self)
@@ -426,7 +421,7 @@ final class KeyboardView: UIView {
         setLabelsHidden(true)
     }
 
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+    private func ended(_ touches: Set<UITouch>) {
         for touch in touches.sorted(by: { $0.timestamp < $1.timestamp }) {
             guard let press = presses.first(where: { $0.touch === touch }) else { continue }
             traceTouch("ended", touch, key: press.frame.key)
@@ -434,7 +429,9 @@ final class KeyboardView: UIView {
         }
     }
 
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+    /// Only the system cancels these (a banner, an incoming call, a system gesture): other
+    /// recognizers' cancels reach views, not KeyTouchRecognizer.
+    private func cancelled(_ touches: Set<UITouch>) {
         for touch in touches {
             guard let press = presses.first(where: { $0.touch === touch }) else { continue }
             traceTouch("cancelled", touch, key: press.frame.key)
@@ -488,6 +485,15 @@ final class KeyboardView: UIView {
             return String(format: "touch %@ %@ at %.2f,%.2f lag %.1f ms id %@", phase, key.id, units.x, units.y,
                           (CACurrentMediaTime() - touch.timestamp) * 1000, "\(Unmanaged.passUnretained(touch).toOpaque())")
         }())
+    }
+
+    /// The touches went away unended (KeyTouchRecognizer reset): no press may stay down, or a held
+    /// backspace would keep repeating.
+    private func dropPresses() {
+        for press in presses {
+            trace("dropped \(press.frame.key.id)")
+            finish(press)
+        }
     }
 
     private func finish(_ press: Press) {

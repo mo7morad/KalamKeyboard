@@ -145,7 +145,6 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         TouchSpy.attach(to: view.window)
         MemoryProbe.logFootprint()
         #endif
-        keyboardView.stopDelayingTouches()
     }
 
     #if DEBUG
