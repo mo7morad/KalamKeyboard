@@ -35,6 +35,7 @@ public struct EngineConfig: Sendable {
     public var alpha = 1.0  // weight of the spatial cost
     public var trigramWeight = 0.5  // lambda3, when the personal trigram has evidence
     public var bigramShare = 0.7  // lambda2 : lambda1 = 0.7 : 0.3 of the remaining mass
+    public var sentenceStartBigramShare = 0.7  // the base bigram's part after <s> (news openers); 0.7 = as elsewhere (eval-log Phase 13)
     public var personalContextPrior = 3.0  // mu_b = Cu(b,.) / (Cu(b,.) + prior)
     public var personalCorpusPrior = 2000.0  // nu = Nu / (Nu + prior)
     public var correctionBoost = 3.0
@@ -80,7 +81,7 @@ public struct EngineConfig: Sendable {
         "farSubstitutionCost": \.farSubstitutionCost, "learnedConfusionCost": \.learnedConfusionCost,
         "tapOffsetX": \.tapOffsetX, "tapOffsetY": \.tapOffsetY, "keyOffsetPrior": \.keyOffsetPrior, "keyOffsetCap": \.keyOffsetCap, "completionPenalty": \.completionPenalty,
         "unknownLogProbEN": \.unknownLogProbEN, "unknownLogProbAR": \.unknownLogProbAR, "alpha": \.alpha, "trigramWeight": \.trigramWeight,
-        "bigramShare": \.bigramShare, "personalContextPrior": \.personalContextPrior,
+        "bigramShare": \.bigramShare, "sentenceStartBigramShare": \.sentenceStartBigramShare, "personalContextPrior": \.personalContextPrior,
         "personalCorpusPrior": \.personalCorpusPrior, "correctionBoost": \.correctionBoost,
         "explicitCharBoost": \.explicitCharBoost, "decayHalfLifeDays": \.decayHalfLifeDays,
         "autocorrectThresholdNormal": \.autocorrectThresholdNormal, "autocorrectThresholdGentle": \.autocorrectThresholdGentle,

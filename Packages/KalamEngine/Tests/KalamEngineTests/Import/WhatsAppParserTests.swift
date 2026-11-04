@@ -97,3 +97,24 @@ func importedLazySpellingFollowsTheDefaultVariantFix(_ lang: Lang, _ typed: Stri
     let ranked = engine.candidates(input)
     #expect(engine.autocorrection(input, ranked: ranked, traits: FieldTraits(), settings: Settings())?.ident == "tamam")
 }
+
+/// Franco (research 2): Latin words with digits are Moe's own vocabulary. Imported twice they are
+/// known, complete by prefix (the digit is a point-less long-press tap) and are never autocorrected.
+@Test func importedFrancoWordsAreKnownCompleteAndNeverCorrected() throws {
+    let store = try PersonalStore(url: temporaryStoreURL())
+    let en = try #require(BaseLexicon(data: fixtureData(.en))), ar = try #require(BaseLexicon(data: fixtureData(.ar)))
+    let texts = Array(repeating: "ok 3ashan el 7aga di, ma3lesh يا عم", count: 2)
+    try store.importTexts(texts.map { ($0, nil) }, lexicons: [en, ar], now: now)
+    for word in ["3ashan", "7aga", "ma3lesh"] {
+        #expect(try store.word(lang: "en", ident: word)?.state == .known, "\(word)")
+        #expect(try !store.corrections().contains { $0.typed == word }, "\(word)")
+    }
+    let engine = Engine(lang: .en, lexicon: en, layout: Layout.bundled("en-letters"), personal: PersonalModel(store: store, clock: { now }))
+    func franco(_ typed: String) -> InputState { InputState(context: [], taps: [Tap(String(typed.first!))] + taps(String(typed.dropFirst()))) }
+    #expect(engine.suggest(franco("3as")).first?.text == "3ashan")
+    #expect(engine.suggest(franco("7ag")).first?.text == "7aga")
+    for typed in ["3ashan", "3ashsn", "7aha", "ma3lesj"] {  // the word itself and slips of it
+        let input = franco(typed)
+        #expect(engine.autocorrection(input, ranked: engine.candidates(input), traits: FieldTraits(), settings: Settings()) == nil, "\(typed)")
+    }
+}

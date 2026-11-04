@@ -278,3 +278,52 @@ What to expect, and to judge (Moe AR R / W over the 10 folds):
 - Synthetic: the same pattern as the proxy, (c) above (b), FA ≤ 0.5%.
 - eval-personal types at key centers with no bias, so it sees the (d) cost: AR changes may move slightly. Import typos with a one-letter far substitution seen twice now cost 2.5 instead of 5.0, so a few more of those slips get corrected. Judge every AR change right or wrong as before; the guard is that the wrong count doesn't grow. If it does, rerun with `--set learnedConfusionCost=5` to see which of the two changes it comes from.
 - Then `kalam-cli tapmap --lang en --trace <kalam-trace.log>` on a fresh device trace: if its mean dy is far from -0.13 (say beyond -0.08 or -0.18), rerun the synthetic eval with that bias and offset before changing the default.
+
+## 2026-11-04 · Phase 13: Arabic and code-switching (proxy lexicons)
+
+Proxy lexicons, not comparable with earlier rows (the same `/proxy` klex and held-out files as Phase 11 and 12, sha256 EN `4dc43a49ae710a53d47366ba361222c67ca27a834242dd8ffecb4d04d44bad86`, AR `5e3e099b9be89b65d80ef65127487a53afc064061826d5c5bfe065fa46f768d7`). git: `416f71f` plus the Phase 13 working tree. Seed 1, 500 sentences, AR autocorrect normal. Bias = the eval typist's `--bias-y` (-0.13 = Moe-like taps, Phase 12). The one tunable is `sentenceStartBigramShare` (SPEC 8.3): the base bigram's share of λ2 after `<s>`; at 0.7 the LM is exactly today's.
+
+```bash
+K=.build/release/kalam-cli
+$K eval --lang en --klex /proxy/en.klex --heldout /proxy/heldout/en.txt --bias-y B [--set sentenceStartBigramShare=S]
+$K eval --lang ar --klex /proxy/ar.klex --heldout /proxy/heldout/ar.txt --autocorrect normal --bias-y B [--set sentenceStartBigramShare=S]
+$K suggest --klex /proxy/en.klex --typed hel [--set sentenceStartBigramShare=S]
+```
+
+| Run | EN AC / FA / NW / KS, bias 0 | EN AC / FA / NW / KS, bias -0.13 | AR AC / FA / KS, bias 0 | AR AC / FA / KS, bias -0.13 |
+|---|---|---|---|---|
+| baseline `416f71f` | 47.1 / 0.00 / 23.2 / 37.2 | 48.3 / 0.00 / 23.2 / 37.4 | 21.6 / 0.00 / 20.5 | 25.2 / 0.00 / 21.1 |
+| **share 0.7 (kept)** | **47.1 / 0.00 / 23.2 / 37.2** | **48.3 / 0.00 / 23.2 / 37.4** | **21.6 / 0.00 / 20.5** | **25.2 / 0.00 / 21.1** |
+| share 0.5 | 47.1 / 0.00 / 23.1 / 37.1 | 48.4 / 0.00 / 23.1 / 37.4 | 21.8 / 0.00 / 20.5 | 25.4 / 0.00 / 21.1 |
+| share 0.3 | 47.1 / 0.00 / 23.1 / 37.1 | 48.4 / 0.00 / 23.1 / 37.4 | 21.9 / 0.00 / 20.5 | 25.6 / 0.00 / 21.2 |
+| share 0.1 | 47.1 / 0.00 / 22.9 / 37.1 | 48.4 / 0.00 / 22.9 / 37.3 | 22.0 / 0.00 / 20.5 | 25.7 / 0.00 / 21.2 |
+| seed 2, share 0.7 / 0.3 | 47.0 / 23.4 / 36.9 against 47.0 / 23.2 / 36.8 (AC / NW / KS) | 48.4 / 23.4 / 37.3 against 48.4 / 23.2 / 37.2 | | |
+
+- **Kept 0.7:** on the EN proxy (Brown has real sentence starts) no lower share beats it. NW and KS fall 0.1 to 0.3 pp as the share drops (within the 0.5 pp limit, but a loss), and AC moves 0.1 pp with the bias only, which is noise. Seed 2 agrees (0.3 loses 0.2 pp NW). Brown is news like the bigram source, so it favours the news openers this knob would down-weight; Moe's chats may not. The knob stays in `EngineConfig` for the real-lexicon rerun below.
+- **AR:** the AR proxy's sentences are random unigram draws, so it can't judge a sentence-start knob. Its AC rises 0.2 to 0.5 pp at lower shares, because the unigram (which the pseudo-sentences are drawn from) gets more weight; that says nothing about real Arabic. The AR effect is unmeasured here.
+- **The docs/issues.md example** doesn't reproduce on the proxy: "hel" at `<s>` gives help first at every share (score −9.81 at 0.7, −8.71 at 0.1; hello 7th), and "he" can't come up for "hel" without an extra-tap edit (5.0). The issue is closed as "not fixed by this knob".
+- **The rest of Phase 13 doesn't move the eval:** the eval has no personal store and never asks for a wrong-layout rescue or the bar slots, and the learner fix (script, not page) doesn't touch it. The final working tree reproduces the baseline row exactly.
+- **Latency** (4 evals in parallel): EN candidates 0.44 / 2.91 / 3.30 ms, AR 0.52 / 4.63 / 5.76 ms, as at baseline. A rescue costs one more search on the other language's engine, only for a 3+ letter non-word with no autocorrect that isn't the start of a word: about one more candidates request (EN 2.9 or AR 4.7 ms p95 here). Not measured by the eval.
+
+To rerun on the Mac with the real lexicons and Moe's chats (from `Packages/KalamEngine`, defaults are Phase 13's):
+
+```bash
+swift build -c release
+K=.build/release/kalam-cli; R=../../KeyboardExtension/Resources; H=../../Tools/data/heldout
+for s in 0.7 0.5 0.3 0.1; do for b in 0 -0.13; do
+  $K eval --lang en --klex $R/en.klex --heldout $H/en.txt --bias-y $b --set sentenceStartBigramShare=$s
+  $K eval --lang ar --klex $R/ar.klex --heldout $H/ar.txt --autocorrect normal --bias-y $b --set sentenceStartBigramShare=$s
+done; done
+$K suggest --klex $R/en.klex --typed hel
+$K suggest --lang ar --klex $R/ar.klex --typed انا
+$K suggest --lang ar --klex $R/ar.klex --typed انا --chat <_chat.txt>... --sender "Mohamed Morad"
+for s in 0.7 0.3; do for k in 0 1 2 3 4 5 6 7 8 9; do
+  $K eval-personal --chat <_chat.txt>... --sender "Mohamed Morad" --klex-en $R/en.klex --klex-ar $R/ar.klex --fold $k --autocorrect normal --set sentenceStartBigramShare=$s
+  $K eval-personal --chat <_chat.txt>... --sender "Mohamed Morad" --klex-en $R/en.klex --klex-ar $R/ar.klex --fold $k --autocorrect gentle --set sentenceStartBigramShare=$s
+done; done
+```
+
+What to expect, and to judge (Moe AR R / W over the 10 folds):
+- At 0.7 every number equals Phase 12's: nothing else in Phase 13 reaches the eval. Judge the AR changes right or wrong as before; the guard is that the wrong count doesn't grow.
+- The rd-plan's weak spots are AR keystroke savings (27% against EN 38.7%) and AR next-word top-3 (15% against EN 20%). The sentence-start share is the only Phase 13 change that can move them; look at eval-personal AR NW and KS at 0.3 against 0.7. Take 0.3 only if AR NW or KS gains with EN NW down at most 0.5 pp; otherwise keep 0.7.
+- If `suggest --typed hel` still shows "he" in the middle on the real klex, note its score breakdown in docs/issues.md: with today's costs it should need an extra-tap edit.

@@ -14,9 +14,9 @@ func fixtureEngine(_ lang: Lang) throws -> Engine {
     return Engine(lang: lang, lexicon: lexicon, layout: Layout.bundled("\(lang.rawValue)-letters"))
 }
 
-/// Taps at the key centers of en-letters; chars with no key are point-less.
-func taps(_ typed: String) -> [Tap] {
-    let centers = Layout.bundled("en-letters")?.keyCenters() ?? [:]
+/// Taps at the key centers of a letters page; chars with no key are point-less.
+func taps(_ typed: String, on page: String = "en-letters") -> [Tap] {
+    let centers = Layout.bundled(page)?.keyCenters() ?? [:]
     return typed.map { Tap(String($0), at: centers[String($0)]) }
 }
 

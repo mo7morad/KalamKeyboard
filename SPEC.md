@@ -179,6 +179,9 @@ There is a single `FeedbackPlayer`, called on touch-down for every key.
   - If an autocorrect is pending, the primary is **bold** and alt1 shows the literal in quotes (“teh”).
   - Otherwise, alt1 shows the 2nd candidate and alt2 the 3rd.
 - **Emoji (5.6):** when the current word, normalized, is an emoji keyword in the current language, its best emoji takes alt2 (rightmost in EN, leftmost in AR), as Apple's does, with or without a pending autocorrect. Not in URL, email, password or one-time-code fields. A tap replaces the typed word with the emoji plus the auto-space. It is never an autocorrect, never learned, and long-press doesn't offer "Don't suggest".
+- **Wrong-layout rescue (8.2):** when the current word is a word of the other language typed by position on this page, that word takes alt2, or alt1 when an emoji holds alt2. A tap replaces the typed word with it plus the auto-space and learns it in the rescued word's language (the learner goes by the word's script, not the page). It never switches the layout. Long-press blocks it in its own language.
+- **Arabic variant slot:** in Arabic, when no autocorrect is pending and another spelling of the literal's key (ة/ه, ى/ي, أ/إ/آ/ا) is a valid base or known word that none of the three slots shows, the best such spelling takes alt1 (the right slot, since AR is mirrored). D8 keeps the auto-fix off, so this is how the variant is offered.
+- **Script lock:** every candidate and prediction is in the script of the page being typed on (the engine of that language only searches its own lexicon and its own personal words); the rescue above is the one exception, in a side slot.
 - **With an empty current word:** the bar shows 3 next-word predictions.
 - **Tapping a suggestion** replaces the whole word around the cursor (the part before it plus the word characters after it; the cursor first moves to the word's end) or inserts the prediction, and adds an auto-space unless text follows the word. Tapping the literal is an explicit accept, so the word is learned.
 - **Tap to revert:** when the cursor moves into or right after a word (a host change) and the whole word is the replacement of one of this session's autocorrects (8.5 revert memory) with the same text before it, the primary slot shows the original literal in quotes. A tap puts the literal back in place of the whole word, records the rejection at once and learns the literal as an explicit accept. Long-press never offers to block it.
@@ -347,10 +350,14 @@ Search runs over the base trie and a small in-memory personal trie. A search sta
 - **End states** (i = n):
   - A terminal node gives a full-word candidate.
   - Plus up to 8 best-first completions (via max-subtree score), each with a 1.0 completion penalty.
-- Each matched key expands to its variants (surface + base word id).
+- Each matched key expands to its variants (surface + base word id). Spellings that share a normalized key (AR ة/ه, ى/ي, أ/إ/آ/ا; EN dont/don't) cost the same as the typed one, so only the LM tells them apart; the ة and ى keys count as ه and ي keys. ؤ and ئ map to و and ي, so مسؤول / مسئول are one edit apart.
 - **Personal trie:** built at launch from PersonalStore and updated each time the learner writes its batch (at most every 5 s, and on dismiss). Capped at 30k known words, with LRU eviction by decayed count.
 - The **literal is always a candidate**, with cost 0. Its LM score is its own if it's known; otherwise `unknownLogProb`: −21 for EN, −15.5 for AR (Arabic unknowns are often real dialect words).
 - An **invalid base variant** scores as unknown and is never offered as a candidate or prediction, except as the literal or when Moe knows it.
+- **Wrong-layout rescue** (`Suggestions/WrongLayout.swift`, for 5.4): a tap point maps to the other letters page by physical position. Both pages span the same width with the same side insets and share the row pitch, so y stays and x scales by the widest rows: x_other = x · widestRow(other) / widestRow(this) (EN 10, AR 11). Each mapped point types the other page's nearest char key. Apple's iPhone Arabic page is not the PC one: السلام by position on the EN page is "gfafgk", not "hgsghl".
+  - Condition: the literal has 3+ letters, every tap has a point (a point-less tap can't be placed), it isn't a valid base word, a known word or an AR clitic form, no edit-free candidate's key starts with its key (a same-key variant, or a word being typed), and it has no autocorrect target.
+  - Then the other language's engine searches the mapped taps with the same context. Its top candidate is offered when it is a valid base or known word, with no completion and an edit cost within `gentleMaxEditCost` (a slip, not a different word).
+  - The extension runs this one extra search on the engine queue, only when the condition holds, and not in URL, email, password or one-time-code fields.
 - Constants in this section were tuned in Phase 3b (`docs/eval-log.md`).
 
 ### 8.3 Scoring
@@ -365,6 +372,8 @@ P(w | a,b) = λ3·Pu(w|a,b) + λ2·[ μb·Pu(w|b) + (1−μb)·PB(w|b) ] + λ1·
   λ3 = 0.5 if Cu(a,b,·) > 0 else 0; the remaining mass is split λ2:λ1 = 0.7:0.3
   P = 0 → unknownLogProb
 ```
+
+- **Sentence start:** when b = `<s>`, the base bigram's part of λ2, (1−μb)·PB(w|<s>), is weighted by `sentenceStartBigramShare` instead of 0.7, and λ1 takes the rest; Moe's own `<s>` bigrams keep λ2·μb. It is 0.7, the same as everywhere: the Phase 13 sweep (0.5, 0.3, 0.1) found no value that beats it on the EN proxy (eval-log Phase 13). The AR effect is unmeasured (the AR proxy has no real sentences).
 
 - **Boosts:** a known manual-correction pair (literal → c in the `corrections` table) gives +3.0.
 - Blocked words are removed entirely.

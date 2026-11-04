@@ -191,7 +191,8 @@ final class InputController {
             recent.remove(offer)
             client.revertAutocorrect(offer.literal, replacement: offer.replacement, lang: lang, context: context)
         } else {
-            learn(slot.word, context: context, how: slot.isLiteral ? .literal : .suggestion, taps: taps)  // an emoji has no letter: not learned
+            // An emoji has no letter: not learned. A rescued word is learned in its own script's language (Learner).
+            learn(slot.word, context: context, how: slot.isLiteral ? .literal : .suggestion, taps: taps)
         }
         // Followed by text, the cursor stays at the word's end: it is the current word, already learned.
         taps = followed ? resyncedTaps([], to: currentWord(before: slot.word)) : []
@@ -203,7 +204,7 @@ final class InputController {
     }
 
     func block(_ slot: BarSlot) {
-        client.block(slot.ident, display: slot.word, lang: lang)
+        client.block(slot.ident, display: slot.word, lang: slot.rescueLang ?? lang)
         refresh()
     }
 
@@ -260,7 +261,7 @@ final class InputController {
         // A literal retyped where it was autocorrected commits as typed, so it shows no pending autocorrect.
         let retyping = recent.retyped(literal, before: String(before.dropLast(literal.count))) != nil
         onSlots?(barSlots(result.candidates, autocorrect: retyping ? nil : result.autocorrect, literal: literal, lang: lang,
-                          capitalized: capitalized, emoji: result.emoji, revert: revertOffer?.literal))
+                          capitalized: capitalized, emoji: result.emoji, revert: revertOffer?.literal, rescue: result.rescue))
     }
 
     // MARK: Commit

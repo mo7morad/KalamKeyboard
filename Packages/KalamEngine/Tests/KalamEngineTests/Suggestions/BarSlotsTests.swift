@@ -37,3 +37,28 @@ private func suggestion(_ text: String, literal: Bool = false) -> Suggestion {
         #expect(slots[1]?.isRevert == true && slots[1]?.isLiteral == true)
     }
 }
+
+@Test func rescueTakesAlt2OrAlt1WhenAnEmojiHoldsAlt2() {
+    let ranked = [suggestion("gfafgk", literal: true), suggestion("gfa")]
+    let rescue = suggestion("السلام", literal: true)  // the other engine's literal: here it's no quoted literal
+    let slots = barSlots(ranked, autocorrect: nil, literal: "gfafgk", lang: .en, capitalized: false, rescue: rescue)
+    #expect(slots.map { $0?.label } == ["gfa", "gfafgk", "السلام"])
+    #expect(slots[2]?.rescueLang == .ar && slots[2]?.isLiteral == false)
+    let withEmoji = barSlots(ranked, autocorrect: nil, literal: "gfafgk", lang: .en, capitalized: false, emoji: "👋", rescue: rescue)
+    #expect(withEmoji.map { $0?.label } == ["السلام", "gfafgk", "👋"])
+    let arabic = barSlots([suggestion("تثككح", literal: true)], autocorrect: nil, literal: "تثككح", lang: .ar, capitalized: false,
+                          rescue: suggestion("hello"))
+    #expect(arabic.map { $0?.label } == ["hello", "تثككح", nil] && arabic[0]?.rescueLang == .en)
+}
+
+@Test func arabicVariantOfTheTypedKeyTakesAlt1() {
+    let ranked = [suggestion("انا", literal: true), suggestion("انت"), suggestion("انها"), suggestion("أنا")]
+    #expect(barSlots(ranked, autocorrect: nil, literal: "انا", lang: .ar, capitalized: false).map { $0?.label } == ["انها", "انا", "أنا"])
+    let shown = [suggestion("انا", literal: true), suggestion("أنا"), suggestion("انت"), suggestion("إنا")]
+    #expect(barSlots(shown, autocorrect: nil, literal: "انا", lang: .ar, capitalized: false).map { $0?.label } == ["انت", "انا", "أنا"])
+    // A pending autocorrect keeps its quoted literal, and English has no variant slot.
+    let pending = barSlots(ranked, autocorrect: ranked[1], literal: "انا", lang: .ar, capitalized: false)
+    #expect(pending.map { $0?.label } == ["انها", "انت", "\u{201C}انا\u{201D}"])
+    let english = [suggestion("dont", literal: true), suggestion("done"), suggestion("dot"), suggestion("don't")]
+    #expect(barSlots(english, autocorrect: nil, literal: "dont", lang: .en, capitalized: false).map { $0?.label } == ["done", "dont", "dot"])
+}

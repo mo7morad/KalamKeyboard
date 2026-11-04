@@ -11,15 +11,20 @@ public struct BarSlot: Equatable, Sendable {
     public var isEmoji = false
     /// SPEC 5.4 tap to revert: the original literal of the corrected word around the cursor.
     public var isRevert = false
+    /// SPEC 5.4 wrong-layout rescue: the slot's word is of this (the other) language; a long-press blocks it there.
+    public var rescueLang: Lang?
 }
 
 /// The three bar slots in visual left-to-right order: EN [alt1] [primary] [alt2], AR mirrored.
 /// With a pending autocorrect, the primary is it, in bold, and alt1 is the quoted literal;
 /// otherwise the slots hold the first three candidates (or predictions). An emoji for the word
 /// takes alt2, as Apple's does (SPEC 5.6). `revert`, the original of the corrected word around the
-/// cursor, takes the primary, quoted (SPEC 5.4). Nil is an empty slot.
+/// cursor, takes the primary, quoted (SPEC 5.4). `rescue`, the other language's word for the same
+/// spots (SPEC 5.4), takes alt2, or alt1 when the emoji holds alt2. In Arabic with no pending
+/// autocorrect, the best other spelling of the literal's key takes alt1 when no slot shows it.
+/// Nil is an empty slot.
 public func barSlots(_ candidates: [Suggestion], autocorrect: Suggestion?, literal: String, lang: Lang,
-                     capitalized: Bool, emoji: String? = nil, revert: String? = nil) -> [BarSlot?] {
+                     capitalized: Bool, emoji: String? = nil, revert: String? = nil, rescue: Suggestion? = nil) -> [BarSlot?] {
     func slot(_ s: Suggestion, bold: Bool = false) -> BarSlot {
         let word = cased(s.text, capitalized: capitalized)
         return BarSlot(word: word, label: word, ident: s.ident, bold: bold, isLiteral: s.isLiteral)
@@ -40,6 +45,17 @@ public func barSlots(_ candidates: [Suggestion], autocorrect: Suggestion?, liter
     }
     if let emoji {
         alt2 = BarSlot(word: emoji, label: emoji, ident: emoji, bold: false, isLiteral: false, isEmoji: true)
+    }
+    if let rescue {
+        let word = cased(rescue.text, capitalized: capitalized)
+        let rescued = BarSlot(word: word, label: word, ident: rescue.ident, bold: false, isLiteral: false, rescueLang: lang == .en ? .ar : .en)
+        if emoji == nil { alt2 = rescued } else { alt1 = rescued }
+    }
+    let literalKey = normalize(literal, lang: lang)
+    if lang == .ar, autocorrect == nil, alt1?.rescueLang == nil,
+       let variant = unique.first(where: { !$0.isLiteral && normalize($0.ident, lang: lang) == literalKey }),
+       ![primary, alt1, alt2].contains(where: { $0?.ident == variant.ident }) {
+        alt1 = slot(variant)
     }
     return lang == .en ? [alt1, primary, alt2] : [alt2, primary, alt1]
 }

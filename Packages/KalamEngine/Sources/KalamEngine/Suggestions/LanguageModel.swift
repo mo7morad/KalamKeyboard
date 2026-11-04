@@ -19,6 +19,8 @@ extension Engine {
     /// Interpolated LM (SPEC 8.3):
     /// P(w|a,b) = λ3·Pu(w|a,b) + λ2·[μb·Pu(w|b) + (1−μb)·PB(w|b)] + λ1·[ν·Pu(w) + (1−ν)·PB(w)]
     /// With no personal data it is bigramShare·PB(w|b) + (1 − bigramShare)·PB(w).
+    /// After <s>, the base bigram's part of λ2 uses sentenceStartBigramShare instead and the unigram
+    /// takes the rest; Moe's own bigram keeps bigramShare·μb.
     func lmLogProb(_ ident: String, word: Int?, _ context: LMContext) -> Double {
         let baseUnigram = word.flatMap { lexicon?.logProb($0) }.map(exp) ?? 0
         let baseBigram = word.flatMap { w in context.previous.flatMap { lexicon?.bigramLogProb($0, w) } }.map(exp) ?? 0
@@ -29,8 +31,11 @@ extension Engine {
         let mu = counts.bigramTotal / (counts.bigramTotal + config.personalContextPrior)
         let nu = context.corpusSize / (context.corpusSize + config.personalCorpusPrior)
         let lambda3 = counts.trigramTotal > 0 ? config.trigramWeight : 0
-        let lambda2 = (1 - lambda3) * config.bigramShare, lambda1 = (1 - lambda3) * (1 - config.bigramShare)
-        let p = lambda3 * trigram + lambda2 * (mu * bigram + (1 - mu) * baseBigram) + lambda1 * (nu * unigram + (1 - nu) * baseUnigram)
+        let baseShare = context.idents.last == sentenceStart ? config.sentenceStartBigramShare : config.bigramShare
+        let personalBigram = config.bigramShare * mu, baseBigramWeight = baseShare * (1 - mu)
+        let p = lambda3 * trigram
+            + (1 - lambda3) * (personalBigram * bigram + baseBigramWeight * baseBigram
+                + (1 - personalBigram - baseBigramWeight) * (nu * unigram + (1 - nu) * baseUnigram))
         return p > 0 ? log(p) : config.unknownLogProb(lang)
     }
 }

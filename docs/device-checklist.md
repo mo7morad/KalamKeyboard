@@ -204,3 +204,18 @@ Setup: install a Debug build with Full Access on, autocorrect normal. Test in No
 - [ ] Feel of the top row: type "quiet", "power", "type", "ضحك", "صحيح" fast. Wrong letters from the row below or from the bar ____. Edge keys: "zap", "plop", "quip", and AR ض, ج, ش, ة, ى words: wrong letters ____.
 - [ ] Taps that land low: type with your thumb deliberately a bit low on the bottom letter row ("zxcvbnm" words like "bacon", "venom"). Does anything get worse than before ____?
 - [ ] A habitual swap gets fixed: pick a one-letter slip you make often (say "tha" for "the", a far-apart pair). Each time, delete the wrong word and type the right one within 10 s, for two different words with the same slip (e.g. "tha" then "the", "sha" then "she"). After that, the same slip in a third word is corrected (or is first in the bar) ____.
+
+## Phase 13: Arabic and code-switching
+
+Setup: install a Debug build with Full Access on, autocorrect normal, your WhatsApp chats imported. Test in Notes unless a step says otherwise.
+
+- [ ] Script of the bar with mixed context: on the AR layout, type "ok " then start an Arabic word ("ان"): every slot is Arabic. Switch to EN and type "hab" right after an Arabic word: every slot is Latin. Empty word after "hello " on the AR layout: the 3 predictions are Arabic. Any slot in the wrong script ____.
+- [ ] Wrong layout, AR word on the EN page: on the EN layout, type السلام by where its letters sit on the Arabic page (the keys "gfafgk"). Before space, the right slot shows السلام. Tap it: "gfafgk" becomes "السلام " and the layout stays EN. Then شكرا ("albg") and 2 words of your own, typed by feel: rescued ____, not rescued ____.
+- [ ] Wrong layout, EN word on the AR page: on the AR layout, type "hello" by where its letters sit on the EN page (تثككح). The left slot (alt2 in Arabic) shows "hello"; tap it: replaced, layout stays AR. Later, on the EN layout, "hel" offers hello as usual (learned as English).
+- [ ] No false rescues: type normal EN and AR for a few minutes. An Arabic word in the EN bar (or the reverse) while you were typing a real word ____ (write the word).
+- [ ] Rescue next to an emoji: on the EN layout, type a word that has an emoji and is an Arabic word by position, if you find one ____; the emoji keeps the right slot and the rescue moves to the left.
+- [ ] Franco: type "3ashan", "7aga", "ma3lesh" (digit by long-press) + space: none changes. Type "3as": 3ashan shows in the bar (once your import holds it). Type a slip "3ashsn" + space: it stays as typed.
+- [ ] ة/ه in the slot: type "مدرسه": مدرسة shows in a slot (the right one if it isn't already in the bar), and space keeps "مدرسه". Same for "انا" (أنا in a slot) and "علي" / "على". Note any where the other spelling never shows ____.
+- [ ] Sentence-start bar: at the start of a new note, type "hel": the middle slot shows ____ (help or hello expected, not "he"). On the AR layout at the start, type "انا": the middle slot shows ____ (انا expected, not أما).
+- [ ] Backspace on tashkeel: type "مُحَمَّد" with the marks (long-press), then press backspace once: only the last mark (or the last letter if it has none) goes ____. Put the cursor after "مَ" and press backspace: the mark goes and م stays ____.
+- [ ] Lam-alef: type "لا" (ل then ا), then press backspace once: "ل" stays ____. Same in WhatsApp and Messages ____.

@@ -165,8 +165,12 @@ public final class Learner {
         }
     }
 
+    /// By the word's own script (its first letter), not the page it was typed on: a word resynced
+    /// from the text or a wrong-layout rescue can be in the other script (script lock, SPEC 5.4).
     private static func kind(of word: String, lang: Lang) -> Token.Kind {
-        isSpecial(word) ? .tok : lang == .en ? .en : .ar
+        guard !isSpecial(word) else { return .tok }
+        let arabic = word.unicodeScalars.lazy.compactMap(strongDirection).first ?? (lang == .ar)
+        return arabic ? .ar : .en
     }
 
     /// The trailing context words of the word's own language run (SPEC 9.3 splits runs by script).
