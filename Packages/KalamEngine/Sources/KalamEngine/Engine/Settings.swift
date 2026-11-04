@@ -4,6 +4,19 @@ public enum AutocorrectMode: String, CaseIterable, Sendable {
     case off, gentle, normal
 }
 
+/// SPEC 10 keyboard height: the letters page's row pitch in points (Apple's is 54).
+public enum KeyboardHeight: String, CaseIterable, Sendable {
+    case compact, `default`, tall
+
+    public var rowPitch: Double {
+        switch self {
+        case .compact: 50
+        case .default: 54
+        case .tall: 58
+        }
+    }
+}
+
 /// User settings (SPEC 10), shared by the keyboard and the host app through App Group UserDefaults.
 /// Each UserDefaults key is the property name; a missing or malformed value keeps the default.
 public struct Settings: Equatable, Sendable {
@@ -24,6 +37,8 @@ public struct Settings: Equatable, Sendable {
     public var digitHints = true
     public var pauseLearning = false
     public var clipboard = true  // SPEC 5.5
+    public var keyboardHeight = KeyboardHeight.default
+    public var numberRow = false  // SPEC 5.1
 
     public init() {}
 
@@ -32,6 +47,7 @@ public struct Settings: Equatable, Sendable {
         "doubleSpacePeriod": \.doubleSpacePeriod, "contractionFix": \.contractionFix,
         "arabicVariantFix": \.arabicVariantFix, "easternArabicDigits": \.easternArabicDigits,
         "digitHints": \.digitHints, "pauseLearning": \.pauseLearning, "clipboard": \.clipboard,
+        "numberRow": \.numberRow,
     ]
     private static let doubles: [String: WritableKeyPath<Settings, Double>] = [
         "hapticStrength": \.hapticStrength, "soundBoost": \.soundBoost,
@@ -53,6 +69,7 @@ public struct Settings: Equatable, Sendable {
         for (key, path) in doubles {
             if let value = defaults.object(forKey: key) as? Double { settings[keyPath: path] = value }
         }
+        if let value = defaults.string(forKey: "keyboardHeight").flatMap(KeyboardHeight.init) { settings.keyboardHeight = value }
         return settings
     }
 
@@ -62,6 +79,7 @@ public struct Settings: Equatable, Sendable {
         for (key, path) in Self.bools { defaults.set(self[keyPath: path], forKey: key) }
         for (key, path) in Self.modes { defaults.set(self[keyPath: path].rawValue, forKey: key) }
         for (key, path) in Self.doubles { defaults.set(self[keyPath: path], forKey: key) }
+        defaults.set(keyboardHeight.rawValue, forKey: "keyboardHeight")
     }
 
     public func autocorrect(_ lang: Lang) -> AutocorrectMode { lang == .en ? autocorrectEN : autocorrectAR }

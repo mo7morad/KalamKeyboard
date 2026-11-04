@@ -69,3 +69,33 @@ func everyPageLoadsWithUniqueIDsAndFullRows(_ id: String) throws {
     let letters = try #require(Layout.bundled("ar-letters"))
     #expect(letters.withDigits(eastern: true).rows[0].compactMap(\.hint).joined() == "١٢٣٤٥٦٧٨٩٠")
 }
+
+@Test func numberRowAddsDigitsAndDropsTheTopRowHints() throws {
+    let en = try #require(Layout.bundled("en-letters")).withNumberRow(digits: "1234567890".map(String.init))
+    #expect(en.hasNumberRow && en.rows.count == 5)
+    #expect(en.rows[0].map(\.output).joined() == "1234567890")
+    #expect(en.rows[0].allSatisfy { $0.kind == .char && $0.popup && $0.alternates.isEmpty })
+    #expect(en.rows[1].allSatisfy { $0.hint == nil })
+    let e = try #require(en.rows[1].first { $0.id == "e" })
+    #expect(e.alternates.contains("é"))  // the letter's own strip stays
+    let q = try #require(en.rows[1].first)
+    #expect(longPressStrip(output: q.output, hint: q.hint, alternates: q.alternates, hintShown: false) == nil)
+}
+
+@Test(arguments: [false, true])
+func arabicNumberRowSpansTheRowAndFollowsTheDigitSetting(_ eastern: Bool) throws {
+    let digits = try #require(Layout.bundled("ar-numbers")?.rows.first).map(\.output)
+    let ar = try #require(Layout.bundled("ar-letters")).withNumberRow(digits: digits).withDigits(eastern: eastern)
+    #expect(ar.rows[0].map(\.output).joined() == (eastern ? "١٢٣٤٥٦٧٨٩٠" : "1234567890"))
+    #expect(abs(Layout.width(ar.rows[0]) - ar.widestRow) < 0.001)
+    #expect(ar.widestRow == 11)
+    #expect(ar.withGlobeKey().hasNumberRow)
+    let ids = ar.rows.joined().map(\.id)
+    #expect(Set(ids).count == ids.count)
+}
+
+@Test(arguments: ["en-letters", "ar-letters"])
+func numberRowKeepsThePagesKeyCenters(_ id: String) throws {
+    let layout = try #require(Layout.bundled(id))
+    #expect(layout.withNumberRow(digits: ["1", "2", "3"]).keyCenters() == layout.keyCenters())
+}

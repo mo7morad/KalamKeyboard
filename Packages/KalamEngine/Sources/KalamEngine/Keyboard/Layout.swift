@@ -6,6 +6,10 @@ public struct Layout: Codable, Sendable {
     public let id: String
     public let lang: Lang
     public let rows: [[Key]]
+    /// SPEC 5.1: row 0 is the optional digit row, outside the page's key units.
+    public private(set) var hasNumberRow = false
+
+    enum CodingKeys: String, CodingKey { case id, lang, rows }
 
     public struct Key: Codable, Sendable {
         /// `gap` is blank space (Apple's EN row 3 and AR row 3). For `page` keys, `output` names the
@@ -57,8 +61,11 @@ public struct Layout: Codable, Sendable {
         return try? JSONDecoder().decode(Layout.self, from: data)
     }
 
-    /// The width of the widest row, in key units.
-    public var widestRow: Double { rows.map(Self.width).max() ?? 0 }
+    /// The width of the widest row, in key units (the number row is fitted to it).
+    public var widestRow: Double { letterRows.map(Self.width).max() ?? 0 }
+
+    /// The page's own rows, without the number row.
+    private var letterRows: ArraySlice<[Key]> { rows.dropFirst(hasNumberRow ? 1 : 0) }
 
     static func width(_ row: [Key]) -> Double { row.reduce(0) { $0 + $1.width } }
 
@@ -74,7 +81,19 @@ public struct Layout: Codable, Sendable {
             out.insert(globe, at: lang)
             return out
         }
-        return Layout(id: id, lang: lang, rows: rows)
+        return Layout(id: id, lang: lang, rows: rows, hasNumberRow: hasNumberRow)
+    }
+
+    /// SPEC 5.1 number row: `digits` as a top row of plain keys spanning the widest row. The old top
+    /// row loses its digit hints, so it draws none and its long-press strip doesn't offer them.
+    public func withNumberRow(digits: [String]) -> Layout {
+        guard !hasNumberRow, !digits.isEmpty else { return self }
+        let width = widestRow / Double(digits.count)
+        let numberRow = digits.map { Key(id: $0, label: $0, output: $0, width: width, kind: .char, popup: true) }
+        let rows = rows.enumerated().map { r, row in
+            r > 0 ? row : row.map { Key(id: $0.id, label: $0.label, output: $0.output, width: $0.width, kind: $0.kind, alternates: $0.alternates, popup: $0.popup) }
+        }
+        return Layout(id: id, lang: lang, rows: [numberRow] + rows, hasNumberRow: true)
     }
 
     /// Every digit on the page as Eastern Arabic (١٢٣) or Western (123), for the Arabic pages'
@@ -93,14 +112,15 @@ public struct Layout: Codable, Sendable {
                     alternates: key.alternates.map(convert), popup: key.popup, hint: key.hint.map(convert))
             }
         }
-        return Layout(id: id, lang: lang, rows: rows)
+        return Layout(id: id, lang: lang, rows: rows, hasNumberRow: hasNumberRow)
     }
 
     /// Char key output -> key center in key units. x counts key widths from the left edge of the
-    /// widest row (narrower rows are centered); y counts rows, so row 0 centers at y = 0.5.
+    /// widest row (narrower rows are centered); y counts rows, so row 0 centers at y = 0.5. The number
+    /// row isn't counted: tap points stay in the page's own key units (SPEC 5.2).
     public func keyCenters() -> [String: Point] {
         var centers: [String: Point] = [:]
-        for (y, row) in rows.enumerated() {
+        for (y, row) in letterRows.enumerated() {
             var x = (widestRow - Self.width(row)) / 2
             for key in row {
                 if key.kind == .char { centers[key.output] = Point(x: x + key.width / 2, y: Double(y) + 0.5) }

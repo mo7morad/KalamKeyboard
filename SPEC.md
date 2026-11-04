@@ -120,6 +120,7 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
 - Arabic alternates must include at least: ا → أ إ آ ء, ي → ى ئ, و → ؤ, ه → ة. Arabic punctuation: ، ؛ ؟.
 - The AR bottom row is `[١٢٣] [EN] [space] [◌ً] [return]`. Holding the tanween key ◌ً opens Apple's tashkeel strip, visual left to right: ◌ٓ ◌ٰ ـ ◌ْ ◌ِ ◌ُ ◌ّ [◌ً] ◌َ ◌ٍ ◌ٌ (fathatan selected). Marks draw on a dotted circle; the output is the bare mark. English alternates follow Apple's accents.
 - Gboard-style long-press digits on the top row (q→1 … p→0; Arabic top row → digits, Western or Eastern per setting), with small hint labels on the English top row (setting, default on; none on Arabic, like Apple, since they covered the letters' dots). This also helps typing Franco words like "3ashan".
+- **Number row** (setting, default off): the letters pages get an extra top row of 10 plain digit keys spanning the widest row, in the order of the numbers page's digit row (1 … 0; Arabic Eastern ١ … ٠ or Western per setting). It is built in code (`Layout.withNumberRow(digits:)`) on top of Apple's JSON, which stays the default (D6). The top letter row then has no digit hints and its long-press strip offers only the letter's own alternates. Digit keys type like char keys but send no tap point. The 123 and #+= pages don't get it.
 
 ### 5.2 Touch model
 
@@ -152,7 +153,7 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
 - **Suggestion bar press:** touch-down on a slot with something in it (or the clip chip) highlights it like a pressed key and plays the key haptic and click through `FeedbackPlayer`, like a key. The pick still fires on release, and a long-press still opens the block overlay; release or cancel clears the highlight.
 - **Pages:** 123 and #+= pages work like Apple's. Typing space or ' on the 123 page returns to letters.
   - A page key switches on touch-down. If the same finger slides onto a key of the new page and is released there, that key is typed and the keyboard returns to the page it came from (123 → a digit → letters). A plain tap just switches.
-- **Swipe down to hide:** `dismissKeyboard()` for a strict downward swipe only: it starts on a char key in rows 0 or 1, travels at least 70 pt down with under 30 pt sideways, within 0.3 s, with no alternates strip open. The letter isn't typed.
+- **Swipe down to hide:** `dismissKeyboard()` for a strict downward swipe only: it starts on a char key in rows 0 or 1 (or the number row), travels at least 70 pt down with under 30 pt sideways, within 0.3 s, with no alternates strip open. The letter isn't typed.
 - **Return:** the label comes from `returnKeyType`. It looks dimmed when `enablesReturnKeyAutomatically` is set and the field is empty.
 - **Bottom row:**
   - When `needsInputModeSwitchKey == false` (Face ID iPhones): `[123] [EN/AR] [space] [return]`.
@@ -160,6 +161,9 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
   - The EN/AR key toggles the layout and the engine language. The last-used language is remembered.
 - **Appearance:** light and dark follow `textDocumentProxy.keyboardAppearance` and the trait collection. Match the screenshots for key color, corner radius, shadow, font, keyboard height per device, and suggestion bar height.
   - iOS 27 puts a 75 pt globe/dictation strip under third-party keyboards (Apple's is 58 pt), and on the iPhone 17 (iOS 27.1) some host apps add about 16 pt of panel above Kalam's view and some don't (device round 2; the view is exactly the height asked for). Keys use Apple's sizes and 54 pt row pitch. A 4.5 pt touch band sits under the bottom row's caps: Moe aims where Apple's lower space bar is, and taps past the view's bottom go to iOS's strip and are lost. The bar is 40 pt and the key area's top inset 7, which looks like Apple's where no extra panel is added (a 30 pt bar was cramped there). The whole keyboard sits about 8 pt above Apple's (the taller strip plus the band); nothing in the extension can bring it lower.
+  - **Keyboard height** (setting): the letters page's row pitch is 50 / 54 / 58 pt (compact / default / tall). Each cap is the pitch minus 11.2 pt tall (42.8 at 54); the cap top inset, side and bottom insets and the 6 pt cap gap stay. The key area is `1.4 + rows × pitch` pt: 201.4 / 217.4 / 233.4, plus the 40 pt bar (241.4 / 257.4 / 273.4 in all).
+  - With the number row on, the letters page has 5 rows at the pitch minus 4 pt (46 / 50 / 54), so the key area is 231.4 / 251.4 / 271.4 pt: the keyboard grows 30 / 34 / 38 pt. The 123 and #+= pages keep 4 rows and fill the same area (pitch 57.5 / 62.5 / 67.5), so the height never changes between pages. The clipboard and emoji panels fill the key area at every height.
+  - Key units don't change with either: y divides by the page's pitch, and the number row sits above row 0 (y from −1 to 0), so a tap at the center of q or ض is the same point at every height, with or without the number row (`KeyGeometry.keyUnits`). The spatial model, the learned key offsets and the wrong-layout rescue keep using `Layout.keyCenters()` of the bundled page.
 
 ### 5.3 Feedback
 
@@ -545,6 +549,8 @@ Settings are stored in App Group `UserDefaults`:
 | Top-row digit hints | on |
 | Pause learning | off |
 | Clipboard (5.5) | on |
+| Keyboard height (compact / default / tall, 5.2) | default |
+| Number row (5.1) | off |
 
 ## 11. Performance and memory budgets
 

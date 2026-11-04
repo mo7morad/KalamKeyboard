@@ -32,7 +32,12 @@ struct SettingsView: View {
             Section("Typing") {
                 Toggle("Auto-Capitalization", isOn: $settings.autoCapitalize)
                 Toggle("\u{201C}.\u{201D} Shortcut", isOn: $settings.doubleSpacePeriod)
+                Picker("Keyboard Height", selection: $settings.keyboardHeight) {  // SPEC 5.2
+                    ForEach(KeyboardHeight.allCases, id: \.self) { Text($0.rawValue.capitalized) }
+                }
+                Toggle("Number Row", isOn: $settings.numberRow)  // SPEC 5.1
                 Toggle("Digit Hints on Top Row", isOn: $settings.digitHints)
+                    .disabled(settings.numberRow)  // the number row replaces them
                 Toggle("Eastern Arabic Digits", isOn: $settings.easternArabicDigits)
             }
             Section {

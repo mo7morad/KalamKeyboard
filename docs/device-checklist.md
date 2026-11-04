@@ -235,3 +235,15 @@ Setup: install a Debug build with Full Access on, autocorrect normal, double-spa
 - [ ] Backspace speed: hold backspace on a long paragraph. It starts after about half a second, speeds up, then switches to words after about 1.7 s. Lift as soon as you see words going: how many words too many went ____? Apple: how many too many ____? Same with the emoji panel's backspace ____.
 - [ ] Trackpad speed: hold space and drag slowly: about one character per 9 pt, as before. A fast flick across the bar moves much further (about 2.5 times). Can you land on a given letter in a long line ____? Apple ____.
 - [ ] Bar touch feedback: press a suggestion slot and hold: it highlights and you feel the key haptic and hear the click at once; the word goes in on release. Long-press still opens "Don't suggest". Press the clip chip: same feedback. The highlight clears on release every time (none left stuck) ____. Apple ____.
+
+## Phase 15: comfort settings
+
+Setup: install a Debug build with Full Access on. Change the settings in the Kalam app (Settings, Typing), then switch to the host app and bring the keyboard up again.
+
+- [ ] Each height in Notes and in WhatsApp, number row off (Compact, Default, Tall): no key or bar clipped, the suggestion bar fits, the clipboard and emoji panels open and fill the key area, and iOS's ~75 pt globe strip still sits below the keys. Total keyboard height (top of the bar to the top of the strip) at Compact ____ pt, Default ____ pt, Tall ____ pt (expected 241.4 / 257.4 / 273.4).
+- [ ] Typing feel: type a paragraph at Compact and at Tall. Typos compared with Default: Compact ____, Tall ____. Top-row and bottom-row taps still land (q, p, space, return) ____.
+- [ ] Number row on, at each height: the keyboard is 30 / 34 / 38 pt taller than with it off ____. Total height at Compact ____ pt, Default ____ pt, Tall ____ pt (expected 271.4 / 291.4 / 311.4). The 123 and #+= pages keep the same height (bigger keys), with no jump when switching pages ____.
+- [ ] Number row digits: tap 1 to 0 on EN: each types its digit with a popup, fast rollover across digits and letters works ____. The q row draws no digit hints, and holding q types nothing extra (no strip); holding e still shows the accents ____.
+- [ ] Arabic number row: with Eastern Arabic digits off, the AR page's row types 1 to 0; on, ١ to ٠, left to right like Apple's 123 page ____. Holding ض shows no digit strip ____.
+- [ ] Words after a digit: type "3ashan" with the number row's 3, and "2day": autocorrect leaves them alone as before ____.
+- [ ] Switching settings: with the keyboard open in Notes, go to the Kalam app and change the height or the number row, then come back to Notes: the change shows the next time the keyboard appears (not before) ____. Digit Hints is greyed out in Settings while the number row is on.

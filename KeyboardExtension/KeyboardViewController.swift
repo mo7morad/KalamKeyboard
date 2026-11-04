@@ -16,6 +16,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     private let panel = ClipboardPanel()
     private let emojiPanel = EmojiPanel()
     private let globeButton = UIButton(type: .custom)
+    private var heightConstraint: NSLayoutConstraint?
 
     private var lang = lastLanguage
     private var page = "letters"
@@ -89,8 +90,10 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
             subview.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(subview)
         }
+        let height = view.heightAnchor.constraint(equalToConstant: KeyboardView.height(settings.keyboardHeight, numberRow: settings.numberRow))
+        heightConstraint = height
         NSLayoutConstraint.activate([
-            view.heightAnchor.constraint(equalToConstant: KeyboardView.height),
+            height,
             bar.topAnchor.constraint(equalTo: view.topAnchor),
             bar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             bar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -196,6 +199,9 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         feedback.settings = settings
         input.settings = settings
         keyboardView.showsHints = settings.digitHints
+        keyboardView.keyboardHeight = settings.keyboardHeight
+        keyboardView.numberRow = settings.numberRow
+        heightConstraint?.constant = KeyboardView.height(settings.keyboardHeight, numberRow: settings.numberRow)
         client.setLearning(traits: input.traits, paused: settings.pauseLearning)
     }
 
@@ -211,7 +217,10 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
 
     private func reloadLayout() {
         let id = "\(lang.rawValue)-\(page)"
-        let bundled = Layout.bundled(id)
+        var bundled = Layout.bundled(id)
+        if page == "letters", settings.numberRow, let digits = Layout.bundled("\(lang.rawValue)-numbers")?.rows.first?.map(\.output) {
+            bundled = bundled?.withNumberRow(digits: digits)  // SPEC 5.1: Apple's digit row, in its order
+        }
         let layout = lang == .ar ? bundled?.withDigits(eastern: settings.easternArabicDigits) : bundled
         view.accessibilityValue = id  // lets UI tests see the page; keys are layer-drawn
         keyboardView.layout = needsInputModeSwitchKey ? layout?.withGlobeKey() : layout

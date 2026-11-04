@@ -10,6 +10,8 @@ import Testing
     defaults.set(0.4, forKey: "hapticStrength")
     defaults.set("off", forKey: "autocorrectEN")
     defaults.set("loud", forKey: "autocorrectAR")  // malformed: keeps the default
+    defaults.set("huge", forKey: "keyboardHeight")  // malformed: keeps the default
+    defaults.set("yes", forKey: "numberRow")  // malformed: keeps the default
     var expected = Settings()
     (expected.sounds, expected.hapticStrength, expected.autocorrectEN) = (false, 0.4, .off)
     #expect(Settings.load(from: defaults) == expected)
@@ -21,6 +23,7 @@ import Testing
     #expect((settings.autocorrect(.en), settings.autocorrect(.ar)) == (.normal, .gentle))
     #expect((settings.variantFix(.en), settings.variantFix(.ar)) == (true, false))
     #expect(settings.clipboard)
+    #expect((settings.keyboardHeight, settings.keyboardHeight.rowPitch, settings.numberRow) == (.default, 54, false))
 }
 
 @Test func savedSettingsLoadBack() throws {
@@ -30,6 +33,7 @@ import Testing
     var settings = Settings()
     (settings.haptics, settings.hapticStrength, settings.autocorrectAR, settings.pauseLearning) = (false, 0.3, .off, true)
     (settings.clipboard, settings.soundBoost) = (false, 0.5)
+    (settings.keyboardHeight, settings.numberRow) = (.tall, true)
     settings.save(to: defaults)
     #expect(Settings.load(from: defaults) == settings)
 }

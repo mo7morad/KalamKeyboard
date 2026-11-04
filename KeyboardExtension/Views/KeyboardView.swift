@@ -35,7 +35,10 @@ final class KeyboardView: UIView {
     /// Apple's is 44. Some host apps get about 16 pt of extra system panel above Kalam's view and
     /// some don't, so the bar is sized for none: 30 was cramped there (device round 2).
     static let barHeight: CGFloat = 40
-    static let height = barHeight + KeyGeometry.height
+    /// SPEC 5.2: the bar plus the key area at the keyboard height setting.
+    static func height(_ setting: KeyboardHeight, numberRow: Bool) -> CGFloat {
+        barHeight + KeyGeometry.height(setting, numberRow: numberRow)
+    }
     /// How far the top row's touch area reaches up into the bar. Moe's top-row taps run right up
     /// to the bar, and taps landing in it were lost (device round 2 trace). Only mid-typing while
     /// the bar has something to tap (SPEC 5.2, `BarBand`).
@@ -48,6 +51,10 @@ final class KeyboardView: UIView {
     var returnKey = ReturnKeyStyle() { didSet { if returnKey != oldValue { refreshContents() } } }
     var palette = Palette.light { didSet { refreshColors() } }
     var showsHints = true
+    /// The keyboard height setting and whether the letters pages have the number row (SPEC 10);
+    /// set before `layout`, which rebuilds the keys.
+    var keyboardHeight = KeyboardHeight.default
+    var numberRow = false
     /// Whether the bar shows a suggestion or the clip chip (set by the view controller).
     var barHasTappableContent = false
 
@@ -94,7 +101,8 @@ final class KeyboardView: UIView {
         guard let layout, bounds.width > 0 else { geometry = nil; return }
         glyphs.scale = traitCollection.displayScale
         popups.scale = glyphs.scale
-        let geometry = KeyGeometry(layout: layout, width: bounds.width, origin: CGPoint(x: 0, y: Self.barHeight))
+        let pitch = KeyGeometry.rowPitch(keyboardHeight, numberRow: numberRow, rows: layout.rows.count)
+        let geometry = KeyGeometry(layout: layout, width: bounds.width, origin: CGPoint(x: 0, y: Self.barHeight), rowPitch: pitch)
         self.geometry = geometry
         for frame in geometry.frames {
             let cap = CALayer()
@@ -445,7 +453,7 @@ final class KeyboardView: UIView {
     private func commit(_ press: Press) {
         let picked = press.strip.map { $0[press.selected] } ?? press.frame.key.output
         let text = press.origin == .shift ? picked.uppercased() : picked  // shift may be off by now
-        let point = press.strip == nil ? geometry?.keyUnits(press.touch.location(in: self)) : nil
+        let point = press.strip == nil && !press.frame.inNumberRow ? geometry?.keyUnits(press.touch.location(in: self)) : nil
         trace("commit \(text.debugDescription)")
         delegate?.commit(text, at: point)
     }
