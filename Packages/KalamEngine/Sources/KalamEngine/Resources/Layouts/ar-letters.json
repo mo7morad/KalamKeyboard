@@ -1,0 +1,52 @@
+{
+ "id": "ar-letters",
+ "lang": "ar",
+ "rows": [
+ [
+  {"id": "ض", "label": "ض", "hint": "1"},
+  {"id": "ص", "label": "ص", "hint": "2"},
+  {"id": "ث", "label": "ث", "hint": "3"},
+  {"id": "ق", "label": "ق", "hint": "4"},
+  {"id": "ف", "label": "ف", "hint": "5"},
+  {"id": "غ", "label": "غ", "hint": "6"},
+  {"id": "ع", "label": "ع", "hint": "7"},
+  {"id": "ه", "label": "ه", "alternates": ["ة", "هـ", "ه"], "hint": "8"},
+  {"id": "خ", "label": "خ", "hint": "9"},
+  {"id": "ح", "label": "ح", "hint": "0"},
+  {"id": "ج", "label": "ج"}
+ ],
+ [
+  {"id": "ش", "label": "ش"},
+  {"id": "س", "label": "س"},
+  {"id": "ي", "label": "ي", "alternates": ["ى", "ي", "ئ"]},
+  {"id": "ب", "label": "ب"},
+  {"id": "ل", "label": "ل"},
+  {"id": "ا", "label": "ا", "alternates": ["ء", "آ", "إ", "أ", "ا"]},
+  {"id": "ت", "label": "ت"},
+  {"id": "ن", "label": "ن"},
+  {"id": "م", "label": "م"},
+  {"id": "ك", "label": "ك", "alternates": ["گ", "ك"]},
+  {"id": "ة", "label": "ة"}
+ ],
+ [
+  {"id": "ء", "label": "ء"},
+  {"id": "ظ", "label": "ظ"},
+  {"id": "ط", "label": "ط"},
+  {"id": "ذ", "label": "ذ"},
+  {"id": "د", "label": "د"},
+  {"id": "ز", "label": "ز"},
+  {"id": "ر", "label": "ر"},
+  {"id": "و", "label": "و", "alternates": ["ؤ", "و"]},
+  {"id": "ى", "label": "ى"},
+  {"id": "gap-r", "label": "", "kind": "gap", "width": 0.6},
+  {"id": "backspace", "label": "", "kind": "backspace", "width": 1.4}
+ ],
+ [
+  {"id": "numbers", "label": "١٢٣", "kind": "page", "output": "numbers", "width": 1.375},
+  {"id": "lang", "label": "EN", "kind": "lang", "width": 1.375},
+  {"id": "space", "label": "", "kind": "space", "output": " ", "width": 4.125},
+  {"id": "tanween", "label": "◌ً", "output": "ً", "popup": false, "width": 1.375},
+  {"id": "return", "label": "", "kind": "return", "output": "\n", "width": 2.75}
+ ]
+ ]
+}

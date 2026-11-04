@@ -1,23 +1,29 @@
 import Foundation
 
-/// A keyboard page (SPEC 5.1). Key widths are in key units (1.0 = one standard letter key).
+/// A keyboard page (SPEC 5.1), built from docs/reference. Key widths are in key units (1.0 = one
+/// letter key pitch of this page). Rows are in visual left-to-right order, Arabic included.
 public struct Layout: Codable, Sendable {
     public let id: String
     public let lang: Lang
     public let rows: [[Key]]
 
     public struct Key: Codable, Sendable {
-        public enum Kind: String, Codable, Sendable { case char, shift, backspace, space, `return`, globe, lang, page }
+        /// `gap` is blank space (Apple's EN row 3 and AR row 3). For `page` keys, `output` names the
+        /// target page ("letters", "numbers", "symbols").
+        public enum Kind: String, Codable, Sendable { case char, shift, backspace, space, `return`, globe, lang, page, gap }
 
         public let id: String
         public let label: String
         public let output: String
         public let width: Double
         public let kind: Kind
+        /// Long-press strip, visual left to right, including the key's own output.
         public let alternates: [String]
         public let popup: Bool
+        /// Small top-row digit, drawn in the corner and preselected in the long-press strip.
+        public let hint: String?
 
-        enum CodingKeys: String, CodingKey { case id, label, output, width, kind, alternates, popup }
+        enum CodingKeys: String, CodingKey { case id, label, output, width, kind, alternates, popup, hint }
 
         /// Only `id` and `label` are required: output defaults to the label, width to 1,
         /// kind to char, and only char keys pop up by default.
@@ -30,6 +36,17 @@ public struct Layout: Codable, Sendable {
             kind = try c.decodeIfPresent(Kind.self, forKey: .kind) ?? .char
             alternates = try c.decodeIfPresent([String].self, forKey: .alternates) ?? []
             popup = try c.decodeIfPresent(Bool.self, forKey: .popup) ?? (kind == .char)
+            hint = try c.decodeIfPresent(String.self, forKey: .hint)
+        }
+
+        init(id: String, label: String, output: String, width: Double, kind: Kind,
+             alternates: [String] = [], popup: Bool = false, hint: String? = nil) {
+            (self.id, self.label, self.output, self.width, self.kind) = (id, label, output, width, kind)
+            (self.alternates, self.popup, self.hint) = (alternates, popup, hint)
+        }
+
+        func resized(by delta: Double) -> Key {
+            Key(id: id, label: label, output: output, width: width + delta, kind: kind, alternates: alternates, popup: popup, hint: hint)
         }
     }
 
@@ -40,14 +57,32 @@ public struct Layout: Codable, Sendable {
         return try? JSONDecoder().decode(Layout.self, from: data)
     }
 
+    /// The width of the widest row, in key units.
+    public var widestRow: Double { rows.map(Self.width).max() ?? 0 }
+
+    static func width(_ row: [Key]) -> Double { row.reduce(0) { $0 + $1.width } }
+
+    /// SPEC 5.2: when iOS asks for our own globe key, it goes left of the EN/AR key, and the space
+    /// bar gives up the room.
+    public func withGlobeKey() -> Layout {
+        let rows = rows.map { row -> [Key] in
+            guard let lang = row.firstIndex(where: { $0.kind == .lang }),
+                  let space = row.firstIndex(where: { $0.kind == .space }) else { return row }
+            let globe = Key(id: "globe", label: "", output: "", width: row[lang].width, kind: .globe)
+            var out = row
+            out[space] = row[space].resized(by: -globe.width)
+            out.insert(globe, at: lang)
+            return out
+        }
+        return Layout(id: id, lang: lang, rows: rows)
+    }
+
     /// Char key output -> key center in key units. x counts key widths from the left edge of the
     /// widest row (narrower rows are centered); y counts rows, so row 0 centers at y = 0.5.
     public func keyCenters() -> [String: Point] {
-        let rowWidths = rows.map { $0.reduce(0) { $0 + $1.width } }
-        let widest = rowWidths.max() ?? 0
         var centers: [String: Point] = [:]
         for (y, row) in rows.enumerated() {
-            var x = (widest - rowWidths[y]) / 2
+            var x = (widestRow - Self.width(row)) / 2
             for key in row {
                 if key.kind == .char { centers[key.output] = Point(x: x + key.width / 2, y: Double(y) + 0.5) }
                 x += key.width

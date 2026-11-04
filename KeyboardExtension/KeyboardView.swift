@@ -1,0 +1,373 @@
+import KalamEngine
+import UIKit
+
+protocol KeyboardViewDelegate: AnyObject {
+    /// Every key, on touch-down (feedback, shift, the first backspace).
+    func keyDown(_ key: Layout.Key)
+    /// Non-char keys on touch-up (space, return, page, lang). Not sent for a space drag.
+    func keyUp(_ key: Layout.Key)
+    /// A char key's text; `point` is the commit point in key units, nil for a long-press pick.
+    func commit(_ text: String, at point: Point?)
+    func backspaceRepeated(_ count: Int)
+    func moveCursor(by offset: Int)
+}
+
+/// The host's return key (SPEC 5.2): a title for non-default types, nil for the ⏎ icon.
+struct ReturnKeyStyle: Equatable {
+    var title: String?
+    var prominent = false
+    var enabled = true
+}
+
+/// One view with layer-drawn keys and raw touch handling (SPEC D1, 5.2). It covers the suggestion
+/// bar too, so popups can rise over it, but only takes touches in the key area.
+final class KeyboardView: UIView {
+    static let barHeight: CGFloat = 44
+    static let height = barHeight + KeyGeometry.height
+
+    weak var delegate: KeyboardViewDelegate?
+
+    var layout: Layout? { didSet { rebuild() } }
+    var shift: ShiftState.Mode = .off { didSet { if shift != oldValue { refreshContents() } } }
+    var returnKey = ReturnKeyStyle() { didSet { if returnKey != oldValue { refreshContents() } } }
+    var palette = Palette.light { didSet { refreshColors() } }
+    var showsHints = true
+
+    private var geometry: KeyGeometry?
+    private var builtWidth: CGFloat = 0
+    private var caps: [String: CALayer] = [:]
+    private var presses: [Press] = []
+    private let glyphs = GlyphCache()
+    private let popups = PopupLayers()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isMultipleTouchEnabled = true
+        layer.addSublayer(popups.bubble)
+        layer.addSublayer(popups.strip)
+        registerForTraitChanges([UITraitDisplayScale.self]) { (self: Self, _) in self.rebuild() }
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        point.y >= Self.barHeight && super.point(inside: point, with: event)
+    }
+
+    /// The globe key's cap frame, for the system's input-mode button placed over it.
+    var globeFrame: CGRect? { geometry?.frames.first { $0.key.kind == .globe }?.cap }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if bounds.width != builtWidth { rebuild() }
+    }
+
+    // MARK: Drawing
+
+    private func rebuild() {
+        caps.values.forEach { $0.removeFromSuperlayer() }
+        caps = [:]
+        builtWidth = bounds.width
+        guard let layout, bounds.width > 0 else { geometry = nil; return }
+        glyphs.scale = traitCollection.displayScale
+        popups.scale = glyphs.scale
+        let geometry = KeyGeometry(layout: layout, width: bounds.width, origin: CGPoint(x: 0, y: Self.barHeight))
+        self.geometry = geometry
+        for frame in geometry.frames {
+            let cap = CALayer()
+            cap.frame = frame.cap
+            cap.cornerRadius = 7.7
+            cap.cornerCurve = .continuous
+            cap.addSublayer(CALayer())  // label
+            cap.addSublayer(CALayer())  // hint or space mark
+            cap.sublayers?.forEach { $0.contentsScale = glyphs.scale }
+            layer.insertSublayer(cap, below: popups.bubble)
+            caps[frame.key.id] = cap
+        }
+        refreshColors()
+    }
+
+    private func refreshColors() {
+        for (id, cap) in caps { cap.backgroundColor = (isPressed(id) ? palette.keyPressed : palette.key).cgColor }
+        refreshContents()
+    }
+
+    private func refreshContents() {
+        guard let geometry else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for frame in geometry.frames {
+            guard let cap = caps[frame.key.id], let sublayers = cap.sublayers else { continue }
+            setContents(of: sublayers[0], in: cap.bounds, image: labelImage(frame.key), centeredAt: labelCenter(frame.key, in: cap.bounds))
+            let corner = cornerImage(frame.key)
+            setContents(of: sublayers[1], in: cap.bounds, image: corner, centeredAt: cornerCenter(frame.key, image: corner, in: cap.bounds))
+        }
+        CATransaction.commit()
+    }
+
+    private func setContents(of layer: CALayer, in bounds: CGRect, image: CGImage?, centeredAt center: CGPoint) {
+        layer.contents = image
+        guard let image else { return }
+        let size = CGSize(width: CGFloat(image.width) / glyphs.scale, height: CGFloat(image.height) / glyphs.scale)
+        layer.frame = CGRect(x: center.x - size.width / 2, y: center.y - size.height / 2, width: size.width, height: size.height)
+    }
+
+    private var isUppercase: Bool { shift != .off && layout?.lang == .en }
+
+    private func displayText(_ key: Layout.Key) -> String {
+        isUppercase && key.kind == .char ? key.label.uppercased() : key.label
+    }
+
+    /// Punctuation that Apple draws on the text baseline, without case-sensitive forms.
+    private static let baselinePunctuation: Set<String> = [".", ",", ":", ";", "،", "؛"]
+    /// Of those, the ones Apple sets a point lower still.
+    private static let lowPunctuation: Set<String> = [".", ",", "،"]
+
+    /// Arabic letters and Eastern digits (not the Latin or symbol keys of the Arabic pages).
+    private static func isArabicScript(_ text: String) -> Bool {
+        text.unicodeScalars.allSatisfy { !$0.isASCII } && text.unicodeScalars.contains { $0.properties.isAlphabetic || $0.properties.numericType != nil }
+    }
+
+    private func font(for key: Layout.Key, text: String) -> UIFont {
+        let arabicScript = Self.isArabicScript(text)
+        switch key.kind {
+        case .char where text.unicodeScalars.first == "\u{25CC}": return KeyFont.tanween
+        case .char where arabicScript: return KeyFont.arabic
+        case .char where Self.baselinePunctuation.contains(text): return KeyFont.uppercase
+        case .char:
+            guard text.first?.isLetter == true else { return KeyFont.symbol }
+            return text == text.lowercased() ? KeyFont.lowercase : KeyFont.uppercase
+        case .page where key.output == "symbols": return KeyFont.symbolsPage
+        case .page where layout?.id.hasSuffix("symbols") == true && key.output == "numbers": return arabicScript ? KeyFont.arabicNumbersPage : KeyFont.numbersPage
+        default: return arabicScript ? KeyFont.arabicFunction : KeyFont.function
+        }
+    }
+
+    private func labelImage(_ key: Layout.Key) -> CGImage? {
+        let isAR = layout?.lang == .ar
+        switch key.kind {
+        case .shift:
+            let name = shift == .locked ? "capslock.fill" : shift == .once ? "shift.fill" : "shift"
+            return glyphs.symbol(name, size: KeyFont.iconSize, color: palette.label)
+        case .backspace: return glyphs.symbol("delete.left", size: KeyFont.iconSize, color: palette.label)
+        case .globe: return glyphs.symbol("globe", size: KeyFont.iconSize, color: palette.label)
+        case .space, .gap: return nil
+        case .return:
+            let color = returnKey.prominent ? UIColor.white : returnKey.enabled ? palette.label : palette.secondaryLabel
+            guard let title = returnKey.title else { return glyphs.symbol(isAR ? "return.right" : "return.left", size: KeyFont.iconSize, color: color) }
+            return glyphs.text(title, font: KeyFont.function, color: color)
+        default:
+            let text = displayText(key)
+            return glyphs.text(text, font: font(for: key, text: text), color: palette.label)
+        }
+    }
+
+    /// Vertical nudges from the captures: lowercase letters sit higher than the line box centers
+    /// them; the shift, delete and Arabic return icons and the #+= page's 123 label sit lower.
+    private func labelCenter(_ key: Layout.Key, in bounds: CGRect) -> CGPoint {
+        let lowercase = key.kind == .char && layout?.lang == .en && !isUppercase && key.label.first?.isLetter == true
+        let offset: CGFloat = switch key.kind {
+        case .shift, .backspace: 0.5
+        case .return where layout?.lang == .ar && returnKey.title == nil: 0.7
+        case .page where layout?.id.hasSuffix("symbols") == true && key.output == "numbers": 0.3
+        case .char where lowercase: -2.5
+        case .char where Self.lowPunctuation.contains(key.label): 1
+        case .char where Self.isArabicScript(key.label) || Self.baselinePunctuation.contains(key.label): 0
+        default: -1
+        }
+        return CGPoint(x: bounds.midX, y: bounds.midY + offset)
+    }
+
+    private func cornerImage(_ key: Layout.Key) -> CGImage? {
+        if key.kind == .space { return glyphs.text(layout?.lang == .ar ? "ع" : "A", font: KeyFont.spaceMark, color: palette.secondaryLabel) }
+        guard showsHints, let hint = key.hint else { return nil }
+        return glyphs.text(hint, font: KeyFont.hint, color: palette.secondaryLabel)
+    }
+
+    private func cornerCenter(_ key: Layout.Key, image: CGImage?, in bounds: CGRect) -> CGPoint {
+        guard let image else { return .zero }
+        let size = CGSize(width: CGFloat(image.width) / glyphs.scale, height: CGFloat(image.height) / glyphs.scale)
+        let bottom = key.kind == .space
+        return CGPoint(x: bounds.maxX - (bottom ? 5 : 4) - size.width / 2,
+                       y: bottom ? bounds.maxY - 2 - size.height / 2 : 2 + size.height / 2)
+    }
+
+    private func isPressed(_ id: String) -> Bool { presses.contains { $0.frame.key.id == id } }
+
+    private func setPressed(_ frame: KeyGeometry.Frame, _ pressed: Bool) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        caps[frame.key.id]?.backgroundColor = (pressed ? palette.keyPressed : palette.key).cgColor
+        CATransaction.commit()
+    }
+
+    private func setLabelsHidden(_ hidden: Bool) {
+        caps.values.forEach { $0.sublayers?.forEach { $0.isHidden = hidden } }
+    }
+
+    // MARK: Touches
+
+    /// One finger on a key.
+    private final class Press {
+        let touch: UITouch
+        var frame: KeyGeometry.Frame
+        let start: CGPoint
+        var timer: Timer?
+        var strip: [String]?
+        var selected = 0
+        var trackpad: Trackpad?
+        var repeats = 0
+
+        init(touch: UITouch, frame: KeyGeometry.Frame, start: CGPoint) {
+            (self.touch, self.frame, self.start) = (touch, frame, start)
+        }
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches {
+            // SPEC 5.2 rollover: a new touch commits any letter still waiting for its touch-up.
+            for press in presses where press.frame.key.kind == .char && press.strip == nil {
+                commit(press)
+                finish(press)
+            }
+            let point = touch.location(in: self)
+            guard let frame = geometry?.key(at: point) else { continue }
+            let press = Press(touch: touch, frame: frame, start: point)
+            presses.append(press)
+            setPressed(frame, true)
+            delegate?.keyDown(frame.key)
+            begin(press)
+        }
+    }
+
+    private func begin(_ press: Press) {
+        let key = press.frame.key
+        switch key.kind {
+        case .char:
+            if key.popup { popups.showBubble(over: press.frame.cap, image: bubbleImage(key), palette: palette) }
+            scheduleLongPress(press)
+        case .backspace:
+            press.timer = after(BackspaceRepeat.delay) { [weak self, weak press] in
+                guard let press else { return }
+                press.timer = Timer.scheduledTimer(withTimeInterval: BackspaceRepeat.interval, repeats: true) { [weak self, weak press] _ in
+                    guard let press else { return }
+                    self?.delegate?.backspaceRepeated(press.repeats)
+                    press.repeats += 1
+                }
+            }
+        case .space:
+            press.timer = after(0.4) { [weak self, weak press] in
+                guard let press else { return }
+                self?.startTrackpad(press)
+            }
+        default: break
+        }
+    }
+
+    private func scheduleLongPress(_ press: Press) {
+        press.timer?.invalidate()
+        let key = press.frame.key
+        let items = (key.hint.map { [$0] } ?? []) + key.alternates
+        guard !items.isEmpty else { return }
+        press.timer = after(0.35) { [weak self, weak press] in
+            guard let self, let press else { return }
+            press.strip = items.map { self.isUppercase ? $0.uppercased() : $0 }
+            press.selected = key.hint == nil ? items.firstIndex(of: key.output) ?? 0 : 0
+            self.popups.hideBubble()
+            self.popups.showStrip(items: press.strip ?? [], selected: press.selected, over: press.frame.cap,
+                                  in: self.bounds, glyph: { self.stripImage($0) }, palette: self.palette)
+        }
+    }
+
+    private func after(_ delay: TimeInterval, _ action: @escaping () -> Void) -> Timer {
+        Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { _ in action() }
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches {
+            guard let press = presses.first(where: { $0.touch === touch }) else { continue }
+            let point = touch.location(in: self)
+            switch press.frame.key.kind {
+            case .char where press.strip != nil:
+                press.selected = popups.stripIndex(at: point.x)
+                popups.select(press.selected, palette: palette)
+            case .char:
+                slide(press, to: point)
+            case .space:
+                if press.trackpad == nil, abs(point.x - press.start.x) > Trackpad.startDistance { startTrackpad(press) }
+                if var pad = press.trackpad {
+                    let offset = pad.offset(toX: Double(point.x))
+                    press.trackpad = pad
+                    if offset != 0 { delegate?.moveCursor(by: offset) }
+                }
+            default: break
+            }
+        }
+    }
+
+    /// SPEC 5.2: the finger may slide; the popup follows it to the char key under it.
+    private func slide(_ press: Press, to point: CGPoint) {
+        guard let frame = geometry?.key(at: point), frame.key.kind == .char, frame.key.id != press.frame.key.id else { return }
+        setPressed(press.frame, false)
+        press.frame = frame
+        setPressed(frame, true)
+        if frame.key.popup { popups.showBubble(over: frame.cap, image: bubbleImage(frame.key), palette: palette) } else { popups.hideBubble() }
+        scheduleLongPress(press)
+    }
+
+    private func startTrackpad(_ press: Press) {
+        press.timer?.invalidate()
+        guard press.trackpad == nil else { return }
+        press.trackpad = Trackpad(startX: Double(press.touch.location(in: self).x), rightToLeft: layout?.lang == .ar)
+        setLabelsHidden(true)
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches {
+            guard let press = presses.first(where: { $0.touch === touch }) else { continue }
+            switch press.frame.key.kind {
+            case .char: commit(press)
+            case .space where press.trackpad != nil: break
+            case .backspace, .shift, .gap, .globe: break
+            default: delegate?.keyUp(press.frame.key)
+            }
+            finish(press)
+        }
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches {
+            if let press = presses.first(where: { $0.touch === touch }) { finish(press) }
+        }
+    }
+
+    private func commit(_ press: Press) {
+        if let strip = press.strip {
+            delegate?.commit(strip[press.selected], at: nil)
+        } else {
+            delegate?.commit(press.frame.key.output, at: geometry?.keyUnits(press.touch.location(in: self)))
+        }
+    }
+
+    private func finish(_ press: Press) {
+        press.timer?.invalidate()
+        presses.removeAll { $0 === press }
+        setPressed(press.frame, isPressed(press.frame.key.id))
+        if press.trackpad != nil { setLabelsHidden(false) }
+        if press.frame.key.kind == .char {
+            popups.hideBubble()
+            if press.strip != nil { popups.hideStrip() }
+        }
+    }
+
+    private func bubbleImage(_ key: Layout.Key) -> CGImage? {
+        let text = displayText(key)
+        let base = font(for: key, text: text)
+        return glyphs.text(text, font: base.withSize(base.pointSize * 1.35), color: palette.label)
+    }
+
+    private func stripImage(_ text: String) -> CGImage? {
+        glyphs.text(text, font: layout?.lang == .ar ? KeyFont.arabic : KeyFont.uppercase, color: palette.label)
+    }
+}
