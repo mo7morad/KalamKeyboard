@@ -20,12 +20,15 @@ struct ReturnKeyStyle: Equatable {
 }
 
 /// One view with layer-drawn keys and raw touch handling (SPEC D1, 5.2). It covers the suggestion
-/// bar too, so popups can rise over it, but only takes touches in the key area.
+/// bar too, so popups can rise over it, but only takes touches in the key area and the bar's bottom edge.
 final class KeyboardView: UIView {
     /// Apple's is 44. Some host apps get about 16 pt of extra system panel above Kalam's view and
     /// some don't, so the bar is sized for none: 30 was cramped there (device round 2).
     static let barHeight: CGFloat = 40
     static let height = barHeight + KeyGeometry.height
+    /// How far the top row's touch area reaches up into the bar. Moe's top-row taps run right up
+    /// to the bar, and taps landing in it were lost (device round 2 trace).
+    static let topRowReach: CGFloat = 12
 
     weak var delegate: KeyboardViewDelegate?
 
@@ -54,7 +57,7 @@ final class KeyboardView: UIView {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        point.y >= Self.barHeight && super.point(inside: point, with: event)
+        point.y >= Self.barHeight - Self.topRowReach && super.point(inside: point, with: event)
     }
 
     /// The globe key's cap frame, for the system's input-mode button placed over it.
@@ -183,7 +186,8 @@ final class KeyboardView: UIView {
 
     private func cornerImage(_ key: Layout.Key) -> CGImage? {
         if key.kind == .space { return glyphs.text(layout?.lang == .ar ? "ع" : "A", font: KeyFont.spaceMark, color: palette.secondaryLabel) }
-        guard showsHints, let hint = key.hint else { return nil }
+        // Not on Arabic, like Apple: the corner digit sat on the letters' dots (ف غ خ ث ق).
+        guard showsHints, layout?.lang != .ar, let hint = key.hint else { return nil }
         return glyphs.text(hint, font: KeyFont.hint, color: palette.secondaryLabel)
     }
 

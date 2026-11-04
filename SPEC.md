@@ -113,11 +113,11 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
 - Built from the screenshots in `docs/reference/`, then compared side by side with them.
 - Arabic alternates must include at least: ا → أ إ آ ء, ي → ى ئ, و → ؤ, ه → ة. Arabic punctuation: ، ؛ ؟.
 - The AR bottom row is `[١٢٣] [EN] [space] [◌ً] [return]`. Holding the tanween key ◌ً opens Apple's tashkeel strip, visual left to right: ◌ٓ ◌ٰ ـ ◌ْ ◌ِ ◌ُ ◌ّ [◌ً] ◌َ ◌ٍ ◌ٌ (fathatan selected). Marks draw on a dotted circle; the output is the bare mark. English alternates follow Apple's accents.
-- Gboard-style long-press digits on the top row (q→1 … p→0; Arabic top row → digits, Western or Eastern per setting), with small hint labels (setting, default on). This also helps typing Franco words like "3ashan".
+- Gboard-style long-press digits on the top row (q→1 … p→0; Arabic top row → digits, Western or Eastern per setting), with small hint labels on the English top row (setting, default on; none on Arabic, like Apple, since they covered the letters' dots). This also helps typing Franco words like "3ashan".
 
 ### 5.2 Touch model
 
-- **Hit-testing:** every touch point maps to a key (nearest key, no dead zones).
+- **Hit-testing:** every touch point maps to a key (nearest key, no dead zones). Each row's hit band starts 5 pt above Apple's gap line, and the top row also takes the bar's bottom 12 pt: Moe's taps land high, and top-row taps that fell in the bar were lost (device round 2).
 - **Haptic and sound fire on touch-down.** A letter is output on touch-up, at the key under the finger. The finger may slide, and the popup follows it.
 - **Rollover:** a new touch-down immediately commits any pending letter, space (unless in trackpad mode) or return touch, through the same touch-up path. Touches that arrive together are handled in timestamp order.
 - **Tap recording:** record the commit point of every letter tap (in key units) as a `Tap`.

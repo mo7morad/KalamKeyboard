@@ -15,10 +15,12 @@ public struct KeyGeometry: Sendable {
     /// Space between neighbouring caps.
     static let capGap: CGFloat = 6
     /// Key area top to the first hit row.
-    static let topInset: CGFloat = 7
+    static let topInset: CGFloat = 2
     /// Apple's row spacing.
     public static let rowPitch: CGFloat = 54
-    static let capTop: CGFloat = 1.1
+    /// Hit row top to its caps. Moe's taps land about 7 pt above the caps' centers, so each row's
+    /// hit band starts 5 pt above where Apple's gaps would put it (device round 2 trace).
+    static let capTop: CGFloat = 6.1
     static let capHeight: CGFloat = 42.8
     /// Touch band under the bottom row's caps (it maps to the bottom row). Without it, taps aimed
     /// where Apple's lower space bar sits fall into iOS's globe strip and are lost (device round 2).
