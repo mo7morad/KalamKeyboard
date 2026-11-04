@@ -15,10 +15,9 @@ public struct KeyGeometry: Sendable {
     /// Space between neighbouring caps.
     static let capGap: CGFloat = 6
     /// Key area top to the first hit row.
-    static let topInset: CGFloat = 7
-    /// Apple's is 54. Tighter rows leave room for `bottomInset` with the panel top where device
-    /// round 2 put it (3 pt below Apple's).
-    public static let rowPitch: CGFloat = 51.5
+    static let topInset: CGFloat = 4  // with the 30 pt bar, the panel top to Q matches Apple's 51.7 pt
+    /// Apple's row spacing.
+    public static let rowPitch: CGFloat = 54
     static let capTop: CGFloat = 1.1
     static let capHeight: CGFloat = 42.8
     /// Touch band under the bottom row's caps (it maps to the bottom row). Without it, taps aimed

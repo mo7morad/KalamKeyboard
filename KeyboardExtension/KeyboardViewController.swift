@@ -121,6 +121,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     /// which can hold back and reorder fast edge keys (device round 1).
     private func stopDelayingTouches() {
         for view in sequence(first: view as UIView, next: \.superview) {
+            trace("frame \(type(of: view)) \(view.frame) in window \(view.convert(view.bounds, to: nil))")
             for recognizer in view.gestureRecognizers ?? [] {
                 trace("gesture \(type(of: view)) \(type(of: recognizer)) delaysTouchesBegan \(recognizer.delaysTouchesBegan)")
                 recognizer.delaysTouchesBegan = false

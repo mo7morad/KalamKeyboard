@@ -22,8 +22,9 @@ struct ReturnKeyStyle: Equatable {
 /// One view with layer-drawn keys and raw touch handling (SPEC D1, 5.2). It covers the suggestion
 /// bar too, so popups can rise over it, but only takes touches in the key area.
 final class KeyboardView: UIView {
-    /// Apple's bar is 44; 40 puts Kalam's panel top at Apple's (y=546 on an iPhone 17).
-    static let barHeight: CGFloat = 40
+    /// Apple's bar is 44. On the iPhone 17 (iOS 27.1) the system panel adds about 16 pt above
+    /// Kalam's view, so 30 plus that looks like Apple's bar (device round 2).
+    static let barHeight: CGFloat = 30
     static let height = barHeight + KeyGeometry.height
 
     weak var delegate: KeyboardViewDelegate?
