@@ -130,16 +130,20 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
 - **Popups:** a key popup appears on press (except on bottom-row keys).
   - A long-press of 0.35 s opens the alternates strip. Slide to select, and release to insert.
 - **Shift:** a tap shifts one letter; a double-tap within 0.3 s locks caps. Auto-shift follows 8.6.
+  - Slide from shift: a finger that went down on shift and is released on a letter types it capitalized, and shift is off afterwards (unless caps lock was on). Released on shift itself, it's a plain shift tap. Once on a letter, it slides like a letter press.
 - **Backspace:**
   - Touch-down deletes 1 character.
   - Holding for 0.45 s starts repeat deletion every 0.09 s.
   - After 15 repeats, it switches to whole-word deletion.
   - The delete sound plays on each deletion.
+  - Swipe left: past 12 pt left of the touch-down point, the repeat stops and the swipe deletes whole words live (`BackspaceRepeat.wordLength`), one more per 22 pt. The character the touch-down deleted is put back first, so only whole words go. Dragging back right puts the most recently deleted words back; back under 12 pt everything is as before the touch. Release keeps the result. The delete sound plays per word deleted. Words put back are treated like a paste: not autocorrected or learned again.
 - **Space:**
   - A tap inserts a space, which is also the autocorrect commit.
   - A horizontal drag of more than 12 pt, or a long-press of 0.4 s, enters trackpad mode: key labels hide, and the cursor moves via `adjustTextPosition` at about 1 character per 9 pt. Releasing exits.
 - **Double-space** → ". " when the previous character is a letter or digit (setting).
 - **Pages:** 123 and #+= pages work like Apple's. Typing space or ' on the 123 page returns to letters.
+  - A page key switches on touch-down. If the same finger slides onto a key of the new page and is released there, that key is typed and the keyboard returns to the page it came from (123 → a digit → letters). A plain tap just switches.
+- **Swipe down to hide:** `dismissKeyboard()` for a strict downward swipe only: it starts on a char key in rows 0 or 1, travels at least 70 pt down with under 30 pt sideways, within 0.3 s, with no alternates strip open. The letter isn't typed.
 - **Return:** the label comes from `returnKeyType`. It looks dimmed when `enablesReturnKeyAutomatically` is set and the field is empty.
 - **Bottom row:**
   - When `needsInputModeSwitchKey == false` (Face ID iPhones): `[123] [EN/AR] [space] [return]`.

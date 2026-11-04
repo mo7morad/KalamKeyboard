@@ -132,3 +132,17 @@ Setup: install a Debug build with Full Access on. Each run appends to the Debug 
 - [ ] The bar at 40 pt: suggestions, dividers, the clipboard button and chip, the "Don't suggest" overlay and the clipboard panel header are not clipped.
 - [ ] Haptics: at the max strength setting, compare a few taps with Apple's keyboard (Settings > Sounds & Haptics > Keyboard Feedback > Haptic on). Kalam should feel as strong and crisp or stronger. Too strong? ____
 - [ ] Sounds: at the same ringer volume, Kalam's key, delete and modifier clicks are louder than Apple's but the same character. The silent switch mutes them. Too loud? ____
+
+## Phase 8: Gboard gestures
+
+Setup: install a Debug build. Test in Notes, EN and AR.
+
+- [ ] Backspace swipe: type "one two three four", put the finger on backspace and slide left slowly. About every finger-width (22 pt) one more whole word goes, with a delete click per word. Slide back right: the words come back in order. Back to the start point: the text is exactly as before the touch. Release mid-way: the result stays. Too sensitive or too slow? ____
+- [ ] Backspace swipe in the middle of a word ("hello wor", cursor at the end): the first step deletes "wor" whole. Then type a new word: suggestions and autocorrect behave normally.
+- [ ] Hold backspace until it repeats, then slide left: the repeat stops and words go instead. Plain tap and hold-repeat still behave as before.
+- [ ] Right after an autocorrect (typed "teh " became "the "), a backspace swipe: no crash, words go, and the text looks right.
+- [ ] Slide from shift: with shift off, put the finger on shift, slide onto "h", release: "H", and shift is off after. Release on shift itself: shift toggles as a plain tap. With caps lock on: the letter is capital and caps lock is off after (say if you'd rather keep it) ____.
+- [ ] Slide from 123: put the finger on 123 (the numbers page shows at once), slide onto "5", release: "5" is typed and the letters page returns. Same from ١٢٣ in AR. A plain tap on 123 still just switches. From the 123 page, slide from #+= onto "%": typed, back to the 123 page.
+- [ ] Swipe down to hide: a quick, straight swipe down starting on a top-row or middle-row letter hides the keyboard and types nothing. A slow drag, a diagonal drag, or a swipe starting on z..m does not.
+- [ ] Fast two-thumb typing for a minute in EN and AR: the keyboard never hides by itself, no letters missing. Long-press strips (hold "e" and pick an accent) never hide it.
+- [ ] Rollover, slide between letters, long-press strips and the space trackpad all feel exactly as before.

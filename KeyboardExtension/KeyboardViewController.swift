@@ -18,6 +18,8 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
 
     private var lang = lastLanguage
     private var page = "letters"
+    /// The page a page key left, for a slide from it that ends on a key (SPEC 5.2).
+    private var slideReturnPage: String?
     private var shift = ShiftState()
 
     private static let lastLanguageKey = "lastLanguage"
@@ -283,12 +285,17 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         case .char: feedback.touchDown(.key)
         case .backspace:
             feedback.touchDown(.delete)
-            input.backspace(1)
+            input.backspaceDown()
         case .shift:
             feedback.touchDown(.modifier)
             shift.tap(at: ProcessInfo.processInfo.systemUptime)
             keyboardView.shift = shift.mode
             input.redrawBar()
+        case .page:  // on touch-down, like Apple, so the finger can slide onto the new page
+            feedback.touchDown(.modifier)
+            slideReturnPage = page
+            page = key.output
+            reloadLayout()
         default: feedback.touchDown(.modifier)
         }
     }
@@ -299,9 +306,6 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
             input.typeSpace()
             if page == "numbers" { showLetters() }
         case .return: input.typeReturn()
-        case .page:
-            page = key.output
-            reloadLayout()
         case .lang:
             lang = lang == .en ? .ar : .en
             Self.lastLanguage = lang
@@ -327,6 +331,21 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         let word = BackspaceRepeat.deletesWord(repeat: count)
         input.backspace(word ? BackspaceRepeat.wordLength(before: textDocumentProxy.documentContextBeforeInput ?? "") : 1)
         feedback.play(.delete)
+    }
+
+    func backspaceSwiped(words: Int) {
+        for _ in 0..<input.swipeBackspace(toWords: words) { feedback.play(.delete) }
+    }
+
+    func pageSlideEnded() {
+        guard let back = slideReturnPage else { return }
+        page = back
+        reloadLayout()
+    }
+
+    func hideKeyboard() {
+        trace("swipe down: dismiss")
+        dismissKeyboard()
     }
 
     func moveCursor(by offset: Int) {

@@ -38,6 +38,10 @@ final class InputController {
     /// The text before the cursor after our last edit, to tell our edits from the host's.
     private var expectedBefore: String?
     private var shown: EngineClient.Result?
+    /// SPEC 5.2 backspace swipe: the character the touch-down deleted, until a swipe puts it back
+    /// or a repeat follows, and the words the swipe deleted, most recent last.
+    private var swipeRestore: String?
+    private var swipeDeleted: [String] = []
 
     init(proxy: UITextDocumentProxy, client: EngineClient) {
         self.proxy = proxy
@@ -98,6 +102,7 @@ final class InputController {
     /// Backspace (count 1) or a whole-word repeat step. The first backspace right after an
     /// autocorrect restores the literal and drops the auto-space in one go.
     func backspace(_ count: Int) {
+        swipeRestore = nil
         if count == 1, let undo, before.hasSuffix(undo.replacement + " ") {
             self.undo = nil
             delete(undo.replacement.count + 1)
@@ -120,6 +125,37 @@ final class InputController {
             client.backspaced(into: literal, lang: lang)
         }
         refresh()
+    }
+
+    /// Backspace touch-down: one character, which a swipe that follows puts back (not an autocorrect undo).
+    func backspaceDown() {
+        let old = before
+        backspace(1)
+        swipeRestore = before == String(old.dropLast()) ? old.last.map(String.init) : nil
+        swipeDeleted = []
+    }
+
+    /// SPEC 5.2 backspace swipe, live: deletes or puts back whole words until `words` are gone.
+    /// Returns how many words this step deleted, for the delete sound.
+    func swipeBackspace(toWords words: Int) -> Int {
+        undo = nil
+        if let restore = swipeRestore {  // the swipe works in whole words
+            swipeRestore = nil
+            insert(restore)
+        }
+        var deleted = 0
+        while swipeDeleted.count < words, !before.isEmpty {
+            let word = String(before.suffix(BackspaceRepeat.wordLength(before: before)))
+            delete(word.count)
+            swipeDeleted.append(word)
+            deleted += 1
+        }
+        while swipeDeleted.count > words, let word = swipeDeleted.popLast() { insert(word) }
+        // Like a paste: a word put back is neither autocorrected nor learned again.
+        taps = resyncedTaps([], to: currentWord(before: before))
+        pastedWord = taps.isEmpty ? nil : literal
+        refresh()
+        return deleted
     }
 
     // MARK: Suggestion bar

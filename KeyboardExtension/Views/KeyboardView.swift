@@ -2,13 +2,18 @@ import KalamEngine
 import UIKit
 
 protocol KeyboardViewDelegate: AnyObject {
-    /// Every key, on touch-down (feedback, shift, the first backspace).
+    /// Every key, on touch-down (feedback, shift, page, the first backspace).
     func keyDown(_ key: Layout.Key)
-    /// Non-char keys on touch-up (space, return, page, lang). Not sent for a space drag.
+    /// Non-char keys on touch-up (space, return, lang). Not sent for a space drag.
     func keyUp(_ key: Layout.Key)
     /// A char key's text; `point` is the commit point in key units, nil for a long-press pick.
     func commit(_ text: String, at point: Point?)
     func backspaceRepeated(_ count: Int)
+    /// A backspace swipe now `words` steps to the left (0 puts everything back).
+    func backspaceSwiped(words: Int)
+    /// A finger that went down on a page key typed a key of the new page.
+    func pageSlideEnded()
+    func hideKeyboard()
     func moveCursor(by offset: Int)
 }
 
@@ -218,15 +223,20 @@ final class KeyboardView: UIView {
     private final class Press {
         let touch: UITouch
         var frame: KeyGeometry.Frame
+        /// The kind of key it went down on; a shift or page press may slide onto a char key.
+        let origin: Layout.Key.Kind
         let start: CGPoint
+        let startTime: TimeInterval
         var timer: Timer?
         var strip: [String]?
         var selected = 0
         var trackpad: Trackpad?
         var repeats = 0
+        var swipeWords: Int?
 
         init(touch: UITouch, frame: KeyGeometry.Frame, start: CGPoint) {
             (self.touch, self.frame, self.start) = (touch, frame, start)
+            (origin, startTime) = (frame.key.kind, touch.timestamp)
         }
     }
 
@@ -253,7 +263,7 @@ final class KeyboardView: UIView {
         let key = press.frame.key
         switch key.kind {
         case .char:
-            if key.popup { popups.showBubble(over: press.frame.cap, image: bubbleImage(key), palette: palette) }
+            if key.popup { popups.showBubble(over: press.frame.cap, image: bubbleImage(key, text: displayText(key)), palette: palette) }
             scheduleLongPress(press)
         case .backspace:
             press.timer = after(BackspaceRepeat.delay) { [weak self, weak press] in
@@ -301,7 +311,11 @@ final class KeyboardView: UIView {
                 press.selected = popups.stripIndex(at: point.x)
                 popups.select(press.selected, palette: palette)
             case .char:
+                if !hidesOnSwipeDown(press, at: point) { slide(press, to: point) }
+            case .shift, .page:
                 slide(press, to: point)
+            case .backspace:
+                swipeBackspace(press, to: point)
             case .space:
                 if press.trackpad == nil, abs(point.x - press.start.x) > Trackpad.startDistance { startTrackpad(press) }
                 if var pad = press.trackpad {
@@ -314,15 +328,44 @@ final class KeyboardView: UIView {
         }
     }
 
-    /// SPEC 5.2: the finger may slide; the popup follows it to the char key under it.
+    /// SPEC 5.2: the finger may slide; the popup follows it to the char key under it. A finger
+    /// from shift or a page key becomes a char press this way.
     private func slide(_ press: Press, to point: CGPoint) {
         guard let frame = geometry?.key(at: point), frame.key.kind == .char, frame.key.id != press.frame.key.id else { return }
         trace("slide \(press.frame.key.id) -> \(frame.key.id)")
         setPressed(press.frame, false)
         press.frame = frame
         setPressed(frame, true)
-        if frame.key.popup { popups.showBubble(over: frame.cap, image: bubbleImage(frame.key), palette: palette) } else { popups.hideBubble() }
+        let text = press.origin == .shift ? frame.key.label.uppercased() : displayText(frame.key)  // shift may be off by now
+        let image = bubbleImage(frame.key, text: text)
+        if frame.key.popup { popups.showBubble(over: frame.cap, image: image, palette: palette) } else { popups.hideBubble() }
         scheduleLongPress(press)
+    }
+
+    /// SPEC 5.2 swipe down to hide: the letter isn't typed.
+    private func hidesOnSwipeDown(_ press: Press, at point: CGPoint) -> Bool {
+        guard press.origin == .char, let geometry,
+              SwipeDownHide.triggers(startRow: Int(geometry.keyUnits(press.start).y), dx: Double(point.x - press.start.x),
+                                     dy: Double(point.y - press.start.y), elapsed: press.touch.timestamp - press.startTime)
+        else { return false }
+        trace("swipe down from \(press.frame.key.id)")
+        finish(press)
+        delegate?.hideKeyboard()
+        return true
+    }
+
+    /// SPEC 5.2 backspace swipe: past the start distance the repeat stops and whole words go, live.
+    private func swipeBackspace(_ press: Press, to point: CGPoint) {
+        let dx = Double(press.start.x - point.x)
+        if press.swipeWords == nil {
+            guard dx > BackspaceSwipe.startDistance else { return }
+            press.timer?.invalidate()
+            trace("backspace swipe")
+        }
+        let words = BackspaceSwipe.words(left: dx)
+        guard words != press.swipeWords else { return }
+        press.swipeWords = words
+        delegate?.backspaceSwiped(words: words)
     }
 
     private func startTrackpad(_ press: Press) {
@@ -361,9 +404,11 @@ final class KeyboardView: UIView {
     /// that act on touch-down).
     private func release(_ press: Press) {
         switch press.frame.key.kind {
-        case .char: commit(press)
+        case .char:
+            commit(press)
+            if press.origin == .page { delegate?.pageSlideEnded() }
         case .space where press.trackpad != nil: break
-        case .backspace, .shift, .gap, .globe: break
+        case .backspace, .shift, .page, .gap, .globe: break
         default:
             trace("keyUp \(press.frame.key.kind)")
             delegate?.keyUp(press.frame.key)
@@ -372,7 +417,8 @@ final class KeyboardView: UIView {
     }
 
     private func commit(_ press: Press) {
-        let text = press.strip.map { $0[press.selected] } ?? press.frame.key.output
+        let picked = press.strip.map { $0[press.selected] } ?? press.frame.key.output
+        let text = press.origin == .shift ? picked.uppercased() : picked  // shift may be off by now
         let point = press.strip == nil ? geometry?.keyUnits(press.touch.location(in: self)) : nil
         trace("commit \(text.debugDescription)")
         delegate?.commit(text, at: point)
@@ -397,8 +443,7 @@ final class KeyboardView: UIView {
         }
     }
 
-    private func bubbleImage(_ key: Layout.Key) -> CGImage? {
-        let text = displayText(key)
+    private func bubbleImage(_ key: Layout.Key, text: String) -> CGImage? {
         let base = font(for: key, text: text)
         return glyphs.text(text, font: base.withSize(base.pointSize * 1.35), color: palette.label)
     }

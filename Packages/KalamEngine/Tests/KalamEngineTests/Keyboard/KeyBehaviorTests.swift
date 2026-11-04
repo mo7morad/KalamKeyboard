@@ -76,3 +76,20 @@ func wordDeleteLength(before: String, expected: Int) {
     var arabic = Trackpad(startX: 100, rightToLeft: true)
     #expect(arabic.offset(toX: 118) == -2)
 }
+
+@Test(arguments: [(0.0, 0), (12, 0), (12.5, 1), (33.9, 1), (34, 2), (100, 5), (-40, 0)])
+func backspaceSwipeDeletesOneMoreWordEvery22Points(dx: Double, expected: Int) {
+    #expect(BackspaceSwipe.words(left: dx) == expected)
+}
+
+@Test(arguments: [
+    (0, 0.0, 70.0, 0.2, true),
+    (1, 29, 120, 0.3, true),
+    (2, 0, 80, 0.1, false),  // starts on the bottom letter row
+    (0, 0, 69, 0.1, false),  // too short
+    (0, 30, 90, 0.1, false),  // too sideways
+    (0, 0, 90, 0.31, false),  // too slow
+] as [(Int, Double, Double, Double, Bool)])
+func swipeDownHidesOnlyWhenFastStraightAndFromTheUpperRows(row: Int, dx: Double, dy: Double, elapsed: Double, expected: Bool) {
+    #expect(SwipeDownHide.triggers(startRow: row, dx: dx, dy: dy, elapsed: elapsed) == expected)
+}

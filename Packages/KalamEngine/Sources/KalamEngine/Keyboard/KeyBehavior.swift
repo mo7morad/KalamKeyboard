@@ -100,3 +100,27 @@ public struct Trackpad: Sendable {
         return Int(steps * direction)
     }
 }
+
+/// SPEC 5.2 backspace swipe: a leftward drag past 12 pt deletes whole words, one more per 22 pt.
+public enum BackspaceSwipe {
+    public static let startDistance: Double = 12
+    static let pointsPerWord: Double = 22
+
+    /// Words deleted with the finger `dx` points left of where it went down (negative is right).
+    public static func words(left dx: Double) -> Int {
+        dx <= startDistance ? 0 : Int((dx - startDistance) / pointsPerWord) + 1
+    }
+}
+
+/// SPEC 5.2 swipe down to hide: strict, so fast typing never triggers it.
+public enum SwipeDownHide {
+    static let minDown: Double = 70
+    static let maxSideways: Double = 30
+    static let maxDuration: TimeInterval = 0.3
+
+    /// A touch that went down on a letter in `startRow` (0 is the top row) and has since moved
+    /// `dx`, `dy` points (down is positive) over `elapsed` seconds.
+    public static func triggers(startRow: Int, dx: Double, dy: Double, elapsed: TimeInterval) -> Bool {
+        startRow <= 1 && dy >= minDown && abs(dx) < maxSideways && elapsed <= maxDuration
+    }
+}
