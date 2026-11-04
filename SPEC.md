@@ -150,7 +150,7 @@ There is a single `FeedbackPlayer`, called on touch-down for every key.
   - One `UIImpactFeedbackGenerator(style: .rigid)` (stronger and crisper than `.light`, device round 1).
   - Call `prepare()` on keyboard appear and after each fire.
   - `impactOccurred(intensity:)` with the intensity setting (0.3 to 1.0, default 0.7).
-- **Sound:** Apple's key sounds as they are, played by system ID (Moe preferred them to the +7.5 dB copies of device round 1). The "Louder" setting (0 to 1, default 0) adds up to +7.5 dB: the keyboard scales the bundled 16-bit WAV copies of `key_press_click`, `key_press_delete` and `key_press_modifier` (`docs/reference/harness/sounds.md`), writes them to its temp folder and registers them with `AudioServicesCreateSystemSoundID`. If one fails to load, its system ID plays instead and the failure is logged.
+- **Sound:** Apple's key sounds as they are, played by system ID (Moe preferred them to the +7.5 dB copies of device round 1). The "Louder" setting (0 to 1 in steps of 0.01, default 0): 0 plays the system IDs; above 0 the keyboard plays copies from -30 dB up to +7.5 dB, because a registered sound plays much louder than the system keyboard click at the same level (device round 2). It scales the bundled 16-bit WAV copies of `key_press_click`, `key_press_delete` and `key_press_modifier` (`docs/reference/harness/sounds.md`), writes them to its temp folder and registers them with `AudioServicesCreateSystemSoundID`. If one fails to load, its system ID plays instead and the failure is logged.
   - Letters, digits and punctuation → click (1104); backspace → delete (1155); shift, 123, EN/AR, globe, return and space → modifier (1156).
   - Verify this mapping by ear against Apple's keyboard on the device and adjust the table if needed.
 - Never use `AVAudioPlayer` or `AVAudioSession` in the extension.
@@ -469,7 +469,6 @@ Settings are stored in App Group `UserDefaults`:
 | Top-row digit hints | on |
 | Pause learning | off |
 | Clipboard (5.5) | on |
-| Debug overlay (Debug builds only) | off |
 
 ## 11. Performance and memory budgets
 
@@ -479,7 +478,7 @@ Settings are stored in App Group `UserDefaults`:
 - **Startup:** the keyboard draws immediately and the lexicon is mapped on the engine queue. First suggestions appear ≤ 150 ms after the keyboard appears.
 - **Instrumentation:**
   - A footprint probe (`task_info` / `TASK_VM_INFO` → `phys_footprint`, plus `os_proc_available_memory()` headroom) logged via `Logger`.
-  - A Debug-only overlay showing MB, headroom and the last suggestion latency, compiled out of Release.
+  - No on-screen readout: Moe asked for the Debug overlay to go (device round 2). Latency is in the per-session p95 log.
 - **Budget guard tests:** the personal trie cap, and an optional allocation count per query.
 
 ## 12. Testing and evaluation

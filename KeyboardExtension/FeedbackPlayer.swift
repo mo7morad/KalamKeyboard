@@ -28,8 +28,10 @@ final class FeedbackPlayer {
         }
     }
 
-    /// `soundBoost` 1 adds this much: Apple's sounds peak near -8.5 dBFS.
-    private static let maxBoostDB = 7.5
+    /// `soundBoost` just above 0 plays the copies this quiet, and 1 this loud (dB on the files, whose
+    /// peak is near -8.5 dBFS). A registered sound plays much louder than the system ID's keyboard
+    /// click at the same file level, so the range starts well below 0 dB (device round 2).
+    private static let boostRangeDB = -30.0...7.5
     private static let log = Logger(subsystem: "com.morad.kalam.keyboard", category: "feedback")
 
     private let generator = UIImpactFeedbackGenerator(style: .rigid)
@@ -61,7 +63,8 @@ final class FeedbackPlayer {
     private func registerSounds() {
         disposeSounds()
         guard settings.soundBoost > 0 else { return }
-        let gain = pow(10, settings.soundBoost * Self.maxBoostDB / 20)
+        let range = Self.boostRangeDB
+        let gain = pow(10, (range.lowerBound + settings.soundBoost * (range.upperBound - range.lowerBound)) / 20)
         for sound in Sound.allCases {
             var id: SystemSoundID = 0
             guard let url = Self.boosted(sound, gain: gain),

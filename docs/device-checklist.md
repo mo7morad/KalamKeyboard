@@ -33,18 +33,18 @@ Setup: install a Debug build, then Settings > General > Keyboard > Keyboards > A
 
 - [ ] Haptic on every touch-down, light, close to Apple's.
 - [ ] Sounds: letters click (1104), delete has its own sound (1155), shift / 123 / EN/AR / space / return use the modifier sound (1156). Each backspace repeat clicks. Silent switch mutes them.
-- [ ] Sounds at "Louder" 0 match the first build. Move Kalam > Settings > Louder up: the next keyboard open is louder, at the top as loud as device round 1, with no crackle.
+- [ ] Sounds at "Louder" 0 match the first build. Move Kalam > Settings > Louder a little: the next keyboard open is quiet, and it grows evenly toward the right, at the top as loud as device round 1, with no crackle. Note the position that sounds right: ____
 - [ ] With Full Access off: the bar shows "Turn on Full Access for learning, haptics and sounds", and nothing crashes.
 
-**Memory (Debug overlay, red text at the top-left of the bar)**
+**Memory (Console.app, subsystem `com.morad.kalam.keyboard`, category "memory": "footprint X MB, headroom Y MB")**
 
-- [ ] Note the MB and "free" readings on first open: ____ MB, ____ free.
+- [ ] Note the footprint and headroom readings on first open: ____ MB, ____ free.
 - [ ] 20 show/hide cycles across 3 apps (Notes, Messages, WhatsApp): MB grows by less than 2 MB. Final: ____ MB.
 - [ ] The latency field shows "– ms" (Phase 5 fills it).
 
 ## Phase 5: suggestions, autocorrect and learning
 
-Setup: install a Debug build, turn on Settings > Debug Overlay in the Kalam app (red text at the top-left of the bar), and test in Notes, Messages and WhatsApp.
+Setup: install a Debug build with Console.app open on the Mac (subsystem `com.morad.kalam.keyboard`), and test in Notes, Messages and WhatsApp.
 
 **Typos and undo**
 
@@ -69,10 +69,10 @@ Setup: install a Debug build, turn on Settings > Debug Overlay in the Kalam app 
 - [ ] A word imported from WhatsApp, or added or forgotten in the app, shows up (or disappears) the next time the keyboard opens.
 - [ ] With Pause Learning on, a new word typed twice in two sessions is still not suggested.
 
-**Latency and memory (Debug overlay: "MB · free · ms")**
+**Latency and memory (Console.app: "footprint ... headroom" on each open, "session: N requests, p95 X ms" on dismiss)**
 
 - [ ] While typing quickly, the latency stays under about 12 ms most of the time, and never above 20 ms. Note the usual value: ____ ms.
-- [ ] Note MB and "free" on first open (EN) ____ / ____, after switching to Arabic ____ / ____. "free" must stay above 10 MB.
+- [ ] Note footprint and headroom on first open (EN) ____ / ____, after switching to Arabic ____ / ____. Headroom must stay above 10 MB.
 - [ ] 20 show/hide cycles across Notes, Messages and WhatsApp: MB grows by less than 2 MB. Start ____ MB, end ____ MB.
 - [ ] Optional: Console.app, subsystem `com.morad.kalam.keyboard`, shows "session: N requests, p95 X ms" after each dismiss.
 
@@ -118,7 +118,7 @@ Setup: install a Debug build with Full Access on, and Kalam > Settings > Clipboa
 - [ ] Clipboard setting off: no button and no chip; turn it on again and the pinned items are still there.
 - [ ] Images: copy a photo in Photos (Share > Copy Photo), open Kalam in WhatsApp and open the panel. The photo's tile shows its thumbnail, with no chip in the bar. Copy some text, then tap the photo's tile: "Copied. Hold the text field and tap Paste." shows for about 2 seconds. Hold the message field, tap Paste: the photo arrives. Long-press the tile: Pin and Delete work as for text.
 - [ ] Take a screenshot, tap Copy and Delete in its editor (or copy it from Photos): it shows up in the panel, and tapping it then pasting works the same.
-- [ ] Copy 20 different photos one after another, opening the panel after each. With all 20 in the panel, scroll it up and down: the Debug overlay's memory stays low (note the number: ____ MB) and Kalam isn't killed.
+- [ ] Copy 20 different photos one after another, opening the panel after each. With all 20 in the panel, scroll it up and down: the logged footprint stays low (note the number: ____ MB) and Kalam isn't killed.
 
 ## Device round 1
 

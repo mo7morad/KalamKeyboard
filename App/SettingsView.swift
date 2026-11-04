@@ -15,7 +15,7 @@ struct SettingsView: View {
                 .disabled(!settings.haptics)
                 Toggle("Key Sounds", isOn: $settings.sounds)
                 LabeledContent("Louder") {
-                    Slider(value: $settings.soundBoost, in: 0...1)  // SPEC 5.3
+                    Slider(value: $settings.soundBoost, in: 0...1, step: 0.01)  // SPEC 5.3
                 }
                 .disabled(!settings.sounds)
             }
@@ -45,11 +45,6 @@ struct SettingsView: View {
             } footer: {
                 Text("While paused, the keyboard learns no new words.")
             }
-            #if DEBUG
-            Section("Debug") {
-                Toggle("Debug Overlay", isOn: $settings.debugOverlay)
-            }
-            #endif
         }
         .navigationTitle("Settings")
         .onChange(of: settings) { _, new in new.save() }

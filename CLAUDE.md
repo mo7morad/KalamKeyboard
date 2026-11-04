@@ -59,7 +59,7 @@ xcrun simctl list devices available     # pick a simulator for UI runs
    - On any engine or store error, degrade (no suggestions, or base-only).
    - Log with `Logger(subsystem: <bundle id>, category: ...)`.
 10. **Tunables live in `EngineConfig`.** Every tuning change gets a `kalam-cli eval` run logged in `docs/eval-log.md`, and the guards must not regress.
-11. **Debug overlay and footprint probes** are compiled only in Debug builds.
+11. **Footprint probes and traces** are compiled only in Debug builds. No on-screen debug readout (Moe removed it).
 
 ## Platform reminders (details in SPEC §2)
 

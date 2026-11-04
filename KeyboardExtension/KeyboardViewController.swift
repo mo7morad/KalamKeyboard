@@ -15,9 +15,6 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     private let clipboard = Clipboard()
     private let panel = ClipboardPanel()
     private let globeButton = UIButton(type: .custom)
-    #if DEBUG
-    private let overlay = DebugOverlay()
-    #endif
 
     private var lang = lastLanguage
     private var page = "letters"
@@ -91,10 +88,6 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
             panel.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             panel.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
-        #if DEBUG
-        overlay.frame = CGRect(x: 28, y: 2, width: 220, height: 12)
-        overlay.latencyMs = { [weak self] in self?.client.latest?.latencyMs }
-        #endif
         reloadLayout()
     }
 
@@ -119,6 +112,9 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         super.viewDidAppear(animated)
         captureClip()
         stopDelayingTouches()
+        #if DEBUG
+        MemoryProbe.logFootprint()
+        #endif
     }
 
     /// The system gesture gate on the keyboard's window delays touchesBegan near the screen edges,
@@ -180,9 +176,6 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         input.settings = settings
         keyboardView.showsHints = settings.digitHints
         client.setLearning(traits: input.traits, paused: settings.pauseLearning)
-        #if DEBUG
-        if settings.debugOverlay { view.addSubview(overlay) } else { overlay.removeFromSuperview() }
-        #endif
     }
 
     /// SPEC 9.2: UILexicon entries (contact names, text replacements) on the first launch, then weekly.

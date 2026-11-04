@@ -12,7 +12,7 @@ public struct Settings: Equatable, Sendable {
     public var haptics = true
     public var hapticStrength = 0.7
     public var sounds = true
-    /// 0 plays Apple's key sounds as they are; 1 is +7.5 dB, their peak at -1 dBFS (SPEC 5.3).
+    /// 0 plays Apple's key sounds as they are; above 0, scaled copies from -30 dB up to +7.5 dB (SPEC 5.3).
     public var soundBoost = 0.0
     public var autocorrectEN = AutocorrectMode.normal
     public var autocorrectAR = AutocorrectMode.gentle
@@ -24,7 +24,6 @@ public struct Settings: Equatable, Sendable {
     public var digitHints = true
     public var pauseLearning = false
     public var clipboard = true  // SPEC 5.5
-    public var debugOverlay = false  // honored in Debug builds only
 
     public init() {}
 
@@ -32,7 +31,7 @@ public struct Settings: Equatable, Sendable {
         "haptics": \.haptics, "sounds": \.sounds, "autoCapitalize": \.autoCapitalize,
         "doubleSpacePeriod": \.doubleSpacePeriod, "contractionFix": \.contractionFix,
         "arabicVariantFix": \.arabicVariantFix, "easternArabicDigits": \.easternArabicDigits,
-        "digitHints": \.digitHints, "pauseLearning": \.pauseLearning, "clipboard": \.clipboard, "debugOverlay": \.debugOverlay,
+        "digitHints": \.digitHints, "pauseLearning": \.pauseLearning, "clipboard": \.clipboard,
     ]
     private static let doubles: [String: WritableKeyPath<Settings, Double>] = [
         "hapticStrength": \.hapticStrength, "soundBoost": \.soundBoost,
