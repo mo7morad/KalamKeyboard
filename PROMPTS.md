@@ -163,3 +163,29 @@ Start by listing the issues grouped by root cause, then wait for my OK.
 - Keyboard did: 
 - Frequency: once / sometimes / always
 ```
+
+---
+
+## Phase 8: Gboard gestures (device round 2, Moe's pick)
+
+```
+Phase 8. Read CLAUDE.md, SPEC §2, §3, §5.1, §5.2.
+Scope:
+- Backspace swipe left deletes whole words, live: each step left deletes one more word, dragging back right restores them, release keeps the result.
+- Slide from shift onto a letter types one capital and shift returns off. Slide from 123 (or ١٢٣) onto a key of the numbers page types it and returns to letters, like Apple.
+- A clear downward swipe on the keys hides the keyboard (dismissKeyboard), with thresholds strict enough that fast typing never triggers it.
+Update SPEC §5.2. Done when: builds, engine tests pass, the geometry/gesture math has tests, and you give a device checklist.
+```
+
+---
+
+## Phase 9: emoji panel and emoji suggestions (device round 2, Moe's pick)
+
+```
+Phase 9. Read CLAUDE.md, SPEC §2, §3, §5.4, §5.5.
+Scope:
+- Data: a Tools script builds emoji.json (Apple-style categories from Unicode emoji-test.txt, EN and AR keywords from CLDR annotations), committed as a KalamEngine resource.
+- Panel: an emoji button in the bar next to the clipboard button opens an Apple-style emoji panel in place of the keys (category tabs, recents, ABC, backspace). Apple's emoji glyphs via the system font.
+- Suggestions: when the current word matches an emoji keyword (EN or AR), the bar offers the emoji; a tap replaces the word with it.
+Update SPEC §5.4 and a new §5.6. Done when: builds, tests pass, and you give a device checklist.
+```
