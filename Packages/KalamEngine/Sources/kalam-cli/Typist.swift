@@ -34,11 +34,21 @@ func centerTapper(_ lang: Lang) -> (String) -> [Tap] {
 
 /// What Moe ends up with when he commits these taps with a space (the autocorrect, else the
 /// literal), and the top-ranked candidate.
-func committed(_ taps: [Tap], context: [String], engine: Engine, latency: Latencies = Latencies()) -> (word: String, top: String?) {
+func committed(_ taps: [Tap], context: [String], engine: Engine, settings: Settings = Settings(),
+               latency: Latencies = Latencies()) -> (word: String, top: String?) {
     let input = InputState(context: context, taps: taps)
     let ranked = latency.time(\.candidates) { engine.candidates(input) }
-    let fix = engine.autocorrection(input, ranked: ranked, traits: FieldTraits(), settings: Settings())
+    let fix = engine.autocorrection(input, ranked: ranked, traits: FieldTraits(), settings: settings)
     return (fix?.ident ?? ident(input.literal, kind: engine.lang == .en ? .en : .ar), ranked.first?.ident)
+}
+
+/// Settings with `--autocorrect off|gentle|normal` applied to both languages; nil on a bad value.
+func parseSettings(_ flags: [String: [String]]) -> Settings? {
+    var settings = Settings()
+    guard let value = flags["autocorrect"]?.last else { return settings }
+    guard let mode = AutocorrectMode(rawValue: value) else { return nil }
+    (settings.autocorrectEN, settings.autocorrectAR) = (mode, mode)
+    return settings
 }
 
 /// Request wall times in ms.

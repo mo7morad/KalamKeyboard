@@ -2,16 +2,16 @@ import CryptoKit
 import Foundation
 import KalamEngine
 
-/// kalam-cli eval --lang en|ar --klex <file> --heldout <file> [--personal <db>] [--limit N] [--seed S] [--set name=value]...
+/// kalam-cli eval --lang en|ar --klex <file> --heldout <file> [--personal <db>] [--limit N] [--seed S] [--autocorrect off|gentle|normal] [--set name=value]...
 /// Types `limit` seeded-random held-out sentences with tap noise (Gaussian, plus omissions, extra taps
 /// and swaps; see NoisyTypist) on the letters page and
 /// reports the SPEC 12 metrics plus request latency on this machine.
 func eval(_ args: [String]) -> Int32 {
     let flags = parseFlags(args)
     guard let lang = flags["lang"]?.last.flatMap(Lang.init(rawValue:)), let klex = flags["klex"]?.last,
-          let heldout = flags["heldout"]?.last, let config = parseConfig(flags),
+          let heldout = flags["heldout"]?.last, let config = parseConfig(flags), let settings = parseSettings(flags),
           let limit = Int(flags["limit"]?.last ?? "500"), let seed = UInt64(flags["seed"]?.last ?? "1") else {
-        print("usage: kalam-cli eval --lang en|ar --klex <file> --heldout <file> [--personal <db>] [--limit N] [--seed S] [--set name=value]...")
+        print("usage: kalam-cli eval --lang en|ar --klex <file> --heldout <file> [--personal <db>] [--limit N] [--seed S] [--autocorrect off|gentle|normal] [--set name=value]...")
         return 2
     }
     guard let data = try? Data(contentsOf: URL(fileURLWithPath: klex), options: .alwaysMapped), let lexicon = BaseLexicon(data: data),
@@ -47,12 +47,12 @@ func eval(_ args: [String]) -> Int32 {
             guard let word = lexicon.wordID(ident: token.ident), lexicon.isValid(word) else { continue }
             if ident(taps.map(\.char).joined(), kind: token.kind) != token.ident {
                 metrics.noisy += 1
-                let result = committed(taps, context: context, engine: engine, latency: latency)
+                let result = committed(taps, context: context, engine: engine, settings: settings, latency: latency)
                 metrics.fixed += result.word == token.ident ? 1 : 0
                 metrics.rankedFirst += result.top == token.ident ? 1 : 0
             }
             metrics.clean += 1
-            metrics.falseFixes += committed(clean(token.surface), context: context, engine: engine).word == token.ident ? 0 : 1
+            metrics.falseFixes += committed(clean(token.surface), context: context, engine: engine, settings: settings).word == token.ident ? 0 : 1
         }
     }
 

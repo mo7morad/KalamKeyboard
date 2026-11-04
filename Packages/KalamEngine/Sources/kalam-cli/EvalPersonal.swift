@@ -1,7 +1,7 @@
 import Foundation
 import KalamEngine
 
-/// kalam-cli eval-personal --chat <_chat.txt>... [--sender <name>]... [--klex-en <path>] [--klex-ar <path>] [--fold k] [--samples N] [--set name=value]...
+/// kalam-cli eval-personal --chat <_chat.txt>... [--sender <name>]... [--klex-en <path>] [--klex-ar <path>] [--fold k] [--samples N] [--autocorrect off|gentle|normal] [--set name=value]...
 /// Trains a temp personal store on 90% of the senders' messages (sorted by time, then text; message
 /// i is held out when i % 10 == fold)
 /// and reports next-word top-3, keystroke savings and the autocorrect change rate (each held-out
@@ -9,8 +9,8 @@ import KalamEngine
 /// --samples prints up to N of the changes (typed -> corrected) per setup.
 func evalPersonal(_ args: [String]) -> Int32 {
     let flags = parseFlags(args)
-    guard let chats = flags["chat"], let config = parseConfig(flags), let fold = Int(flags["fold"]?.last ?? "0"), (0..<10).contains(fold) else {
-        print("usage: kalam-cli eval-personal --chat <_chat.txt>... [--sender <name>]... [--klex-en <path>] [--klex-ar <path>] [--fold k] [--samples N] [--set name=value]...")
+    guard let chats = flags["chat"], let config = parseConfig(flags), let settings = parseSettings(flags), let fold = Int(flags["fold"]?.last ?? "0"), (0..<10).contains(fold) else {
+        print("usage: kalam-cli eval-personal --chat <_chat.txt>... [--sender <name>]... [--klex-en <path>] [--klex-ar <path>] [--fold k] [--samples N] [--autocorrect off|gentle|normal] [--set name=value]...")
         return 2
     }
     guard var messages = readChats(chats) else { return 1 }
@@ -45,7 +45,7 @@ func evalPersonal(_ args: [String]) -> Int32 {
             let tap = centerTapper(lang)
             let typed = words.map { simulateTyping($0.token, taps: tap($0.token.surface), context: $0.context, engine: engine) }
             let changes = words.compactMap { word -> String? in
-                let result = committed(tap(word.token.surface), context: word.context, engine: engine).word
+                let result = committed(tap(word.token.surface), context: word.context, engine: engine, settings: settings).word
                 return result == word.token.ident ? nil : "\(word.token.surface) -> \(result)"
             }
             let top3 = Double(typed.filter(\.predicted).count) / Double(max(typed.count, 1))
