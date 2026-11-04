@@ -36,7 +36,7 @@ public struct EngineConfig: Sendable {
     var halfLife: Double { decayHalfLifeDays * 86_400 }  // seconds
 
     // 8.5 Autocorrect
-    public var autocorrectThresholdNormal = 2.5  // theta: score(c*) - score(literal)
+    public var autocorrectThresholdNormal = 1.0  // theta: score(c*) - score(literal); AR adds c*'s edit cost (eval-log Device round 2)
     public var autocorrectThresholdGentle = 4.0
     public var autocorrectMinShare = 0.5  // c*'s softmax share among the candidates
     public var gentleMaxEditCost = 3.0  // gentle mode: c*'s edit cost (not spatial) stays within one omission or swap

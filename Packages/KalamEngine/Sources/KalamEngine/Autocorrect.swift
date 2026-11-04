@@ -38,7 +38,9 @@ func autocorrectTarget(literal: String, ranked: [Suggestion], facts: Autocorrect
     } else if facts.literalValid {
         return nil  // rule 2, base half
     }
-    let threshold = facts.mode == .gentle ? config.autocorrectThresholdGentle : config.autocorrectThresholdNormal
+    // AR normal counts c*'s edit cost twice: in Moe's chats an extra tap, a far key or a swap is more often a dialect word than a slip.
+    let normal = config.autocorrectThresholdNormal + (lang == .ar ? best.edits : 0)
+    let threshold = facts.mode == .gentle ? config.autocorrectThresholdGentle : normal
     let share = 1 / ranked.reduce(0) { $0 + exp($1.score - best.score) }  // softmax share of best
     return best.score - typed.score >= threshold && share >= config.autocorrectMinShare ? best : nil  // rule 5
 }
@@ -60,15 +62,18 @@ extension Engine {
     }
 
     /// AR rule 2: a known word plus one clitic (بكلم, افتكره) counts as a word too.
-    private func isCliticForm(_ ident: String) -> Bool {
+    func isCliticForm(_ ident: String) -> Bool {
         guard lang == .ar else { return false }
         func known(_ stem: Substring) -> Bool {
             stem.count >= 2 && (isValidBaseWord(String(stem)) || personal?.isKnown(lang, String(stem)) == true)
         }
         return arabicPrefixes.contains { ident.hasPrefix($0) && known(ident.dropFirst($0.count)) }
             || arabicSuffixes.contains { ident.hasSuffix($0) && known(ident.dropLast($0.count)) }
+            || ident.count >= 5 && ident.hasPrefix("م") && ident.hasSuffix("ش") && known(ident.dropFirst().dropLast())  // negation م…ش
     }
 }
 
-private let arabicPrefixes = ["و", "ف", "ب", "ل", "ك", "ه", "ح", "ال", "لل"]  // لل: ل + ال, which drops its alif
-private let arabicSuffixes = ["ه", "ها", "هم", "ك", "كم", "ني", "نا", "ي"]
+// لل: ل + ال, which drops its alif. ي: a fused يا (يحبيبتي).
+private let arabicPrefixes = ["و", "ف", "ب", "ل", "ك", "ه", "ح", "ال", "لل", "ي"]
+// ش: negation (مخلصش); لي … لنا: "to me" … "to us" (قولتلي); وا: plural (بيعملوا).
+private let arabicSuffixes = ["ه", "ها", "هم", "ك", "كم", "ني", "نا", "ي", "ش", "لي", "له", "لك", "لها", "لهم", "لنا", "وا"]

@@ -37,7 +37,13 @@ private let cases: [PolicyCase] = [
                change: { $0.mode = .gentle }, corrects: false),
     PolicyCase(name: "completion one letter past the taps", literal: "goin", best: "going", bestLM: -4, bestCompletion: 1, corrects: true),
     PolicyCase(name: "completion two letters past the taps", literal: "goi", best: "going", bestLM: -4, bestCompletion: 1, corrects: false),
-    PolicyCase(name: "below normal threshold", literal: "teh", best: "the", bestLM: -12, corrects: false),
+    PolicyCase(name: "below normal threshold", literal: "teh", best: "the", bestLM: -13.5, corrects: false),
+    PolicyCase(name: "AR normal fixes a slip by a small margin", literal: "مايون", best: "مليون", bestLM: -12.5,
+               change: { $0.lang = .ar }, corrects: true),
+    PolicyCase(name: "AR normal counts an edit twice", literal: "عاوزينا", best: "عاوزين", bestLM: -6, bestEdits: 5,
+               change: { $0.lang = .ar }, corrects: false),
+    PolicyCase(name: "AR normal fixes an edit by a clear margin", literal: "اموورك", best: "امورك", bestLM: -2.5, bestEdits: 5,
+               change: { $0.lang = .ar }, corrects: true),
     PolicyCase(name: "EN contraction fix", literal: "dont", best: "don't", bestLM: -6, literalLM: -9.9,
                change: { $0.literalValid = true }, corrects: true),
     PolicyCase(name: "contraction fix off", literal: "dont", best: "don't", bestLM: -6, literalLM: -9.9,
@@ -99,12 +105,19 @@ func engineAutocorrectsWithDefaultSettings(_ typed: String, _ expected: String) 
     #expect(engine.autocorrection(input, ranked: engine.candidates(input), traits: FieldTraits(), settings: Settings()) == nil)
 }
 
-@Test func arabicKnownWordPlusACliticIsKept() throws {
+@Test(arguments: [("ومن", "من"), ("يحبيبي", "حبيبي"), ("عايزش", "عايز")])
+func arabicKnownWordPlusACliticIsKept(_ typed: String, _ stem: String) throws {
     let engine = try fixtureEngine(.ar)
     var settings = Settings()
     settings.autocorrectAR = .normal
-    let input = InputState(context: [], taps: "ومن".map { Tap(String($0)) })
+    let input = InputState(context: [], taps: typed.map { Tap(String($0)) })
     let ranked = engine.candidates(input)
-    #expect(ranked.first?.ident == "من")
+    #expect(ranked.first?.ident == stem)
     #expect(engine.autocorrection(input, ranked: ranked, traits: FieldTraits(), settings: settings) == nil)
+}
+
+// م + عايز + ش, شكرا + لك, عايز + وا; مدهش (م + ده + ش) has a stem under 3 letters
+@Test(arguments: [("معايزش", true), ("شكرالك", true), ("عايزوا", true), ("معايز", false), ("مدهش", false)])
+func arabicCliticForms(_ ident: String, _ isClitic: Bool) throws {
+    #expect(try fixtureEngine(.ar).isCliticForm(ident) == isClitic)
 }

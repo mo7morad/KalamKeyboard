@@ -59,7 +59,7 @@ func evalPersonal(_ args: [String]) -> Int32 {
     return 0
 }
 
-private func readChats(_ paths: [String]) -> [ChatMessage]? {
+func readChats(_ paths: [String]) -> [ChatMessage]? {
     var messages: [ChatMessage] = []
     for path in paths {
         guard let text = try? String(contentsOfFile: path, encoding: .utf8) else {
@@ -71,7 +71,7 @@ private func readChats(_ paths: [String]) -> [ChatMessage]? {
     return messages
 }
 
-private func trainedModel(_ train: [ChatMessage], in dir: URL, lexicons: [BaseLexicon], config: EngineConfig, now: Date) throws -> PersonalModel {
+func trainedModel(_ train: [ChatMessage], in dir: URL, lexicons: [BaseLexicon], config: EngineConfig, now: Date) throws -> PersonalModel {
     try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
     let store = try PersonalStore(url: dir.appendingPathComponent("personal.sqlite"), config: config)
     try store.importTexts(train.map { ($0.text, $0.date) }, lexicons: lexicons, now: now)

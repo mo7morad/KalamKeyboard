@@ -150,3 +150,42 @@ Final eval-personal over the 10 folds:
 | AR | personal | 15.0% | 27.0% | 0.26% (33 right, 4 wrong) |
 
 Synthetic AR AC fell from 24.2% to 21.0%, a cost accepted because that set is MSA news. The 4 remaining wrong AR changes are dialect spellings: يخوي → يخويا (twice), بتلظبط → بالظبط and مؤاخدة → مؤاخذة.
+
+## 2026-11-04 · Device round 2: bolder normal autocorrect
+
+git: `7ab5acd` plus the working tree. klex as in 3c. Moe sets both languages to normal and reports that autocorrect "doesn't auto work" (1 change in ~84 commits on device). New CLI flags: `--autocorrect off|gentle|normal` on `eval`, `eval-personal` and `suggest` (both languages), and `--chat` / `--sender` on `suggest`, which imports the chats into a temp store first (as the host app does) and prints what a space commits.
+
+Moe columns are eval-personal over the 10 folds, personal setup, AR 14,005 words, judged by hand again (the 3c judgements are not in the repo). Re-judged, the 3c gentle config is 32 / 5 rather than 33 / 4. Synthetic AR is given in both modes, because Moe uses normal and the default is gentle.
+
+What the shipped normal did: 41 right and 38 wrong on Moe's chats. So it wasn't too timid, it was wrong half the time. The wrong ones were mostly dialect words outside the base and unknown to Moe's store: clitic forms the rule-2 list lacked (قولتلي, مخلصش, يماما, معملش) and fixes that need an extra tap, a far key or a swap (يسطا → يسط, خوفت → شوفت, عمالين → عاملين).
+
+| Run | EN AC / FA / KS | AR gentle AC / FA / KS | AR normal AC | Moe AR gentle R / W | Moe AR normal R / W | Verdict |
+|---|---|---|---|---|---|---|
+| 3c final (θ normal 2.5) | 51.3 / 0.01 / 38.2 | 21.0 / 0.00 / 28.2 | 26.3 | 32 / 5 | 41 / 38 | baseline |
+| [code] rule 2 clitics: prefix ي (fused يا), suffixes ش لي له لك لها لهم لنا وا, negation م…ش | = | 20.8 / 0.00 / 28.2 | 26.1 | 28 / 3 | 37 / 19 | kept with the next row |
+| [code] م…ش only for words of 5+ letters (مقيش and محاش are typos) | = | 20.8 / 0.00 / 28.2 | 26.1 | 30 / 3 | 39 / 19 | kept |
+| [code] normal adds c*'s edit cost to θ (both langs), θ 2.5 | 49.4 / 0.01 / 38.2 | = | 24.9 | 30 / 3 | 36 / 7 | candidate |
+| same, θ 1.0 | 53.6 / 0.02 / 38.2 | = | 30.7 | 30 / 3 | 39 / 12 | AR kept; EN loses guidence and iterational (a far key, two omissions) |
+| [code] edit cost only in AR; θ normal 1.0 for both | **55.5 / 0.02 / 38.2** | **20.8 / 0.00 / 28.2** | **30.7** | **30 / 3** | **39 / 12** | **kept** |
+| + knownMinImports 3 | = | | | | 37 / 8 (KS 26.3) | rejected: fewer right changes, KS ↓ |
+| + typoNeighbourRatio 5 | = | | | | 39 / 12 | no change |
+
+Offline sweep on the dumped candidate facts (126 AR changes that some policy could make, all judged by hand), at most one wrong change per three right ones. Rule 5 alone at θ 4 / 3 / 2.5 gives 33 / 8, 37 / 14 and 39 / 19, so no threshold alone reaches 3:1 with clearly more right changes than gentle (30 / 3). With the edit cost counted twice, θ 2 / 1.5 / 1 / 0.5 / 0 gives 38 / 8, 38 / 9, 39 / 12, 39 / 15 and 40 / 16. θ 1 is the boldest point that keeps 3:1. Lowering unknownLogProbAR by 2 adds only 3 more changes under this rule, so it stays at -15.5.
+
+Rule 2 known words (cause 2): over the 10 folds, a known literal that isn't a valid base word has a non-literal top candidate only 7 times, and none of them is a typo (اشطا ↔ اشط). Imported typos already go through `markLikelyTypos`. A stricter known rule has nothing to fix here, so none was added.
+
+eval-personal, final:
+
+| Lang | Setup | Mode | KS | AC changes |
+|---|---|---|---|---|
+| EN | personal | normal | 38.7% | 1.69% (14; was 12: + mediocres → mediocre, + Yaaay → that) |
+| AR | personal | normal | 27.0% | 0.36% (39 right, 12 wrong; was 0.57%, 41 / 38) |
+| AR | personal | gentle | 27.0% | 0.24% (30 right, 3 wrong; was 32 / 5) |
+
+Normal versus 3c: 4 right changes are lost (محاش and يحبيتي now read as clitic forms; اشطات and يكعلمي need an extra tap) and 2 are gained (مايون → مليون, الحنسية → الجنسية). 27 wrong changes are gone. The 12 that remain: عمالين → عاملين (twice), بتلظبط → بالظبط, اسطا → اشطا, وعنلت → وعملتي, مؤاخدة → مؤاخذة, تظبط → اظبط, جيبت → حسيت, بيسهلك → ييسرلك, اتوضى → اتوضيت, احصا → تحيا, العرص → العصر. Gentle loses محاش → محدش and يحبيتي → يحبيبتي (right) and يخوي → يخويا twice (wrong). This eval taps key centers, so a neighbour slip costs 2.47. A real slip lands near the key edge and costs less, so on device the slip fixes clear θ 1 by a wider margin (device-only, unverified). Latency was measured with 3 evals in parallel (EN 0.26 / 1.62 / 1.98, AR 0.34 / 2.86 / 3.57 ms), so it is not comparable with 3c. The rules add no search work.
+
+Moe's device examples (`suggest --chat` with the 3 chats, normal, key-center taps):
+- دلوثا → دلوقت (one far slip, margin 3.4) and نشتغ → نشتغل (completion of one letter, margin 4.6) are fixed.
+- عانلة stays as typed, which is right: on device, عائلة ranks first by 0.99 with a 0.38 share, and fixing it would give the wrong word. With no context, the CLI fixes it to عاملة.
+- دولوثت (an extra tap plus a slip, margin 0.8) and عليهاه (an extra tap, margin 1.9, and it also reads as عليها + ه) stay as typed. In Moe's chats, extra-tap fixes at such margins are mostly real words (بعتتلي, اتطمنت, عاوزينا).
+- تينيتنن has no candidate within the edit limits. الاخيار is the valid word الأخيار (rule 2).
