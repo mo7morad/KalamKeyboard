@@ -140,7 +140,7 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
   - When it's true: `[123] [globe] [EN/AR] [space] [return]`. The globe uses `handleInputModeList(from:with:)`: a tap goes to the next system keyboard, and a long-press opens the list.
   - The EN/AR key toggles the layout and the engine language. The last-used language is remembered.
 - **Appearance:** light and dark follow `textDocumentProxy.keyboardAppearance` and the trait collection. Match the screenshots for key color, corner radius, shadow, font, keyboard height per device, and suggestion bar height.
-  - iOS 27 puts a 75 pt globe/dictation strip under third-party keyboards (Apple's is 58 pt), and on the iPhone 17 (iOS 27.1) the panel adds about 16 pt above Kalam's view (device round 2 trace: the view is exactly the height asked for). Keys use Apple's sizes and 54 pt row pitch. A 4.5 pt touch band sits under the bottom row's caps: Moe aims where Apple's lower space bar is, and taps past the view's bottom go to iOS's strip and are lost. The bar is 30 pt and the key area's top inset 4, so the panel top to the Q row looks like Apple's (51.7 pt). The whole keyboard sits about 8 pt above Apple's (the taller strip plus the band); nothing in the extension can bring it lower.
+  - iOS 27 puts a 75 pt globe/dictation strip under third-party keyboards (Apple's is 58 pt), and on the iPhone 17 (iOS 27.1) some host apps add about 16 pt of panel above Kalam's view and some don't (device round 2; the view is exactly the height asked for). Keys use Apple's sizes and 54 pt row pitch. A 4.5 pt touch band sits under the bottom row's caps: Moe aims where Apple's lower space bar is, and taps past the view's bottom go to iOS's strip and are lost. The bar is 40 pt and the key area's top inset 7, which looks like Apple's where no extra panel is added (a 30 pt bar was cramped there). The whole keyboard sits about 8 pt above Apple's (the taller strip plus the band); nothing in the extension can bring it lower.
 
 ### 5.3 Feedback
 
@@ -345,10 +345,10 @@ Replace the literal ℓ with the top candidate c* only if all of the following h
 
 1. Autocorrect is on for this language, `autocorrectionType != .no`, `keyboardType` is not `.URL` or `.emailAddress`, and `textContentType` is not `.password` or `.oneTimeCode`.
 2. ℓ is not known: it's neither a `valid` base variant nor a `known` personal word.
-   - In AR, a known word plus one clitic counts as known too (Egyptian forms the MSA base lacks). Prefixes: و ف ب ل ك ه ح ال لل. Suffixes: ه ها هم ك كم ني نا ي. The stem has at least 2 letters.
+   - In AR, a known word plus one clitic counts as known too (Egyptian forms the MSA base lacks). Prefixes: و ف ب ل ك ه ح ال لل ي (a fused يا). Suffixes: ه ها هم ك كم ني نا ي ش لي له لك لها لهم لنا وا. The stem has at least 2 letters. The negation م…ش around a known stem counts too, when the word has at least 5 letters.
 3. ℓ is not a special token and contains no digits. In EN, it has no capital after its first letter (OMG, LLMs, iOS).
 4. There is no recorded rejection of (ℓ → c*).
-5. `score(c*) − score(ℓ) ≥ θ`, where θ is 2.5 for "normal" and 4.0 for "gentle". Also, c*'s softmax share among the candidates must be ≥ 0.5.
+5. `score(c*) − score(ℓ) ≥ θ`, where θ is 4.0 for "gentle" and 1.0 for "normal". In AR, normal adds c*'s edit cost to θ (so an edit counts twice: in Moe's chats an extra tap, a far key or a swap is more often a dialect word than a slip). Also, c*'s softmax share among the candidates must be ≥ 0.5.
    - Defaults: EN normal, AR gentle (dialect words are often missing from the base data).
 6. c* fixes a slip, not a different word:
    - as a completion, it adds at most 1 letter past the taps (goin → going, never tomo → tomorrow);

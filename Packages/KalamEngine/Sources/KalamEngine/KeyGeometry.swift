@@ -15,7 +15,7 @@ public struct KeyGeometry: Sendable {
     /// Space between neighbouring caps.
     static let capGap: CGFloat = 6
     /// Key area top to the first hit row.
-    static let topInset: CGFloat = 4  // with the 30 pt bar, the panel top to Q matches Apple's 51.7 pt
+    static let topInset: CGFloat = 7
     /// Apple's row spacing.
     public static let rowPitch: CGFloat = 54
     static let capTop: CGFloat = 1.1
