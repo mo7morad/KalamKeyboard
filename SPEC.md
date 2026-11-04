@@ -284,7 +284,7 @@ Search runs over the base trie and a small in-memory personal trie. A search sta
   - A terminal node gives a full-word candidate.
   - Plus up to 8 best-first completions (via max-subtree score), each with a 1.0 completion penalty.
 - Each matched key expands to its variants (surface + base word id).
-- **Personal trie:** built at launch from PersonalStore and updated on every commit. Capped at 30k known words, with LRU eviction by decayed count.
+- **Personal trie:** built at launch from PersonalStore and updated each time the learner writes its batch (at most every 5 s, and on dismiss). Capped at 30k known words, with LRU eviction by decayed count.
 - The **literal is always a candidate**, with cost 0. Its LM score is its own if it's known; otherwise `unknownLogProb = −14`.
 
 ### 8.3 Scoring
@@ -357,15 +357,18 @@ Replace the literal ℓ with the top candidate c* only if all of the following h
 ### 9.1 Store (SQLite, App Group, WAL, `busy_timeout` 200 ms, versioned migrations)
 
 ```
-words(lang, ident, norm, display, count, t_last, state[pending|known|blocked],
-      sessions_seen, source[typed|import|lexicon|manual], accepted_explicitly)
+words(lang, ident, norm, display, display_votes, count, t_last, state[pending|known|blocked],
+      sessions_seen, last_session, uses, imports, source[typed|import|lexicon|manual], accepted_explicitly)
 ngrams(lang, w1, w2, w3, count, t_last)        -- w1 = '' for bigrams; '<s>' allowed
-ctx_totals(lang, w1, w2, count, t_last)
-corrections(lang, typed, chosen, count, t_last, rejected)
-meta(key, value)                                -- schema version, stats
+corrections(lang, typed, chosen, rejected, count, t_last)
+meta(key, value)                                -- stats; the schema version is PRAGMA user_version
 ```
 
 Add indexes that match the query patterns. Writes from both the keyboard and the host app go through the same `PersonalStore` code.
+
+- `uses` and `imports` are raw (undecayed) counts for the pending → known rules, because a decayed count of 2 is already below 2.
+- `display_votes` runs a weighted majority vote over display forms. Sentence-initial capitals don't vote.
+- There is no `ctx_totals` table. Context totals are the sums of the loaded continuations, which decay the same way.
 
 ### 9.2 Learning rules
 
@@ -398,7 +401,9 @@ The parser lives in KalamEngine, so the CLI can test it.
 - **Learning:**
   - Each message is tokenized and split by script into languages, then fed to the n-gram updates.
   - `t_last` is the message date when it parses; otherwise use now − 30 days.
-  - Words with an import count ≥ 2 become known.
+  - Words with an import count ≥ 2 become known, with two exceptions that stay pending (only the keyboard's typed-use rule can make them known):
+    - **Likely typos** (Moe leaves 10 to 20% of typos unfixed): a word that isn't a valid base word, with a neighbour within the search's edit limits that he uses at least 10x as often. Its count goes to `corrections(typo → neighbour)` instead.
+    - **Lazy spellings:** a same-key variant of a different valid base word (dont / don't), or an invalid base variant. Otherwise imports would switch off the EN contraction fix (D8) for him.
 - A "Paste text to learn" box exists too.
 - Fixture tests cover both formats with synthetic chats.
 
