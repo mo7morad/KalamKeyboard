@@ -238,3 +238,19 @@ Scope (engine with tests; the extension only passes taps along):
 - eval gets a tap-bias noise option.
 Update SPEC §8.2, §9.1, §12. Done when: engine tests pass, eval runs with and without the bias are logged in docs/eval-log.md with the guards holding, and docs/device-checklist.md has a Phase 12 section (a trace before and after, the tapmap).
 ```
+
+---
+
+## Phase 13: Arabic and code-switching (docs/rd-plan.md)
+
+```
+Phase 13. Read CLAUDE.md, SPEC §2, §3, §5.4, §6, §8.2, §8.3, §8.6, §9.3, docs/rd-plan.md (Phase 13), docs/research/02-arabic-bilingual.md and docs/issues.md.
+Re-check each item against the current code first; skip and report what's already done.
+Scope (engine with tests):
+- Suggestions only in the script being typed: verify it and lock it with tests.
+- Wrong-layout rescue: a word typed on one layout that maps key-for-key (same physical spot) to a known word of the other language is offered in a side slot. Never switch the layout by itself.
+- Franco: Latin tokens with digits from the chats become known words, complete by prefix and are never autocorrected (verify, fix gaps).
+- Arabic variants: ة/ه, ى/ي and hamza forms cost nothing in the beam already (shared key); the best other spelling of the typed word always gets a side slot.
+- Sentence start: base bigrams after <s> get less weight against the unigram and Moe's own (EngineConfig, tuned with eval; docs/issues.md).
+Update SPEC §5.4, §8.2, §8.3. Done when: engine tests pass, an eval run is logged with the guards holding, and docs/device-checklist.md has a Phase 13 section (incl. backspace with tashkeel and lam-alef).
+```
