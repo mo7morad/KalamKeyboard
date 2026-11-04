@@ -223,3 +223,18 @@ Scope (logic in Autocorrect / TextContext / Learner / Engine with tests):
 - Learning hygiene: next-word predictions never offer a word that is neither a valid base word nor known to Moe.
 Update SPEC §3 D8, §5.4, §8.5, §8.6, §9.2. Done when: engine tests pass, the policy table tests are extended, an eval run is logged in docs/eval-log.md with the guards holding, and docs/device-checklist.md has a Phase 11 section.
 ```
+
+---
+
+## Phase 12: a touch model that learns Moe's thumbs (docs/rd-plan.md)
+
+```
+Phase 12. Read CLAUDE.md, SPEC §2, §3, §5.2, §8.2, §8.3, §9.1, §9.2, §12, docs/rd-plan.md (Phase 12) and docs/research/03-ui-sizing-touch.md, 04-prediction-autocorrect.md §3.
+Scope (engine with tests; the extension only passes taps along):
+- A fixed tap offset in EngineConfig (key units), set from the device round 2 trace (taps land about 7 pt above the caps' centers), checked with eval under a matching tap bias.
+- Per-key learned offsets: words committed and not reverted align their taps to their letters; a running mean per key in the personal store, shrunk toward the all-keys mean while data is thin, capped at 0.3 key widths, used by the spatial model. Hit areas don't move.
+- Learned confusion pairs: one-letter substitutions in Moe's corrections make that key pair a cheaper far substitution.
+- kalam-cli tapmap prints the per-key offsets (from the store, or from a pulled device trace).
+- eval gets a tap-bias noise option.
+Update SPEC §8.2, §9.1, §12. Done when: engine tests pass, eval runs with and without the bias are logged in docs/eval-log.md with the guards holding, and docs/device-checklist.md has a Phase 12 section (a trace before and after, the tapmap).
+```
