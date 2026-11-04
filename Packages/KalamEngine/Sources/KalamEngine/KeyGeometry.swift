@@ -16,7 +16,9 @@ public struct KeyGeometry: Sendable {
     static let capGap: CGFloat = 6
     /// Key area top to the first hit row.
     static let topInset: CGFloat = 7
-    public static let rowPitch: CGFloat = 54
+    /// Apple's is 54. One less keeps the bottom row where it is and brings the rows above it and the
+    /// panel top 1 to 3 pt lower, as Moe asked (device round 2); the extension can't draw any lower.
+    public static let rowPitch: CGFloat = 53
     static let capTop: CGFloat = 1.1
     static let capHeight: CGFloat = 42.8
     /// Height of the key area, excluding the suggestion bar. Apple's is 226; a third-party keyboard
