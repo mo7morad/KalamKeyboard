@@ -2,17 +2,22 @@ import KalamEngine
 import UIKit
 
 /// SPEC 5.5: the clipboard panel in place of the keys (its header is the suggestion bar): a
-/// two-column grid of 3-line tiles. A tap pastes; a long-press turns the tile into
-/// Pin/Unpin and Delete buttons (extensions can't show menus or alerts reliably).
+/// two-column grid of 3-line text tiles and image thumbnails. A tap pastes a text or copies an
+/// image back to the pasteboard; a long-press turns the tile into Pin/Unpin and Delete buttons
+/// (extensions can't show menus or alerts reliably).
 final class ClipboardPanel: UIView, UICollectionViewDataSource, UICollectionViewDelegate {
     var onPaste: ((String) -> Void)?
-    var onPin: ((String, Bool) -> Void)?
-    var onDelete: ((String) -> Void)?
+    /// Returns whether the image is on the pasteboard now.
+    var onCopy: ((ClipboardHistory.Image) -> Bool)?
+    var onPin: ((ClipboardHistory.Content, Bool) -> Void)?
+    var onDelete: ((ClipboardHistory.Content) -> Void)?
+    /// Where the image thumbnails are.
+    var folder: URL?
 
     /// In panel order.
     var items: [ClipboardHistory.Item] = [] {
         didSet {
-            if !items.contains(where: { $0.text == actionsFor }) { actionsFor = nil }
+            if !items.contains(where: { $0.content == actionsFor }) { actionsFor = nil }
             empty.isHidden = !items.isEmpty
             grid.reloadData()
         }
@@ -21,13 +26,17 @@ final class ClipboardPanel: UIView, UICollectionViewDataSource, UICollectionView
     var palette = Palette.light {
         didSet {
             empty.textColor = palette.secondaryLabel
+            toast.backgroundColor = palette.label
+            toast.textColor = palette.key
             grid.reloadData()
         }
     }
 
     /// The tile showing its Pin/Delete buttons.
-    private var actionsFor: String?
+    private var actionsFor: ClipboardHistory.Content?
     private let empty = UILabel()
+    /// After an image tap: how to paste it, since the keyboard can't.
+    private let toast = UILabel()
     private let layout = UICollectionViewFlowLayout()
     private lazy var grid = UICollectionView(frame: .zero, collectionViewLayout: layout)
 
@@ -36,19 +45,26 @@ final class ClipboardPanel: UIView, UICollectionViewDataSource, UICollectionView
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        empty.text = "Text you copy shows up here. Pinned items stay; others go after an hour."
+        empty.text = "Text and images you copy show up here. Pinned items stay; others go after an hour."
         empty.font = .systemFont(ofSize: 15)
         empty.numberOfLines = 0
         empty.textAlignment = .center
+        toast.text = "Copied. Hold the text field and tap Paste."
+        toast.font = .systemFont(ofSize: 15, weight: .medium)
+        toast.textAlignment = .center
+        toast.layer.cornerRadius = 8
+        toast.clipsToBounds = true
+        toast.isHidden = true
         layout.minimumInteritemSpacing = Self.gap
         layout.minimumLineSpacing = Self.gap
         layout.sectionInset = UIEdgeInsets(top: Self.gap, left: Self.gap, bottom: Self.gap, right: Self.gap)
         grid.backgroundColor = .clear
+        if #available(iOS 26, *) { grid.topEdgeEffect.isHidden = true }  // a light band under the header
         grid.dataSource = self
         grid.delegate = self
         grid.register(ClipTile.self, forCellWithReuseIdentifier: ClipTile.id)
         grid.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(longPressed)))
-        [grid, empty].forEach { addSubview($0) }
+        [grid, empty, toast].forEach { addSubview($0) }
     }
 
     @available(*, unavailable)
@@ -58,6 +74,7 @@ final class ClipboardPanel: UIView, UICollectionViewDataSource, UICollectionView
         super.layoutSubviews()
         grid.frame = bounds
         empty.frame = bounds.insetBy(dx: 32, dy: 0)
+        toast.frame = CGRect(x: Self.gap, y: bounds.height - 44 - Self.gap, width: bounds.width - 2 * Self.gap, height: 44)
         layout.itemSize = CGSize(width: floor((bounds.width - 3 * Self.gap) / 2), height: Self.tileHeight)
     }
 
@@ -68,21 +85,32 @@ final class ClipboardPanel: UIView, UICollectionViewDataSource, UICollectionView
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let tile = collectionView.dequeueReusableCell(withReuseIdentifier: ClipTile.id, for: indexPath) as! ClipTile
         let item = items[indexPath.item]
-        tile.show(item, actions: item.text == actionsFor, palette: palette)
-        tile.onPin = { [weak self] in self?.onPin?(item.text, !item.pinned) }
-        tile.onDelete = { [weak self] in self?.onDelete?(item.text) }
+        tile.show(item, actions: item.content == actionsFor, folder: folder, palette: palette)
+        tile.onPin = { [weak self] in self?.onPin?(item.content, !item.pinned) }
+        tile.onDelete = { [weak self] in self?.onDelete?(item.content) }
         return tile
     }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         collectionView.deselectItem(at: indexPath, animated: false)
         if actionsFor != nil { return hideActions() }
-        onPaste?(items[indexPath.item].text)
+        switch items[indexPath.item].content {
+        case .text(let text): onPaste?(text)
+        case .image(let image): if onCopy?(image) == true { showToast() }
+        }
     }
+
+    private func showToast() {
+        toast.isHidden = false
+        NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(hideToast), object: nil)
+        perform(#selector(hideToast), with: nil, afterDelay: 2)
+    }
+
+    @objc private func hideToast() { toast.isHidden = true }
 
     @objc private func longPressed(_ gesture: UILongPressGestureRecognizer) {
         guard gesture.state == .began, let path = grid.indexPathForItem(at: gesture.location(in: grid)) else { return }
-        actionsFor = items[path.item].text
+        actionsFor = items[path.item].content
         grid.reloadData()
     }
 
@@ -92,13 +120,15 @@ final class ClipboardPanel: UIView, UICollectionViewDataSource, UICollectionView
     }
 }
 
-/// One clip: up to 3 lines (right-aligned for Arabic) and a pin mark, or its two action buttons.
+/// One clip: up to 3 lines (right-aligned for Arabic) or an image's thumbnail, and a pin mark, or
+/// its two action buttons.
 private final class ClipTile: UICollectionViewCell {
     static let id = "clip"
     var onPin: (() -> Void)?
     var onDelete: (() -> Void)?
 
     private let label = UILabel()
+    private let thumbnail = UIImageView()
     private let pinMark = UIImageView(image: UIImage(systemName: "pin.fill"))
     private let pinButton = UIButton(type: .system)
     private let deleteButton = UIButton(type: .system)
@@ -110,6 +140,8 @@ private final class ClipTile: UICollectionViewCell {
     override init(frame: CGRect) {
         super.init(frame: frame)
         contentView.layer.cornerRadius = 8
+        contentView.clipsToBounds = true
+        thumbnail.contentMode = .scaleAspectFill
         label.font = .systemFont(ofSize: 15)
         label.numberOfLines = 3
         label.lineBreakMode = .byTruncatingTail
@@ -119,7 +151,7 @@ private final class ClipTile: UICollectionViewCell {
             button.addTarget(self, action: action, for: .touchUpInside)
         }
         deleteButton.setTitle("Delete", for: .normal)
-        [label, pinMark, pinButton, deleteButton].forEach { contentView.addSubview($0) }
+        [thumbnail, label, pinMark, pinButton, deleteButton].forEach { contentView.addSubview($0) }
     }
 
     @available(*, unavailable)
@@ -129,16 +161,25 @@ private final class ClipTile: UICollectionViewCell {
         didSet { contentView.backgroundColor = isHighlighted ? palette.keyPressed : palette.key }
     }
 
-    func show(_ item: ClipboardHistory.Item, actions: Bool, palette: Palette) {
+    func show(_ item: ClipboardHistory.Item, actions: Bool, folder: URL?, palette: Palette) {
         self.palette = palette
         contentView.backgroundColor = palette.key
-        label.text = String(item.text.prefix(Self.shownCharacters)).trimmingCharacters(in: .whitespacesAndNewlines)
+        switch item.content {
+        case .text(let text):
+            label.text = String(text.prefix(Self.shownCharacters)).trimmingCharacters(in: .whitespacesAndNewlines)
+            label.textAlignment = isRightToLeft(text) ? .right : .left
+            thumbnail.image = nil
+        case .image(let image):
+            label.text = nil
+            // contentsOfFile doesn't cache, so a scrolled-away tile's pixels are freed.
+            thumbnail.image = folder.flatMap { UIImage(contentsOfFile: $0.appendingPathComponent(image.thumbnail).path) }
+        }
         label.textColor = palette.label
-        label.textAlignment = isRightToLeft(item.text) ? .right : .left
         pinMark.tintColor = palette.secondaryLabel
         pinButton.setTitle(item.pinned ? "Unpin" : "Pin", for: .normal)
         [pinButton, deleteButton].forEach { $0.setTitleColor(palette.label, for: .normal) }
         label.isHidden = actions
+        thumbnail.isHidden = actions
         pinMark.isHidden = actions || !item.pinned
         pinButton.isHidden = !actions
         deleteButton.isHidden = !actions
@@ -148,6 +189,7 @@ private final class ClipTile: UICollectionViewCell {
     override func layoutSubviews() {
         super.layoutSubviews()
         let bounds = contentView.bounds
+        thumbnail.frame = bounds
         let text = bounds.insetBy(dx: 10, dy: 8)  // top-aligned, as a short clip would float otherwise
         label.frame = CGRect(origin: text.origin, size: CGSize(width: text.width, height: min(text.height, label.sizeThatFits(text.size).height)))
         pinMark.frame = CGRect(x: bounds.width - 14, y: 3, width: 10, height: 10)

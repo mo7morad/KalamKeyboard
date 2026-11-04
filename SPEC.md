@@ -37,7 +37,7 @@ Non-goals for v1: swipe/glide typing, dictation (no mic access in keyboard exten
 | **Full Access** is required for App Group shared-container writes. Older docs say haptics and sounds need it too. | `RequestsOpenAccess = YES`. Show a banner in the keyboard if `hasFullAccess == false`. |
 | `AVAudioPlayer` goes through the media volume bus, so clicks become inaudible at low media volume. `AudioServicesPlaySystemSound` uses the ringer volume, respects the silent switch and needs no audio session. | Register louder copies of Apple's key sounds with `AudioServicesCreateSystemSoundID` (5.3), falling back to system IDs **1104** (key), **1155** (delete), **1156** (modifier). |
 | iOS forces the system keyboard in secure fields and phone-pad fields. Some apps block third-party keyboards. Extensions get no microphone. | Accept these limits; don't try to work around them. |
-| A keyboard runs only while it's shown, so it can't watch the clipboard in the background. Reading another app's clipboard text shows iOS's "Allow Paste" prompt unless the app is set to Allow (Settings › Apps › Kalam › Paste from Other Apps; the simulator shows both the prompt and the setting for Kalam's keyboard, and the read blocks the keyboard's main thread until the prompt is answered). `changeCount`, `hasStrings` and `types` are metadata and never prompt. A keyboard can only insert text, not images. | The clipboard history (5.5) captures text when Kalam appears or the clipboard changes while it's shown. Moe sets Paste from Other Apps to Allow once. The capture on appear runs in `viewDidAppear`, so the keys are drawn before any prompt. |
+| A keyboard runs only while it's shown, so it can't watch the clipboard in the background. Reading another app's clipboard text shows iOS's "Allow Paste" prompt unless the app is set to Allow (Settings › Apps › Kalam › Paste from Other Apps; the simulator shows both the prompt and the setting for Kalam's keyboard, and the read blocks the keyboard's main thread until the prompt is answered). `changeCount`, `hasStrings` and `types` are metadata and never prompt. A keyboard can only insert text, not images. | The clipboard history (5.5) captures text and images when Kalam appears or the clipboard changes while it's shown. Moe sets Paste from Other Apps to Allow once. The capture on appear runs in `viewDidAppear`, so the keys are drawn before any prompt. |
 | `documentContextBeforeInput` is partial and can be nil. | Engine context = the last 2 words from it. The keyboard keeps its own word state and resyncs on `textDidChange`. |
 | A SQLite lock held in an App Group container while the process suspends gets the process killed (`0xdead10cc`). | Short transactions only. Never hold a transaction open while idle. Flush on `viewWillDisappear`. |
 | KeyboardKit's free tier gives a basic English layout only. Localized layouts (Arabic) and autocomplete are paid Pro features, and it abstracts away raw touch points. | Don't use KeyboardKit (D1). |
@@ -172,19 +172,23 @@ There is a single `FeedbackPlayer`, called on touch-down for every key.
 
 - **Capture:** on every appear, on every text or selection change while shown, and when the panel opens, compare `UIPasteboard.general.changeCount` with the last one seen (kept in App Group defaults; a lower value after a reboot counts as a change). When it changed, read the string once and add it to the history.
   - Skip empty text, text over 10,000 characters, and items marked concealed (`org.nspasteboard.ConcealedType`, as password managers do).
-  - Copying a text that's already in the history moves it to the top.
-- **History:** `clipboard.json` in the App Group container, written atomically (no lock is held, so no 0xdead10cc).
+  - Text wins. Without text but with an image (`hasImages`), read the raw data of the first pasteboard type that conforms to `public.image`, and skip it if it's over 20 MB.
+  - An image is never decoded whole (no `UIImage` of the original): a big photo would push the keyboard past its memory limit. The original's bytes go to a file in `Clipboard/` in the App Group container, named by their SHA-256. ImageIO (`CGImageSourceCreateThumbnailAtIndex`) makes a JPEG thumbnail straight from the data, 560 px on its long side (a tile's width at @3x).
+  - Copying a text or an image that's already in the history moves it to the top and keeps its pin. Images match by content (the SHA-256).
+- **History:** `clipboard.json` in the App Group container, written atomically (no lock is held, so no 0xdead10cc). An image item stores its file name and pasteboard type in place of the text, so files from before images still load.
+  - After each change, files in `Clipboard/` that no item references are deleted.
   - Pinned items stay until deleted. Other items are deleted 1 hour after they were captured, as in Gboard.
   - At most 50 items; the oldest unpinned ones go first.
 - **Bar:**
   - A clipboard button at the bar's left edge, in both languages. The three slots share the rest of the width.
-  - **Clip chip:** for 2 minutes after a clip is captured, while the current word is empty, the primary slot shows "📋" plus the clip's first line. A tap pastes it. It's gone once used, or as soon as Moe types a letter.
+  - **Clip chip:** for 2 minutes after a clip is captured, while the current word is empty, the primary slot shows "📋" plus the clip's first line. A tap pastes it. It's gone once used, or as soon as Moe types a letter. A copied image gets no chip: it's on the pasteboard already, so the field's own Paste works.
 - **Panel:** the button swaps the keys for a panel of the same height.
   - Header: "Clipboard", "Clear" (deletes the unpinned items) and "ABC" (back to the letters). The button also toggles back.
-  - Below: a two-column grid of tiles, pinned first, then newest first. Each tile shows up to 3 lines, right-aligned for Arabic.
-  - A tap pastes the tile and the panel stays open, as in Gboard. A long-press offers Pin/Unpin and Delete on the tile.
-  - Empty state: "Text you copy shows up here. Pinned items stay; others go after an hour."
+  - Below: a two-column grid of tiles, pinned first, then newest first. A text tile shows up to 3 lines, right-aligned for Arabic. An image tile shows its thumbnail, aspect-filled and clipped to the tile's corners.
+  - A tap on a text tile pastes it and the panel stays open, as in Gboard. A long-press offers Pin/Unpin and Delete on any tile.
+  - Empty state: "Text and images you copy show up here. Pinned items stay; others go after an hour."
 - **Paste:** `insertText` of the clip. The input state resyncs afterwards, and pasted text is never learned.
+- **Images can't be inserted:** a keyboard only inserts text (`UITextDocumentProxy` has no image API, checked in the iOS 27.1 SDK). So a tap on an image tile does what Gboard does on iPhone: it puts the original bytes back on `UIPasteboard.general` with their type, stores the new `changeCount` (so Kalam doesn't capture its own write), and shows "Copied. Hold the text field and tap Paste." for 2 seconds. Moe pastes with the field's own Paste.
 - **Off switch:** the Clipboard setting. When it's off there's no capture, no button and no chip; pinned items stay stored.
 
 ## 6. Text processing (engine)

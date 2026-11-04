@@ -17,6 +17,7 @@ struct Field: UIViewRepresentable {
             v.spellCheckingType = .no
             v.inlinePredictionType = .no
         }
+        if ProcessInfo.processInfo.arguments.contains("-images") { v.allowsEditingTextAttributes = true }  // takes pasted images
         forceSoftwareKeyboard()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { v.becomeFirstResponder() }
         return v

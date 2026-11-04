@@ -56,11 +56,13 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         bar.onClipboard = { [weak self] in self?.togglePanel() }
         bar.onChip = { [weak self] in
             guard let self, let clip = clipboard.history.chip(now: Date()) else { return }
-            paste(clip.text)
+            paste(clip)
         }
+        panel.folder = clipboard.folder
         panel.onPaste = { [weak self] in self?.paste($0) }
-        panel.onPin = { [weak self] text, pinned in self?.changeClipboard { $0.setPinned(pinned, text: text) } }
-        panel.onDelete = { [weak self] text in self?.changeClipboard { $0.delete(text) } }
+        panel.onCopy = { [weak self] in self?.clipboard.copy($0) ?? false }
+        panel.onPin = { [weak self] content, pinned in self?.changeClipboard { $0.setPinned(pinned, content) } }
+        panel.onDelete = { [weak self] content in self?.changeClipboard { $0.delete(content) } }
         bar.onClear = { [weak self] in self?.changeClipboard { $0.clear() } }
         bar.onClose = { [weak self] in self?.closePanel() }
         panel.isHidden = true
@@ -363,7 +365,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     }
 
     private func showChip() {
-        bar.chip = clipboardEnabled && !input.hasWord ? clipboard.history.chip(now: Date())?.text : nil
+        bar.chip = clipboardEnabled && !input.hasWord ? clipboard.history.chip(now: Date()) : nil
     }
 
     private func paste(_ text: String) {

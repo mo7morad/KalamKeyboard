@@ -115,6 +115,9 @@ Setup: install a Debug build with Full Access on, and Kalam > Settings > Clipboa
 - [ ] Pasted words aren't learned: paste a made-up word, type space, and it isn't suggested later.
 - [ ] Full Access off: no button, no chip, no prompt, nothing crashes.
 - [ ] Clipboard setting off: no button and no chip; turn it on again and the pinned items are still there.
+- [ ] Images: copy a photo in Photos (Share > Copy Photo), open Kalam in WhatsApp and open the panel. The photo's tile shows its thumbnail, with no chip in the bar. Copy some text, then tap the photo's tile: "Copied. Hold the text field and tap Paste." shows for about 2 seconds. Hold the message field, tap Paste: the photo arrives. Long-press the tile: Pin and Delete work as for text.
+- [ ] Take a screenshot, tap Copy and Delete in its editor (or copy it from Photos): it shows up in the panel, and tapping it then pasting works the same.
+- [ ] Copy 20 different photos one after another, opening the panel after each. With all 20 in the panel, scroll it up and down: the Debug overlay's memory stays low (note the number: ____ MB) and Kalam isn't killed.
 
 ## Device round 1
 

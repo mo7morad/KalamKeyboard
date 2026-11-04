@@ -28,3 +28,5 @@ They come from `../harness/UITests/Phase5.swift` (`testTypoUndoArabic`), which a
 - `clip-panel-ar-dark.png`: the panel over the Arabic keyboard in dark mode, the Arabic tile right-aligned.
 
 They come from `../harness/UITests/Clipboard.swift`: `testAllowPaste` sets Settings › Apps › Kalam › Paste from Other Apps to Allow (without it, iOS's "Allow Paste" prompt blocks the keyboard), and `testChipThenPanel` checks the chip paste, a tile paste with the panel staying open, Pin and Delete.
+
+- `clip-panel-image-light.png`: an image clip's tile, its thumbnail filling the tile. From `testImage`, which also taps the tile, checks that the pasteboard holds `public.png` again and pastes it into the field (launched with `-images`, so it takes images).

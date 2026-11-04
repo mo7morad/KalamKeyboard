@@ -11,8 +11,9 @@ class KalamField: XCTestCase {
     var pageID: String { kalam.value as? String ?? "" }
 
     /// Launches the harness and selects Kalam (the globe's tap cycles only Apple's keyboards).
-    func launchKalam() {
+    func launchKalam(_ arguments: [String] = []) {
         app = XCUIApplication()
+        app.launchArguments = arguments
         app.launch()
         sleep(2)
         if !kalam.exists {

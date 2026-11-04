@@ -62,6 +62,38 @@ final class ClipboardCheck: KalamField {
         note("end, panel value \(pageID)")
     }
 
+    /// An image clip: its tile, a tap putting it back on the pasteboard, and the field's Paste.
+    func testImage() {
+        let png = UIGraphicsImageRenderer(size: CGSize(width: 1200, height: 800)).image { context in
+            UIColor.systemOrange.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 1200, height: 800))
+            UIColor.systemBlue.setFill()
+            context.cgContext.fillEllipse(in: CGRect(x: 350, y: 150, width: 500, height: 500))
+        }.pngData()!
+        UIPasteboard.general.setData(png, forPasteboardType: "public.png")
+        launchKalam(["-images"])
+        answerPastePrompt("appear")
+        clipboardButton.tap()
+        answerPastePrompt("panel")
+        sleep(1)
+        shot("clip-panel-image")
+        UIPasteboard.general.string = "placeholder"  // so the check below sees Kalam's own write
+        let before = UIPasteboard.general.changeCount
+        tile(0).tap()
+        shot("clip-image-copied", delay: 0.3)
+        log += "after tap: types \(UIPasteboard.general.types), changed \(UIPasteboard.general.changeCount != before)\n"
+        clipboardButton.tap()  // back to the keys
+        field.press(forDuration: 1.2)
+        answerPastePrompt("field hold")
+        let paste = app.menuItems["Paste"].exists ? app.menuItems["Paste"] : app.buttons["Paste"]
+        if paste.waitForExistence(timeout: 3) { paste.tap() }
+        answerPastePrompt("field paste")
+        sleep(1)
+        dump("clip-image-pasted")
+        shot("clip-image-pasted")
+        note("after paste")
+    }
+
     /// Arabic letters behind the panel, an Arabic tile right-aligned.
     func testPanelArabic() {
         UIPasteboard.general.string = "مساء الخير، هنتقابل الساعة سبعة"
