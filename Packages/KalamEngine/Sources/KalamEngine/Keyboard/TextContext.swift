@@ -57,20 +57,46 @@ public func resyncedTaps(_ taps: [Tap], to word: String) -> [Tap] {
     return kept + word.dropFirst(spelled.count).map { Tap(String($0)) }
 }
 
-/// SPEC 8.6 display casing: a capital first letter, unless the form already carries its own
-/// casing (Moe's or the corpus's: iPhone, London).
-public func cased(_ word: String, capitalized: Bool) -> String {
-    guard capitalized, word == word.lowercased(), let first = word.first else { return word }
-    return first.uppercased() + word.dropFirst()
+/// SPEC 8.6 display casing: none, a capital first letter, or all caps (caps lock).
+public enum Casing: Comparable, Sendable { case none, firstLetter, all }
+
+/// `word` in `casing`. A capital first letter leaves a form that carries its own casing as it is
+/// (Moe's or the corpus's: iPhone, London); all caps uppercases every form.
+public func cased(_ word: String, _ casing: Casing) -> String {
+    switch casing {
+    case .none: return word
+    case .all: return word.uppercased()
+    case .firstLetter:
+        guard word == word.lowercased(), let first = word.first else { return word }
+        return first.uppercased() + word.dropFirst()
+    }
+}
+
+/// The casing a typed literal asks for: all caps when it has 2 or more letters, all capitals
+/// (NASA), a capital first letter when it starts with one, else none.
+public func literalCasing(_ literal: String) -> Casing {
+    guard literal.first?.isUppercase == true else { return .none }
+    let letters = literal.filter(\.isLetter)
+    return letters.count >= 2 && letters.allSatisfy(\.isUppercase) ? .all : .firstLetter
 }
 
 /// SPEC 8.7 punctuation spacing: what to delete before the cursor and what to insert when `char`
-/// is typed. After an auto-space, . , ! ? ; ، ؛ ؟ take its place and bring their own space, and
-/// : ' " ) just take its place.
-public func punctuationEdit(_ char: String, afterAutoSpace: Bool) -> (delete: Int, insert: String) {
+/// is typed, with `before` the text before the cursor. After an auto-space, or after a plain space
+/// that follows a letter or digit, . , ! ? ; ، ؛ ؟ take the space's place and bring their own.
+/// After an auto-space only, : ' ) just take its place, and so does a closing " (the current line
+/// has an odd number of " “ ”); an opening " keeps the space.
+public func punctuationEdit(_ char: String, before: String, afterAutoSpace: Bool) -> (delete: Int, insert: String) {
+    if [".", ",", "!", "?", ";", "،", "؛", "؟"].contains(char) {
+        // One space after a letter or digit, the same test as the double-space period's.
+        return afterAutoSpace || doubleSpaceBecomesPeriod(before: before) ? (1, char + " ") : (0, char)
+    }
     guard afterAutoSpace else { return (0, char) }
-    if [".", ",", "!", "?", ";", "،", "؛", "؟"].contains(char) { return (1, char + " ") }
-    if [":", "'", "\"", ")", "\u{2019}", "\u{201D}"].contains(char) { return (1, char) }
+    if char == "\"" || char == "\u{201D}" {
+        let line = before.reversed().prefix { !$0.isNewline }
+        let quotes = line.filter { $0 == "\"" || $0 == "\u{201C}" || $0 == "\u{201D}" }.count
+        return quotes % 2 == 1 ? (1, char) : (0, char)
+    }
+    if [":", "'", ")", "\u{2019}"].contains(char) { return (1, char) }
     return (0, char)
 }
 

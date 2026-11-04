@@ -134,18 +134,22 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
   - Preselection: a slow press types what the key shows (`longPressStrip`). A top-row digit comes first and is preselected only where its hint is drawn (English with digit hints on). Elsewhere (Arabic, hints off) the strip still offers the digit, but the letter is in it too, right after the digit unless its alternates already hold it, and the letter is preselected. Keys without a digit preselect their own output if the alternates hold it, else the first item.
 - **Shift:** a tap shifts one letter; a double-tap within 0.3 s locks caps. Auto-shift follows 8.6.
   - Slide from shift: a finger that went down on shift and is released on a letter types it capitalized, and shift is off afterwards (unless caps lock was on). Released on shift itself, it's a plain shift tap. Once on a letter, it slides like a letter press.
+  - Shift held: while the finger that went down on shift is still down, every letter typed (by another finger) is a capital and shift stays on, auto-shift included. When that finger lifts after letters were typed during the hold, shift goes off, and the next tap starts a new tap sequence (no caps lock from it). A hold with no letters is a plain tap (one-shot, double-tap caps lock). Caps lock is never turned off by a hold. The view tells the controller when the shift touch ends; the slide from shift is the same finger (`ShiftState.shiftDown`, `shiftUp`, `letterTyped`).
 - **Backspace:**
   - Touch-down deletes 1 character.
-  - Holding for 0.45 s starts repeat deletion every 0.09 s.
-  - After 15 repeats, it switches to whole-word deletion.
+  - Holding for 0.5 s starts repeat deletion: characters every 0.1 s for the first 5 repeats, then every 0.06 s.
+  - From repeat 15 on (16 characters, about 1.7 s after touch-down), it deletes whole words every 0.15 s, slower than characters so the finger can lift before overshooting (`BackspaceRepeat.interval(afterRepeat:)`). Each tick is a one-shot timer set to the next interval. The emoji panel's backspace uses the same timing.
   - The delete sound plays on each deletion.
   - Swipe left: past 12 pt left of the touch-down point, the repeat stops and the swipe deletes whole words live (`BackspaceRepeat.wordLength`), one more per 22 pt. The character the touch-down deleted is put back first, so only whole words go. Dragging back right puts the most recently deleted words back; back under 12 pt everything is as before the touch. Release keeps the result. The delete sound plays per word deleted. Words put back are treated like a paste: not autocorrected or learned again.
 - **Space:**
   - A tap inserts a space, which is also the autocorrect commit.
-  - A horizontal drag of more than 12 pt, or a long-press of 0.4 s, enters trackpad mode: key labels hide, and the cursor moves via `adjustTextPosition` at about 1 character per 9 pt. Releasing exits.
+  - A horizontal drag of more than 12 pt, or a long-press of 0.4 s, enters trackpad mode: key labels hide, and the cursor moves via `adjustTextPosition`. Releasing exits.
+  - Acceleration: 1 character per 9 pt while the finger moves at up to 100 pt/s, down to 1 per 3.6 pt (2.5x) at 600 pt/s and up, linear in between. The speed is the finger's between two moves (the first move counts as slow). The points left over carry to the next move, so a slow drag steps exactly every 9 pt (`Trackpad.offset(toX:at:)`).
   - A trackpad started by the hold (the finger within 12 pt of where it went down) that never moved the cursor was a slow tap: its release types a space, like a tap. Rollover still skips a space in trackpad mode.
   - Direction comes from the text at the cursor when the trackpad starts: the nearest strong-direction letter before the cursor (Arabic script is right to left, other letters left to right; spaces, digits, punctuation, emoji and marks are skipped), else the nearest after it, else the layout language.
 - **Double-space** → ". " when the previous character is a letter or digit (setting).
+- **Space after an auto-space** (8.7: a suggestion tap, an autocorrect, punctuation's own ". "): inserts nothing, but counts as the first space of a double-space period. So suggestion + space + space gives ". ", and after punctuation's ". " a further space never adds a second period (the next space after that is a plain space). An autocorrect's space was typed, so the space after it is already the second (`spaceEdit`).
+- **Suggestion bar press:** touch-down on a slot with something in it (or the clip chip) highlights it like a pressed key and plays the key haptic and click through `FeedbackPlayer`, like a key. The pick still fires on release, and a long-press still opens the block overlay; release or cancel clears the highlight.
 - **Pages:** 123 and #+= pages work like Apple's. Typing space or ' on the 123 page returns to letters.
   - A page key switches on touch-down. If the same finger slides onto a key of the new page and is released there, that key is typed and the keyboard returns to the page it came from (123 → a digit → letters). A plain tap just switches.
 - **Swipe down to hide:** `dismissKeyboard()` for a strict downward swipe only: it starts on a char key in rows 0 or 1, travels at least 70 pt down with under 30 pt sideways, within 0.3 s, with no alternates strip open. The letter isn't typed.
@@ -159,7 +163,7 @@ touch ─▶ KeyboardView (main) ──insertText──▶ textDocumentProxy   (
 
 ### 5.3 Feedback
 
-There is a single `FeedbackPlayer`, called on touch-down for every key.
+There is a single `FeedbackPlayer`, called on touch-down for every key and every suggestion bar slot (5.2).
 
 - **Haptic:**
   - One `UIImpactFeedbackGenerator(style: .rigid)` (stronger and crisper than `.light`, device round 1).
@@ -174,6 +178,7 @@ There is a single `FeedbackPlayer`, called on touch-down for every key.
 ### 5.4 Suggestion bar
 
 - **Layout:** 3 slots in Apple style. EN order is `[alt1] [primary] [alt2]`; AR mirrors it (RTL).
+- **Casing (8.6):** with shift on, every slot gets a capital first letter; in caps lock (EN), every slot and prediction is all caps. A literal typed all in capitals (2 or more letters) shows its suggestions all caps too.
 - **While typing a word:**
   - The primary slot shows the best candidate.
   - If an autocorrect is pending, the primary is **bold** and alt1 shows the literal in quotes (“teh”).
@@ -437,14 +442,16 @@ Replace the literal ℓ with the top candidate c* only if all of the following h
 - **Empty current word:** show the top 3 next words, drawn from personal trigrams and bigrams, base bigrams and unigram backoff. Exclude a repeat of the previous word and `<s>`.
 - A prediction is a valid base word or a known personal word. A pending word (a typo used once) is never predicted, even from Moe's n-grams.
 - After `. ! ? ؟`, a newline or an empty field, the context is `<s>`. First-word-of-message predictions are personal and valuable.
-- **Auto-shift (EN):** at the start of the field, after a sentence end + space, and after a newline, when `autocapitalizationType` allows it.
-- **Display casing** follows 6.3. When shift is active, capitalize the first letter of every suggestion.
+- **Auto-shift (EN):** at the start of the field, after a sentence end + space, and after a newline, when `autocapitalizationType` allows it. Closing quotes and brackets `) ] } " ' ” ’ »` between the `. ! ?` and the space are skipped (`."`, `.)`, `?"`, `!”`).
+- **Display casing** follows 6.3. When shift is active, capitalize the first letter of every suggestion; in caps lock, all caps (`Casing`). An autocorrect keeps the literal's casing: a capital first letter, or all caps for a literal typed in capitals.
 
 ### 8.7 Punctuation spacing
 
 - An auto-space (inserted after a suggestion tap or an autocorrect) is marked as auto.
-- If the next character is one of `. , ! ? ; ، ؛ ؟`, delete the auto-space, insert the punctuation, then insert a space.
-- For `: ' " )`, delete the auto-space and insert only the character.
+- If the next character is one of `. , ! ? ; ، ؛ ؟`, delete the auto-space, insert the punctuation, then insert a space. The same after a plain typed space that follows a letter or digit ("hello ," → "hello, "); one space only, so after two typed spaces nothing is deleted.
+- For `: ' )`, delete the auto-space and insert only the character (only after an auto-space). `'` joins the word before it (Moe's).
+- `"` (and `”`) after an auto-space: closing, taking the auto-space's place, when the current line before the cursor has an odd number of `"` `“` `”` (an open quote waiting); otherwise opening, keeping the space.
+- A space right after an auto-space inserts nothing (5.2).
 
 ## 9. Personal learning
 

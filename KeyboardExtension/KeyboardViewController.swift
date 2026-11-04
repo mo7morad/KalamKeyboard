@@ -42,7 +42,10 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         view.accessibilityIdentifier = "kalam"
         keyboardView.delegate = self
         input.lang = lang
-        input.isShifted = { [weak self] in self?.shift.mode != .off }
+        input.shiftCasing = { [weak self] in
+            guard let self, lang == .en else { return .none }
+            return shift.mode == .locked ? .all : shift.capitalizes ? .firstLetter : .none
+        }
         input.onEdit = { [weak self] in
             self?.refreshAutoShift()
             self?.refreshReturnKey()
@@ -52,6 +55,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
             self?.showChip()
         }
         bar.onPick = { [weak self] in self?.input.accept($0) }
+        bar.onPress = { [weak self] in self?.feedback.touchDown(.key) }
         bar.onBlock = { [weak self] in self?.input.block($0) }
         bar.onClipboard = { [weak self] in self?.togglePanel() }
         bar.onChip = { [weak self] in
@@ -303,7 +307,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
             input.backspaceDown()
         case .shift:
             feedback.touchDown(.modifier)
-            shift.tap(at: ProcessInfo.processInfo.systemUptime)
+            shift.shiftDown(at: ProcessInfo.processInfo.systemUptime)
             keyboardView.shift = shift.mode
             input.redrawBar()
         case .page:  // on touch-down, like Apple, so the finger can slide onto the new page
@@ -335,7 +339,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
 
     func commit(_ text: String, at point: Point?) {
         clipboard.dismissChip()  // SPEC 5.5: typing ends the chip's offer
-        let output = lang == .en && shift.mode != .off ? text.uppercased() : text
+        let output = lang == .en && shift.capitalizes ? text.uppercased() : text
         shift.letterTyped()
         input.type(output, at: page == "letters" ? point : nil)  // the engine's spatial model knows the letters page only
         // SPEC 5.2: an apostrophe on the 123 page returns to letters.
@@ -346,6 +350,13 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         let word = BackspaceRepeat.deletesWord(repeat: count)
         input.backspace(word ? BackspaceRepeat.wordLength(before: textDocumentProxy.documentContextBeforeInput ?? "") : 1, repeated: true)
         feedback.play(.delete)
+    }
+
+    /// SPEC 5.2: the finger that went down on shift lifted (also after a slide onto a letter).
+    func shiftReleased() {
+        shift.shiftUp()
+        keyboardView.shift = shift.mode
+        input.redrawBar()
     }
 
     func backspaceSwiped(words: Int) {

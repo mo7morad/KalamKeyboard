@@ -12,8 +12,8 @@ final class InputController {
     var lang = Lang.en
     var settings = Settings()
     var traits = FieldTraits()
-    /// Whether shift is on now, for SPEC 8.6 display casing.
-    var isShifted: () -> Bool = { false }
+    /// The casing shift asks for now (SPEC 8.6 display casing; all caps in caps lock, 5.4).
+    var shiftCasing: () -> Casing = { .none }
     /// After every edit the controller makes (the view controller refreshes shift and return).
     var onEdit: (() -> Void)?
     /// New bar slots, visual left to right.
@@ -63,7 +63,7 @@ final class InputController {
             taps.append(Tap(text, at: point))
         } else {
             if !taps.isEmpty { commitWord() }
-            let edit = punctuationEdit(text, afterAutoSpace: autoSpace)
+            let edit = punctuationEdit(text, before: before, afterAutoSpace: autoSpace)
             delete(edit.delete)
             insert(edit.insert)
             // SPEC 8.5: the slot covers the punctuation that committed the word, or that took its auto-space's place.
@@ -79,11 +79,15 @@ final class InputController {
     func typeSpace() {
         dropUndo()
         let corrected = taps.isEmpty ? nil : commitWord()
-        if settings.doubleSpacePeriod, lastKeyWasSpace, doubleSpaceBecomesPeriod(before: before) {
+        switch spaceEdit(before: before, afterAutoSpace: autoSpace, lastKeyWasSpace: lastKeyWasSpace,
+                         doubleSpacePeriod: settings.doubleSpacePeriod) {
+        case .period:
             delete(1)
             insert(". ")
             client.sentenceEnded()
-        } else {
+        case .nothing:
+            lastKeyWasSpace = true  // the auto-space stays auto, for punctuation that follows (SPEC 8.7)
+        case .space:
             insert(" ")
             lastKeyWasSpace = true
             autoSpace = corrected != nil
@@ -199,7 +203,6 @@ final class InputController {
         restoredLiteral = taps.isEmpty ? nil : literal
         pastedWord = nil
         autoSpace = !followed
-        lastKeyWasSpace = !followed
         refresh()
     }
 
@@ -257,11 +260,11 @@ final class InputController {
 
     private func show(_ result: EngineClient.Result) {
         shown = result
-        let capitalized = isShifted() || literal.first?.isUppercase == true
+        let casing = max(shiftCasing(), literalCasing(literal))
         // A literal retyped where it was autocorrected commits as typed, so it shows no pending autocorrect.
         let retyping = recent.retyped(literal, before: String(before.dropLast(literal.count))) != nil
         onSlots?(barSlots(result.candidates, autocorrect: retyping ? nil : result.autocorrect, literal: literal, lang: lang,
-                          capitalized: capitalized, emoji: result.emoji, revert: revertOffer?.literal, rescue: result.rescue))
+                          casing: casing, emoji: result.emoji, revert: revertOffer?.literal, rescue: result.rescue))
     }
 
     // MARK: Commit
@@ -291,7 +294,7 @@ final class InputController {
             learn(literal, context: context, how: .typed, taps: taps)
             return nil
         }
-        let replacement = cased(target.text, capitalized: literal.first?.isUppercase == true)
+        let replacement = cased(target.text, literalCasing(literal))
         trace("commitWord \(literal.debugDescription) -> \(replacement.debugDescription) delete \(literal.count)")
         delete(literal.count)
         insert(replacement)

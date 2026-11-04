@@ -176,12 +176,14 @@ final class EmojiPanel: UIView, UICollectionViewDataSource, UICollectionViewDele
 
     @objc private func backspaceDown() {
         onBackspace?()
-        var repeats = 0
-        repeatTimer = Timer.scheduledTimer(withTimeInterval: BackspaceRepeat.delay, repeats: false) { [weak self] _ in
-            self?.repeatTimer = Timer.scheduledTimer(withTimeInterval: BackspaceRepeat.interval, repeats: true) { [weak self] _ in
-                self?.onBackspaceRepeat?(repeats)
-                repeats += 1
-            }
+        scheduleRepeat(0, after: BackspaceRepeat.delay)
+    }
+
+    /// SPEC 5.2: one-shot timers, each waiting the next repeat's interval, as on the keys.
+    private func scheduleRepeat(_ n: Int, after delay: TimeInterval) {
+        repeatTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+            self?.onBackspaceRepeat?(n)
+            self?.scheduleRepeat(n + 1, after: BackspaceRepeat.interval(afterRepeat: n))
         }
     }
 

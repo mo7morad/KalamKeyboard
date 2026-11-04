@@ -46,18 +46,33 @@ func contextWordsSkipTheCurrentWord(text: String, expected: [String]) {
     #expect(resyncedTaps([], to: "hi").map(\.char) == ["h", "i"])
 }
 
-@Test(arguments: [("the", true, "The"), ("the", false, "the"), ("iPhone", true, "iPhone"), ("London", true, "London"), ("انا", true, "انا")])
-func displayCasing(word: String, capitalized: Bool, expected: String) {
-    #expect(cased(word, capitalized: capitalized) == expected)
+@Test(arguments: [
+    ("the", Casing.firstLetter, "The"), ("the", .none, "the"), ("iPhone", .firstLetter, "iPhone"), ("London", .firstLetter, "London"),
+    ("انا", .firstLetter, "انا"), ("the", .all, "THE"), ("iPhone", .all, "IPHONE"), ("don't", .all, "DON'T"), ("انا", .all, "انا"),
+] as [(String, Casing, String)])
+func displayCasing(word: String, casing: Casing, expected: String) {
+    #expect(cased(word, casing) == expected)
+}
+
+@Test(arguments: [("teh", Casing.none), ("Teh", .firstLetter), ("TEH", .all), ("I", .firstLetter), ("I'M", .all), ("NAsa", .firstLetter), ("", .none), ("انا", .none)] as [(String, Casing)])
+func typedLiteralCasing(literal: String, expected: Casing) {
+    #expect(literalCasing(literal) == expected)
 }
 
 @Test(arguments: [
-    (".", true, 1, ". "), ("،", true, 1, "، "), ("؟", true, 1, "؟ "),
-    (":", true, 1, ":"), (")", true, 1, ")"), ("\"", true, 1, "\""),
-    ("-", true, 0, "-"), (".", false, 0, "."),
-])
-func punctuationSpacing(char: String, autoSpace: Bool, delete: Int, insert: String) {
-    let edit = punctuationEdit(char, afterAutoSpace: autoSpace)
+    // After an auto-space.
+    (".", "hi ", true, 1, ". "), ("،", "انا ", true, 1, "، "), ("؟", "ايه ", true, 1, "؟ "),
+    (":", "hi ", true, 1, ":"), (")", "hi ", true, 1, ")"), ("'", "Moe ", true, 1, "'"), ("-", "hi ", true, 0, "-"),
+    // After a plain typed space that follows a letter or digit: . , ! ? ; ، ؛ ؟ only.
+    (",", "hello ", false, 1, ", "), ("?", "7 ", false, 1, "? "), ("؟", "ايه ", false, 1, "؟ "),
+    (",", "hello  ", false, 0, ","), (",", "hello. ", false, 0, ","), (",", " ", false, 0, ","), (".", "hi", false, 0, "."),
+    (":", "hello ", false, 0, ":"), (")", "hello ", false, 0, ")"), ("'", "Moe ", false, 0, "'"), ("\"", "said ", false, 0, "\""),
+    // Quotes after an auto-space: closing when the line has an open quote, else opening.
+    ("\"", "He said \"hi ", true, 1, "\""), ("\u{201D}", "He said \u{201C}hi ", true, 1, "\u{201D}"),
+    ("\"", "He said ", true, 0, "\""), ("\"", "\"a\" and ", true, 0, "\""), ("\"", "\"a\nsaid ", true, 0, "\""),
+] as [(String, String, Bool, Int, String)])
+func punctuationSpacing(char: String, before: String, autoSpace: Bool, delete: Int, insert: String) {
+    let edit = punctuationEdit(char, before: before, afterAutoSpace: autoSpace)
     #expect(edit.delete == delete)
     #expect(edit.insert == insert)
 }

@@ -6,6 +6,8 @@ import UIKit
 /// SPEC 5.5 adds the clipboard button at the left edge and the clip chip in the primary slot;
 /// while the clipboard panel is open, the bar is its header: "Clipboard", "Clear" and "ABC".
 /// SPEC 5.6 adds the emoji button right of it, shown always; the emoji panel hides the slots.
+/// SPEC 5.2: touch-down on a slot with something in it highlights it like a key and plays the key
+/// feedback (`onPress`); the pick still fires on release.
 final class SuggestionBar: UIView {
     var onPick: ((BarSlot) -> Void)?
     var onBlock: ((BarSlot) -> Void)?
@@ -14,6 +16,8 @@ final class SuggestionBar: UIView {
     var onChip: (() -> Void)?
     var onClear: (() -> Void)?
     var onClose: (() -> Void)?
+    /// Touch-down on a slot or the clip chip, for the key haptic and click.
+    var onPress: (() -> Void)?
 
     private let labels = (0..<3).map { _ in UILabel() }
     private let dividers = (0..<2).map { _ in UIView() }
@@ -25,6 +29,7 @@ final class SuggestionBar: UIView {
     private let clearButton = UIButton(type: .system)
     private let closeButton = UIButton(type: .system)
     private var blocking: BarSlot?
+    private var pressed: UILabel?
 
     private static let primary = 1
     private static let buttonWidth: CGFloat = 44
@@ -98,6 +103,8 @@ final class SuggestionBar: UIView {
             $0.font = KeyFont.bar
             $0.textAlignment = .center
             $0.lineBreakMode = .byTruncatingMiddle
+            $0.layer.cornerRadius = 8
+            $0.layer.cornerCurve = .continuous
             addSubview($0)
         }
         dividers.forEach { addSubview($0) }
@@ -174,17 +181,17 @@ final class SuggestionBar: UIView {
         }
     }
 
-    /// The slot index under the gesture, if the slots are showing.
-    private func slotIndex(at gesture: UIGestureRecognizer) -> Int? {
+    /// The slot index at `point`, if the slots are showing.
+    private func slotIndex(at point: CGPoint) -> Int? {
         guard hasFullAccess, !isPanelOpen, !isEmojiOpen, slotWidth > 0 else { return nil }
-        let x = gesture.location(in: self).x - slotsStart
+        let x = point.x - slotsStart
         let index = x < 0 ? -1 : Int(x / slotWidth)
         return slots.indices.contains(index) ? index : nil
     }
 
     @objc private func tapped(_ gesture: UITapGestureRecognizer) {
         if blocking != nil { return hideBlock() }
-        guard let index = slotIndex(at: gesture) else { return }
+        guard let index = slotIndex(at: gesture.location(in: self)) else { return }
         if index == Self.primary, chip != nil {
             onChip?()
         } else if let slot = slots[index] {
@@ -193,12 +200,38 @@ final class SuggestionBar: UIView {
     }
 
     @objc private func longPressed(_ gesture: UILongPressGestureRecognizer) {
-        guard gesture.state == .began, let index = slotIndex(at: gesture), !(index == Self.primary && chip != nil),
+        guard gesture.state == .began, let index = slotIndex(at: gesture.location(in: self)), !(index == Self.primary && chip != nil),
               let slot = slots[index], !slot.isLiteral, !slot.isEmoji else { return }
         blocking = slot
         blockButton.setTitle("Don\u{2019}t suggest \u{2018}\(slot.word)\u{2019}", for: .normal)
         blockButton.isHidden = false
         showSlots()
+    }
+
+    // MARK: Press feedback (the recognizers above still pick on release)
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesBegan(touches, with: event)
+        guard blocking == nil, let point = touches.first?.location(in: self), let index = slotIndex(at: point),
+              slots[index] != nil || (index == Self.primary && chip != nil) else { return }
+        setPressed(labels[index])
+        onPress?()
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesEnded(touches, with: event)
+        setPressed(nil)
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesCancelled(touches, with: event)
+        setPressed(nil)
+    }
+
+    private func setPressed(_ label: UILabel?) {
+        pressed?.layer.backgroundColor = nil
+        pressed = label
+        label?.layer.backgroundColor = palette.keyPressed.cgColor
     }
 
     @objc private func clipboardTapped() { onClipboard?() }

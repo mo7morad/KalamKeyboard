@@ -22,11 +22,12 @@ public struct BarSlot: Equatable, Sendable {
 /// cursor, takes the primary, quoted (SPEC 5.4). `rescue`, the other language's word for the same
 /// spots (SPEC 5.4), takes alt2, or alt1 when the emoji holds alt2. In Arabic with no pending
 /// autocorrect, the best other spelling of the literal's key takes alt1 when no slot shows it.
+/// Candidates and the rescue are shown in `casing` (SPEC 8.6; all caps in caps lock, 5.4).
 /// Nil is an empty slot.
 public func barSlots(_ candidates: [Suggestion], autocorrect: Suggestion?, literal: String, lang: Lang,
-                     capitalized: Bool, emoji: String? = nil, revert: String? = nil, rescue: Suggestion? = nil) -> [BarSlot?] {
+                     casing: Casing, emoji: String? = nil, revert: String? = nil, rescue: Suggestion? = nil) -> [BarSlot?] {
     func slot(_ s: Suggestion, bold: Bool = false) -> BarSlot {
-        let word = cased(s.text, capitalized: capitalized)
+        let word = cased(s.text, casing)
         return BarSlot(word: word, label: word, ident: s.ident, bold: bold, isLiteral: s.isLiteral)
     }
     var seen: Set<String> = []
@@ -47,7 +48,7 @@ public func barSlots(_ candidates: [Suggestion], autocorrect: Suggestion?, liter
         alt2 = BarSlot(word: emoji, label: emoji, ident: emoji, bold: false, isLiteral: false, isEmoji: true)
     }
     if let rescue {
-        let word = cased(rescue.text, capitalized: capitalized)
+        let word = cased(rescue.text, casing)
         let rescued = BarSlot(word: word, label: word, ident: rescue.ident, bold: false, isLiteral: false, rescueLang: lang == .en ? .ar : .en)
         if emoji == nil { alt2 = rescued } else { alt1 = rescued }
     }

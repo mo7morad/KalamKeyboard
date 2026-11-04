@@ -8,11 +8,14 @@ protocol KeyboardViewDelegate: AnyObject {
     func keyUp(_ key: Layout.Key)
     /// A char key's text; `point` is the commit point in key units, nil for a long-press pick.
     func commit(_ text: String, at point: Point?)
+    /// Backspace repeat number `count`, from 0 (`BackspaceRepeat` timing).
     func backspaceRepeated(_ count: Int)
     /// A backspace swipe now `words` steps to the left (0 puts everything back).
     func backspaceSwiped(words: Int)
     /// A finger that went down on a page key typed a key of the new page.
     func pageSlideEnded()
+    /// The finger that went down on shift lifted or was cancelled (SPEC 5.2 shift held).
+    func shiftReleased()
     func hideKeyboard()
     func moveCursor(by offset: Int)
     /// SPEC 5.2: the trackpad's direction from the text at the cursor, nil to follow the layout.
@@ -278,20 +281,24 @@ final class KeyboardView: UIView {
             if key.popup { popups.showBubble(over: press.frame.cap, image: bubbleImage(key, text: displayText(key)), palette: palette) }
             scheduleLongPress(press)
         case .backspace:
-            press.timer = after(BackspaceRepeat.delay) { [weak self, weak press] in
-                guard let press else { return }
-                press.timer = Timer.scheduledTimer(withTimeInterval: BackspaceRepeat.interval, repeats: true) { [weak self, weak press] _ in
-                    guard let press else { return }
-                    self?.delegate?.backspaceRepeated(press.repeats)
-                    press.repeats += 1
-                }
-            }
+            scheduleBackspaceRepeat(press, after: BackspaceRepeat.delay)
         case .space:
             press.timer = after(0.4) { [weak self, weak press] in
                 guard let press else { return }
                 self?.startTrackpad(press)
             }
         default: break
+        }
+    }
+
+    /// SPEC 5.2 backspace hold: one-shot timers, each tick waiting the next repeat's interval.
+    private func scheduleBackspaceRepeat(_ press: Press, after delay: TimeInterval) {
+        press.timer = after(delay) { [weak self, weak press] in
+            guard let self, let press else { return }
+            let n = press.repeats
+            delegate?.backspaceRepeated(n)
+            press.repeats = n + 1
+            scheduleBackspaceRepeat(press, after: BackspaceRepeat.interval(afterRepeat: n))
         }
     }
 
@@ -331,7 +338,7 @@ final class KeyboardView: UIView {
             case .space:
                 if press.trackpad == nil, abs(point.x - press.start.x) > Trackpad.startDistance { startTrackpad(press) }
                 if var pad = press.trackpad {
-                    let offset = pad.offset(toX: Double(point.x))
+                    let offset = pad.offset(toX: Double(point.x), at: touch.timestamp)
                     press.trackpad = pad
                     if offset != 0 { delegate?.moveCursor(by: offset) }
                 }
@@ -454,6 +461,7 @@ final class KeyboardView: UIView {
     private func finish(_ press: Press) {
         press.timer?.invalidate()
         presses.removeAll { $0 === press }
+        if press.origin == .shift { delegate?.shiftReleased() }
         setPressed(press.frame, isPressed(press.frame.key.id))
         if press.trackpad != nil { setLabelsHidden(false) }
         if press.frame.key.kind == .char {

@@ -219,3 +219,19 @@ Setup: install a Debug build with Full Access on, autocorrect normal, your Whats
 - [ ] Sentence-start bar: at the start of a new note, type "hel": the middle slot shows ____ (help or hello expected, not "he"). On the AR layout at the start, type "انا": the middle slot shows ____ (انا expected, not أما).
 - [ ] Backspace on tashkeel: type "مُحَمَّد" with the marks (long-press), then press backspace once: only the last mark (or the last letter if it has none) goes ____. Put the cursor after "مَ" and press backspace: the mark goes and م stays ____.
 - [ ] Lam-alef: type "لا" (ل then ا), then press backspace once: "ل" stays ____. Same in WhatsApp and Messages ____.
+
+## Phase 14: text polish (side by side with Apple's keyboard)
+
+Setup: install a Debug build with Full Access on, autocorrect normal, double-space period on, auto-capitals on. Do each step in Notes on Kalam, then the same keystrokes on Apple's keyboard, and note where Apple differs.
+
+- [ ] Space before punctuation: type "hello" + space + "," then "ok" + space + "?". Kalam gives "hello, ok? " ____. Apple gives ____. With the double-space period off, type "hello" + 2 spaces + ",": both spaces stay. Type "hello" + space + ":": the space stays.
+- [ ] Space after a suggestion: type "hel", tap "hello" in the bar, then space: still one space ("hello "). Space again: "hello. " ____. Apple, tapping a suggestion then space twice ____.
+- [ ] Space after punctuation: type "ok." (Kalam shows "ok. "), then space, then space: "ok.  " with no second period ____. Apple ____.
+- [ ] Quotes after a suggestion: tap a suggestion for "said", then type `"`: the space stays (`said "`). Type "hi", tap a suggestion, then `"`: it closes with no space before it (`said "hi"`). Apple ____.
+- [ ] Apostrophe after a suggestion: tap "Moe" from the bar, then `'` and "s": "Moe's" ____.
+- [ ] Capitals after closing quotes: type `He said "hi."` + space: shift turns on. Same for `(done.)` + space and `really?"` + space ____. Apple ____.
+- [ ] Caps-lock bar: double-tap shift, type "hel": every slot is in capitals (HELLO, HELP), and an empty word shows all-caps predictions. Tap one: it goes in all caps. Type "TEH" + space in caps lock: becomes "THE" ____. Apple ____.
+- [ ] Shift held: hold shift with one thumb and type "nasa" with the other: "NASA". Lift shift: the next letter is lowercase ____. Hold shift with no letters and lift: one capital follows (a plain tap). Double-tap for caps lock, then hold shift (that turns it off) and type: capitals until you lift. The slide from shift onto a letter still types one capital ____. Apple ____.
+- [ ] Backspace speed: hold backspace on a long paragraph. It starts after about half a second, speeds up, then switches to words after about 1.7 s. Lift as soon as you see words going: how many words too many went ____? Apple: how many too many ____? Same with the emoji panel's backspace ____.
+- [ ] Trackpad speed: hold space and drag slowly: about one character per 9 pt, as before. A fast flick across the bar moves much further (about 2.5 times). Can you land on a given letter in a long line ____? Apple ____.
+- [ ] Bar touch feedback: press a suggestion slot and hold: it highlights and you feel the key haptic and hear the click at once; the word goes in on release. Long-press still opens "Don't suggest". Press the clip chip: same feedback. The highlight clears on release every time (none left stuck) ____. Apple ____.

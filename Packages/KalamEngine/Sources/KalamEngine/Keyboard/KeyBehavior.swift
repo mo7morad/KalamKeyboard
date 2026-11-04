@@ -1,6 +1,8 @@
 import Foundation
 
 /// Shift and caps lock (SPEC 5.2): a tap shifts one letter, a second tap within 0.3 s locks caps.
+/// While the finger that went down on shift stays down, every letter is a capital; if letters were
+/// typed during the hold, lifting it turns shift off (caps lock stays).
 public struct ShiftState: Sendable {
     public enum Mode: Sendable { case off, once, locked }
 
@@ -8,10 +10,17 @@ public struct ShiftState: Sendable {
 
     public private(set) var mode: Mode = .off
     private var lastTap: TimeInterval?
+    private var held = false
+    private var typedWhileHeld = false
 
     public init() {}
 
-    public mutating func tap(at time: TimeInterval) {
+    /// Whether the next letter is a capital: shift is on, or held.
+    public var capitalizes: Bool { mode != .off || held }
+
+    public mutating func shiftDown(at time: TimeInterval) {
+        held = true
+        typedWhileHeld = false
         if mode == .locked {
             mode = .off
             lastTap = nil
@@ -24,22 +33,37 @@ public struct ShiftState: Sendable {
         }
     }
 
-    /// A letter was typed: a one-shot shift ends.
-    public mutating func letterTyped() {
-        if mode == .once { mode = .off }
+    /// The shift finger lifted: after letters typed during the hold, shift goes off.
+    public mutating func shiftUp() {
+        guard held else { return }
+        held = false
+        guard typedWhileHeld else { return }
+        lastTap = nil
+        if mode != .locked { mode = .off }
     }
 
-    /// Auto-shift (SPEC 8.6) sets or clears a one-shot shift, and never touches caps lock.
+    /// A letter was typed: a one-shot shift ends, unless shift is held (then it stays on).
+    public mutating func letterTyped() {
+        if held {
+            typedWhileHeld = true
+            if mode == .off { mode = .once }
+        } else if mode == .once {
+            mode = .off
+        }
+    }
+
+    /// Auto-shift (SPEC 8.6) sets or clears a one-shot shift, and never touches caps lock or a held shift.
     public mutating func setAuto(_ on: Bool) {
-        if mode != .locked { mode = on ? .once : .off }
+        if mode != .locked, !held { mode = on ? .once : .off }
     }
 }
 
 /// Mirrors UITextAutocapitalizationType without importing UIKit.
 public enum Autocapitalization: Sendable { case none, words, sentences, allCharacters }
 
-/// SPEC 8.6 auto-shift: at the start of the field, after a sentence end plus space, and after a
-/// newline. `before` is the text before the cursor (nil when the host gives none).
+/// SPEC 8.6 auto-shift: at the start of the field, after a sentence end plus space (closing quotes
+/// and brackets after the . ! ? are skipped: ." .) ?"), and after a newline. `before` is the text
+/// before the cursor (nil when the host gives none).
 public func shouldAutoShift(before: String?, autocapitalization: Autocapitalization) -> Bool {
     guard let before, let last = before.last else { return autocapitalization != .none }
     switch autocapitalization {
@@ -49,7 +73,8 @@ public func shouldAutoShift(before: String?, autocapitalization: Autocapitalizat
     case .sentences:
         if last.isNewline { return true }
         guard last == " " else { return false }
-        guard let end = before.reversed().first(where: { $0 != " " }) else { return true }
+        let closers: Set<Character> = [")", "]", "}", "\"", "'", "\u{201D}", "\u{2019}", "\u{BB}"]
+        guard let end = before.reversed().drop(while: { $0 == " " }).first(where: { !closers.contains($0) }) else { return true }
         return ".!?".contains(end) || end.isNewline
     }
 }
@@ -62,14 +87,39 @@ public func doubleSpaceBecomesPeriod(before: String) -> Bool {
     return prev.isLetter || prev.isNumber
 }
 
-/// SPEC 5.2 backspace hold: repeat after 0.45 s every 0.09 s; after 15 repeats delete whole words.
+/// What a space does (SPEC 5.2, 8.7).
+public enum SpaceEdit: Sendable {
+    /// Insert a space.
+    case space
+    /// Delete the space before the cursor and insert ". " (double-space period).
+    case period
+    /// Insert nothing: an auto-space is already there. It still counts as the first space of a
+    /// double-space period.
+    case nothing
+}
+
+/// The space key's edit: a double-space period when the setting is on, the last key was a space
+/// and `doubleSpaceBecomesPeriod`; else nothing right after an auto-space (a suggestion tap, an
+/// autocorrect, punctuation's own ". "); else a space.
+public func spaceEdit(before: String, afterAutoSpace: Bool, lastKeyWasSpace: Bool, doubleSpacePeriod: Bool) -> SpaceEdit {
+    if doubleSpacePeriod, lastKeyWasSpace, doubleSpaceBecomesPeriod(before: before) { return .period }
+    return afterAutoSpace && !lastKeyWasSpace ? .nothing : .space
+}
+
+/// SPEC 5.2 backspace hold: repeat after 0.5 s, characters every 0.1 s for the first 5 repeats, then
+/// every 0.06 s; from repeat 15 on, whole words every 0.15 s (slower, against overshoot).
 public enum BackspaceRepeat {
-    public static let delay: TimeInterval = 0.45
-    public static let interval: TimeInterval = 0.09
+    public static let delay: TimeInterval = 0.5
+    static let slowRepeats = 5
     static let charRepeats = 15
 
     /// Whether repeat number `n` (0-based, after the initial delay) deletes a word.
     public static func deletesWord(repeat n: Int) -> Bool { n >= charRepeats }
+
+    /// The wait between repeat `n` and the next one.
+    public static func interval(afterRepeat n: Int) -> TimeInterval {
+        deletesWord(repeat: n + 1) ? 0.15 : n < slowRepeats ? 0.1 : 0.06
+    }
 
     /// Characters to delete for one word step: trailing whitespace plus the word before it (at least 1).
     public static func wordLength(before: String) -> Int {
@@ -80,15 +130,20 @@ public enum BackspaceRepeat {
 }
 
 /// SPEC 5.2 space-bar trackpad: a drag past 12 pt or a 0.4 s hold starts it, then the cursor moves
-/// one character per 9 pt.
+/// one character per 9 pt for a slow finger (up to 100 pt/s), down to one per 3.6 pt for a fast one
+/// (600 pt/s and up), linear in between.
 public struct Trackpad: Sendable {
     public static let startDistance: Double = 12
-    static let pointsPerChar: Double = 9
+    static let slowPointsPerChar: Double = 9
+    static let fastPointsPerChar: Double = 3.6
+    static let slowSpeed: Double = 100
+    static let fastSpeed: Double = 600
 
     private var anchor: Double
     private let direction: Double
     private let fromHold: Bool
     private var moved = false
+    private var last: (x: Double, time: TimeInterval)?
 
     /// `downX` is where the finger went down on space. `rightToLeft` flips the direction so a
     /// rightward drag moves the cursor right in Arabic text.
@@ -98,10 +153,21 @@ public struct Trackpad: Sendable {
         fromHold = abs(startX - downX) <= Self.startDistance
     }
 
-    /// The character offset to apply for the finger now at `x`, since the last call.
-    public mutating func offset(toX x: Double) -> Int {
-        let steps = ((x - anchor) / Self.pointsPerChar).rounded(.towardZero)
-        anchor += steps * Self.pointsPerChar
+    /// Points per character at a finger speed in pt/s.
+    static func pointsPerChar(speed: Double) -> Double {
+        let t = min(max((speed - slowSpeed) / (fastSpeed - slowSpeed), 0), 1)
+        return slowPointsPerChar - t * (slowPointsPerChar - fastPointsPerChar)
+    }
+
+    /// The character offset to apply for the finger now at `x` at `time`, since the last call. The
+    /// speed is the finger's since the last call (the first call counts as slow); what is left over
+    /// carries to the next call, so slow drags step exactly every 9 pt.
+    public mutating func offset(toX x: Double, at time: TimeInterval) -> Int {
+        let speed = last.map { time > $0.time ? abs(x - $0.x) / (time - $0.time) : 0 } ?? 0
+        last = (x, time)
+        let perChar = Self.pointsPerChar(speed: speed)
+        let steps = ((x - anchor) / perChar).rounded(.towardZero)
+        anchor += steps * perChar
         if steps != 0 { moved = true }
         return Int(steps * direction)
     }

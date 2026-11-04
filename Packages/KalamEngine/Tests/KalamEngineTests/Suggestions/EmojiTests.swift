@@ -35,9 +35,9 @@ func keywordsFindTheBestEmojiByNormalizedWord(word: String, lang: Lang, expected
     let ranked = ["pizza", "pizzas", "piazza"].map {
         Suggestion(text: $0, ident: $0, isLiteral: $0 == "pizza", lm: 0, spatial: 0, edits: 0, completion: 0, boosts: 0)
     }
-    let en = barSlots(ranked, autocorrect: nil, literal: "pizza", lang: .en, capitalized: false, emoji: "🍕")
+    let en = barSlots(ranked, autocorrect: nil, literal: "pizza", lang: .en, casing: .none, emoji: "🍕")
     #expect(en.map { $0?.label } == ["pizzas", "pizza", "🍕"])
     #expect(en[2]?.isEmoji == true)
-    let ar = barSlots(ranked, autocorrect: nil, literal: "pizza", lang: .ar, capitalized: false, emoji: "🍕")
+    let ar = barSlots(ranked, autocorrect: nil, literal: "pizza", lang: .ar, casing: .none, emoji: "🍕")
     #expect(ar[0]?.label == "🍕")
 }
