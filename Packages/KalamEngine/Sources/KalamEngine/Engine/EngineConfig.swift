@@ -11,8 +11,8 @@ public struct EngineConfig: Sendable {
     public var farSubstitutionCost = 5.0
     public var learnedConfusionCost = 2.5  // a far substitution (typed char -> intended) Moe's corrections show...
     public var learnedConfusionMinCorrections = 2  // ...in this many distinct corrections
-    // Tap offset: where Moe's taps land relative to a key center, in key units (y: 1.0 = one 54 pt row,
-    // negative = above). The device round 2 trace puts them about 7 pt above the caps' centers (eval-log Phase 12).
+    // Tap offset: where Moe's taps land relative to a key center, in key units (y: 1.0 = one row, 54 pt when
+    // measured; negative = above). The device round 2 trace puts them about 7 pt above the caps' centers (eval-log Phase 12).
     public var tapOffsetX = 0.0
     public var tapOffsetY = -0.13
     public var keyOffsetPrior = 20.0  // K: a key's learned mean counts as K samples of the all-keys mean

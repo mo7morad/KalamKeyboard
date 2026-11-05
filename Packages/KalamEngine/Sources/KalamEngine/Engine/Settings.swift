@@ -8,11 +8,12 @@ public enum AutocorrectMode: String, CaseIterable, Sendable {
 public enum KeyboardHeight: String, CaseIterable, Sendable {
     case compact, `default`, tall
 
+    /// Compact is Apple's; the others are bigger, as Moe asked (device round 4).
     public var rowPitch: Double {
         switch self {
-        case .compact: 50
-        case .default: 54
-        case .tall: 58
+        case .compact: 54
+        case .default: 58
+        case .tall: 62
         }
     }
 }

@@ -23,7 +23,7 @@ import Testing
     #expect((settings.autocorrect(.en), settings.autocorrect(.ar)) == (.normal, .gentle))
     #expect((settings.variantFix(.en), settings.variantFix(.ar)) == (true, false))
     #expect(settings.clipboard)
-    #expect((settings.keyboardHeight, settings.keyboardHeight.rowPitch, settings.numberRow) == (.default, 54, false))
+    #expect((settings.keyboardHeight, settings.keyboardHeight.rowPitch, settings.numberRow) == (.default, 58, false))
 }
 
 @Test func savedSettingsLoadBack() throws {

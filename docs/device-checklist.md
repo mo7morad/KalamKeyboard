@@ -270,3 +270,12 @@ Round 3's touch intake didn't fix the lost taps (Moe: still no buzz and no lette
 - [ ] Nothing doubled: no tap types two letters ____.
 - [ ] Still the same: touch a letter, slide to its neighbour and lift: only the neighbour is typed ____. Shift slid onto a letter, 123 slid onto a digit ____. The space trackpad, including a quick flick ____. Backspace hold and swipe ____. Swipe down to hide ____.
 - [ ] If taps still drop: does Apple's keyboard drop any at the same speed ____? Then pull the trace on the Mac and send it: `xcrun devicectl device copy from --device <iPhone name> --domain-type appGroupDataContainer --domain-identifier group.com.morad.kalam --source Library/Caches/kalam-trace.log --destination ~/Desktop/kalam-trace.log`. Its "sudden move" lines are the jumps Kalam split; a lost tap with neither a "sudden move" nor a "spy began" line never reached Kalam.
+
+## Device round 5: bigger keys, buzz first, the touch report
+
+Moe after round 4: taps still drop; Apple's keyboard never drops at the same speed; he types on Debug builds. So the drops are Kalam's. Three changes: keys 4 pt taller per row at every Keyboard Height (Default is 58 pt rows, Compact is Apple's 54) with caps 4 pt apart instead of 6; a new touch's buzz and click come before the previous letter's commit (two thumbs); a Debug "view began" trace line, so a lost tap shows which layer missed it.
+
+- [ ] Debug build from `development`, Full Access on. In Notes, type "the quick brown fox jumps over the lazy dog" once, fast, with two thumbs. Letters missing ____.
+- [ ] Right after, on the Mac in the repo: `python3 Tools/touch-report/touch_report.py --device "<iPhone name>"` (`xcrun devicectl list devices` shows the name), and paste its output. It says how many touch-downs the keyboard's window got, how many reached the keys, and for each one that didn't, where it was and which system recognizer had it.
+- [ ] Bigger keys feel right, not too big ____. Compact (in Kalam's Settings) is Apple's size, Tall is 4 pt taller again ____.
+- [ ] Then day to day, a Release build (Xcode: Product > Scheme > Edit Scheme > Run > Build Configuration > Release): optimized, no trace writes. Feels faster than Debug ____. Taps still drop on Release ____.

@@ -320,23 +320,26 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
 
     // MARK: KeyboardViewDelegate
 
-    func keyDown(_ key: Layout.Key) {
+    func touchFeedback(_ key: Layout.Key) {
         switch key.kind {
         case .char: feedback.touchDown(.key)
-        case .backspace:
-            feedback.touchDown(.delete)
-            input.backspaceDown()
+        case .backspace: feedback.touchDown(.delete)
+        default: feedback.touchDown(.modifier)
+        }
+    }
+
+    func keyDown(_ key: Layout.Key) {
+        switch key.kind {
+        case .backspace: input.backspaceDown()
         case .shift:
-            feedback.touchDown(.modifier)
             shift.shiftDown(at: ProcessInfo.processInfo.systemUptime)
             keyboardView.shift = shift.mode
             input.redrawBar()
         case .page:  // on touch-down, like Apple, so the finger can slide onto the new page
-            feedback.touchDown(.modifier)
             slideReturnPage = page
             page = key.output
             reloadLayout()
-        default: feedback.touchDown(.modifier)
+        default: break
         }
     }
 

@@ -2,7 +2,9 @@ import KalamEngine
 import UIKit
 
 protocol KeyboardViewDelegate: AnyObject {
-    /// Every key, on touch-down (feedback, shift, page, the first backspace).
+    /// Every key's haptic and sound, first thing on touch-down (SPEC 5.2, 5.3).
+    func touchFeedback(_ key: Layout.Key)
+    /// Every key, on touch-down after the rollover (shift, page, the first backspace).
     func keyDown(_ key: Layout.Key)
     /// Non-char keys on touch-up (space, return, lang). Not sent for a space whose trackpad moved the cursor.
     func keyUp(_ key: Layout.Key)
@@ -276,7 +278,12 @@ final class KeyboardView: UIView {
     }
 
     // KeyTouchRecognizer handles the keys' touches; the view's own copies stop here, as before.
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {}
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        #if DEBUG
+        // Next to the spy and key lines (same id): a touch the view got and KeyTouchRecognizer didn't.
+        for touch in touches { trace("view began id \(Unmanaged.passUnretained(touch).toOpaque())") }
+        #endif
+    }
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {}
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {}
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {}
@@ -288,16 +295,20 @@ final class KeyboardView: UIView {
         }
     }
 
-    /// A finger going down at `point`, from `began` or a sudden move: the rollover, then its press
-    /// with the touch-down feedback. Nil when there is no key to press.
+    /// A finger going down at `point`, from `began` or a sudden move: its feedback, the rollover,
+    /// then its press. Nil when there is no key to press.
     @discardableResult
     private func touchDown(_ touch: UITouch, at point: CGPoint, time: TimeInterval) -> Press? {
+        // SPEC 5.2: the haptic and sound first, so a second thumb's buzz never waits for the first
+        // thumb's letter and its edits.
+        if let frame = geometry?.key(at: point) { delegate?.touchFeedback(frame.key) }
         // SPEC 5.2 rollover: a new touch releases any letter, space or return still waiting for
         // its touch-up, so two thumbs keep their order ("hi there", not "hit here").
         for press in presses where rollsOver(press) {
             trace("rollover \(press.frame.key.id)")
             release(press)
         }
+        // Found again: the rollover can change the page (a slide from 123 ending on a key).
         guard let frame = geometry?.key(at: point) else { return nil }
         let press = Press(touch: touch, frame: frame, start: point, time: time)
         traceTouch("began", press, at: point, time: time)
