@@ -13,6 +13,7 @@ and prints a short report to paste back.
 """
 
 import argparse
+import os
 import re
 import statistics
 import subprocess
@@ -199,14 +200,15 @@ def report(session):
 
 
 def pull(device):
-    destination = tempfile.NamedTemporaryFile(suffix="-kalam-trace.log", delete=False).name
+    # A path that doesn't exist yet: devicectl may not overwrite a file.
+    destination = os.path.join(tempfile.mkdtemp(prefix="kalam-trace-"), "kalam-trace.log")
     command = ["xcrun", "devicectl", "device", "copy", "from", "--device", device,
                "--domain-type", "appGroupDataContainer", "--domain-identifier", APP_GROUP,
                "--source", TRACE_PATH, "--destination", destination]
     try:
         subprocess.run(command, check=True, stdout=subprocess.DEVNULL)
     except (OSError, subprocess.CalledProcessError) as error:
-        sys.exit(f"devicectl couldn't copy the trace ({error}). `xcrun devicectl list devices` shows the iPhone's name.")
+        sys.exit(f"devicectl couldn't copy the trace ({error}). `xcrun devicectl list devices` shows the iPhone's identifier.")
     return destination
 
 
@@ -221,6 +223,8 @@ def main():
     path = pull(args.device) if args.device else args.trace
     with open(path, encoding="utf-8", errors="replace") as file:
         print(report(parse(file.read(), everything=args.all)))
+    if args.device:
+        print(f"(trace saved at {path})")
 
 
 if __name__ == "__main__":
