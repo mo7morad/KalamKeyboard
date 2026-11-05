@@ -279,3 +279,14 @@ Moe after round 4: taps still drop; Apple's keyboard never drops at the same spe
 - [ ] Right after, on the Mac in the repo: `python3 Tools/touch-report/touch_report.py --device "<iPhone name>"` (`xcrun devicectl list devices` shows the name), and paste its output. It says how many touch-downs the keyboard's window got, how many reached the keys, and for each one that didn't, where it was and which system recognizer had it.
 - [ ] Bigger keys feel right, not too big ____. Compact (in Kalam's Settings) is Apple's size, Tall is 4 pt taller again ____.
 - [ ] Then day to day, a Release build (Xcode: Product > Scheme > Edit Scheme > Run > Build Configuration > Release): optimized, no trace writes. Feels faster than Debug ____. Taps still drop on Release ____.
+
+## Device round 6: the touch surface
+
+The round 5 trace found the lost taps: iOS only delivers a keyboard extension's touches that land on something it drew, and Kalam's gaps between keys were see-through. Of about 95 taps that arrived, every one was on a key cap; the lost "n", "x" and "s" never reached the keyboard's window. A full-size tint too faint to see now sits under everything (SPEC 5.2 touch surface).
+
+- [ ] Debug build from `development`. Type "the quick brown fox jumps over the lazy dog" 3 times, fast, two thumbs. Letters missing ____ (before: 2 in one sentence).
+- [ ] Aim between keys on purpose: tap the gap between g and h, between rows, under the space bar's bottom edge, just above the top row: each types a key and buzzes ____.
+- [ ] The keyboard looks the same as before, no tint visible in light or dark ____.
+- [ ] The bar: tap between suggestions and beside the clipboard and emoji buttons; the emoji panel: tap between emoji ____.
+- [ ] Then the report: `python3 Tools/touch-report/touch_report.py --device 00008150-0002199602E1401C`. "Key touch-downs between rows" is above 0 now (each of those would have been lost before) ____.
+- [ ] Then switch day-to-day typing to Release (Edit Scheme > Run > Build Configuration > Release) ____.

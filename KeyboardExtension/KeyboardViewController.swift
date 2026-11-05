@@ -16,6 +16,10 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     private let panel = ClipboardPanel()
     private let emojiPanel = EmojiPanel()
     private let globeButton = UIButton(type: .custom)
+    /// SPEC 5.2 touch surface: iOS gives a keyboard extension only the touches that land on something
+    /// it drew, so taps between the keys (and on the bar's empty space) never arrived (device round 5
+    /// trace). A tint too faint to see, under everything, makes every point of the keyboard count.
+    private let touchSurface = UIView()
     private var heightConstraint: NSLayoutConstraint?
     /// The appearance the views were last painted in (nil: not yet).
     private var paintedDark: Bool?
@@ -92,7 +96,8 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         NotificationCenter.default.addObserver(self, selector: #selector(hostDidBecomeActive), name: .NSExtensionHostDidBecomeActive, object: nil)
         registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: Self, _) in self.refreshAppearance() }
         globeButton.addTarget(self, action: #selector(handleInputModeList(from:with:)), for: .allTouchEvents)
-        for subview in [bar, keyboardView, globeButton, panel, emojiPanel] {
+        touchSurface.backgroundColor = UIColor(white: 0.5, alpha: 0.02)
+        for subview in [touchSurface, bar, keyboardView, globeButton, panel, emojiPanel] {
             subview.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(subview)
         }
@@ -100,6 +105,10 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         heightConstraint = height
         NSLayoutConstraint.activate([
             height,
+            touchSurface.topAnchor.constraint(equalTo: view.topAnchor),
+            touchSurface.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            touchSurface.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            touchSurface.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             bar.topAnchor.constraint(equalTo: view.topAnchor),
             bar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             bar.trailingAnchor.constraint(equalTo: view.trailingAnchor),

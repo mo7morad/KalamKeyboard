@@ -46,6 +46,12 @@ def test_everything_counts_older_appearances_too():
     assert "Touch-downs the keyboard's window got: 5" in report(parse(TRACE, everything=True))
 
 
+def test_taps_between_rows_are_counted():
+    trace = "1.0 touch began q at 0.50,0.95 lag 1.0 ms id 0xq\n2.0 touch began z at 1.90,-0.05 lag 1.0 ms id 0xz\n"
+    assert "Key touch-downs between rows (iOS dropped these before round 6): 2" in report(parse(trace))
+    assert "between rows (iOS dropped these before round 6): 0" in report(parse(TRACE))
+
+
 def test_a_trace_without_spy_lines_says_so():
     text = report(parse("1.0 touch began q at 0.50,0.50 lag 1.0 ms id 0xq\n"))
     assert "Key touch-downs with no window line (spy not attached?): 1" in text

@@ -40,6 +40,10 @@ MATCH_WINDOW_MS = (-20.0, 100.0)
 VIEW_WINDOW_MS = (-20.0, 1500.0)
 # A "sudden move" line is followed by its landing's "touch began" within the same event.
 LANDING_WINDOW_MS = 10.0
+# Key units: rows are 1.0 apart, and a row's caps cover this part of it at the default height (5.1 pt
+# down a 58 pt row, 48.8 pt tall). A tap outside landed between rows, on a see-through gap: iOS didn't
+# deliver those until the touch surface (device round 6).
+CAP_ROWS = (5.1 / 58, (5.1 + 48.8) / 58)
 # Kalam's views whose touches the keys never see, by design: the suggestion bar and its buttons (or
 # the globe), and the emoji and clipboard panels. A touch anywhere else that no key got was lost.
 NOT_KEYS = {"SuggestionBar", "UIButton", "EmojiPanel", "ClipboardPanel", "UICollectionView", "EmojiCell", "ClipTile"}
@@ -61,6 +65,7 @@ class Spy:
 class KeyTouch:
     time: float
     key: str
+    y: float
     lag: float
     id: str
     landing: bool = False
@@ -117,10 +122,10 @@ def parse(text, everything=False):
             session.spies.append(Spy(time, phase, float(x), float(y), view, float(lag), touch_id,
                                      [r for r in recognizers.split(",") if r]))
         elif m := TOUCH.match(text):
-            phase, key, _, _, lag, touch_id = m.groups()
+            phase, key, _, y, lag, touch_id = m.groups()
             if phase == "began":
                 landing = landing_after is not None and time - landing_after <= LANDING_WINDOW_MS
-                session.keys.append(KeyTouch(time, key, float(lag), touch_id, landing))
+                session.keys.append(KeyTouch(time, key, float(y), float(lag), touch_id, landing))
                 landing_after = None
             elif phase == "cancelled":
                 session.cancelled += 1
@@ -183,6 +188,8 @@ def report(session):
                    + f"lag {spy.lag:.1f} ms, recognizers {','.join(spy.recognizers)}{end}{reached}")
     if unseen:
         out.append(f"Key touch-downs with no window line (spy not attached?): {len(unseen)}")
+    between = [k for k in session.keys if not CAP_ROWS[0] <= k.y % 1 <= CAP_ROWS[1]]
+    out.append(f"Key touch-downs between rows (iOS dropped these before round 6): {len(between)}")
     out.append(f"Cancelled by the system: {session.cancelled}; dropped on reset: {session.dropped}")
     lags = [k.lag for k in session.keys]
     if lags:
