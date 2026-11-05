@@ -56,13 +56,13 @@ func evalPersonal(_ args: [String]) -> Int32 {
         for lang in [Lang.en, .ar] {
             let lexicon = lexicons.first { $0.lang == lang }
             let layout = Layout.bundled("\(lang.rawValue)-letters")
-            let words = test.flatMap { contextualWords($0.text) }.filter { $0.token.kind == (lang == .en ? .en : .ar) }
+            let words = test.flatMap { wordsWithNext($0.text) }.filter { $0.token.kind == (lang == .en ? .en : .ar) }
             for (name, personal) in [("base-only", nil), ("personal", model)] {
                 let engine = Engine(lang: lang, lexicon: lexicon, layout: layout, personal: personal, config: config)
                 let tap = centerTapper(lang)
                 let typed = words.map { simulateTyping($0.token, taps: tap($0.token.surface), context: $0.context, engine: engine) }
                 let changes = words.compactMap { word -> String? in
-                    let result = committed(tap(word.token.surface), context: word.context, engine: engine, settings: settings).word
+                    let result = committed(tap(word.token.surface), context: word.context, next: word.next, engine: engine, settings: settings).word
                     return result == word.token.ident ? nil : "\(word.token.surface) -> \(result)"
                 }
                 let top3 = Double(typed.filter(\.predicted).count) / Double(max(typed.count, 1))
@@ -84,12 +84,12 @@ func evalNoise(_ test: [ChatMessage], engine: Engine, typist: NoisyTypist, setti
     var tally = NoiseTally(sampleLimit: sampleLimit)
     let kind: Token.Kind = engine.lang == .en ? .en : .ar
     let clean = centerTapper(engine.lang)
-    for (token, context) in test.flatMap({ contextualWords($0.text) }) where token.kind == kind && engine.isWord(token.ident) {
+    for (token, context, next) in test.flatMap({ wordsWithNext($0.text) }) where token.kind == kind && engine.isWord(token.ident) {
         let (taps, kinds) = typist.taps(token.surface, using: &rng)
         let literal = ident(taps.map(\.char).joined(), kind: kind)
-        let noisy = literal == token.ident ? nil : committed(taps, context: context, engine: engine, settings: settings)
+        let noisy = literal == token.ident ? nil : committed(taps, context: context, next: next, engine: engine, settings: settings)
         tally.add(token.ident, noisy: noisy.map { NoisyResult(literal: literal, kinds: kinds, realWord: engine.isWord(literal), word: $0.word, top: $0.top) },
-                  clean: committed(clean(token.surface), context: context, engine: engine, settings: settings).word)
+                  clean: committed(clean(token.surface), context: context, next: next, engine: engine, settings: settings).word)
     }
     return tally
 }

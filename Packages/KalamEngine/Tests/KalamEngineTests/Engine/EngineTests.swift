@@ -11,6 +11,13 @@ func correctsTypo(_ typed: String, _ expected: String) throws {
     #expect(suggestions(try fixtureEngine(.en), typed).first == expected)
 }
 
+@Test func aKeyTappedTwiceCostsLessThanAnExtraTap() throws {
+    let engine = try fixtureEngine(.en)
+    func edits(_ typed: String) -> Double? { engine.candidates(InputState(context: [], taps: taps(typed))).first { $0.ident == "wait" }?.edits }
+    #expect(edits("waait") == EngineConfig().doubledInsertionCost)
+    #expect(edits("wapit") == EngineConfig().insertionCost)
+}
+
 @Test func completesPrefix() throws {
     let top = suggestions(try fixtureEngine(.en), "hel")
     #expect(top.contains("hello") && top.contains("help"))

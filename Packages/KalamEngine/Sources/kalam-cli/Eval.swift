@@ -40,7 +40,7 @@ func eval(_ args: [String]) -> Int32 {
     let started = Date()
 
     for sentence in sentences {
-        for (token, context) in contextualWords(sentence) where token.kind == (lang == .en ? .en : .ar) {
+        for (token, context, next) in wordsWithNext(sentence) where token.kind == (lang == .en ? .en : .ar) {
             let taps = noisy.taps(token.surface, using: &rng).taps  // drawn up front: the same noise whatever the engine does
             let typed = simulateTyping(token, taps: taps, context: context, engine: engine, latency: latency)
             metrics.words += 1
@@ -50,12 +50,12 @@ func eval(_ args: [String]) -> Int32 {
             guard let word = lexicon.wordID(ident: token.ident), lexicon.isValid(word) else { continue }
             if ident(taps.map(\.char).joined(), kind: token.kind) != token.ident {
                 metrics.noisy += 1
-                let result = committed(taps, context: context, engine: engine, settings: settings, latency: latency)
+                let result = committed(taps, context: context, next: next, engine: engine, settings: settings, latency: latency)
                 metrics.fixed += result.word == token.ident ? 1 : 0
                 metrics.rankedFirst += result.top == token.ident ? 1 : 0
             }
             metrics.clean += 1
-            metrics.falseFixes += committed(clean(token.surface), context: context, engine: engine, settings: settings).word == token.ident ? 0 : 1
+            metrics.falseFixes += committed(clean(token.surface), context: context, next: next, engine: engine, settings: settings).word == token.ident ? 0 : 1
         }
     }
 

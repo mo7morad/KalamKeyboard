@@ -70,7 +70,10 @@ extension Engine {
             prune(&layers[i])
             guard i < taps.count else { break }
             for s in layers[i].values.sorted(by: State.cheaper) {
-                if s.edits < maxEdits { relax(&layers[i + 1], s.moved(to: s.node, edit: config.insertionCost)) }
+                if s.edits < maxEdits {
+                    let doubled = i > 0 && taps[i].unit == taps[i - 1].unit  // a key tapped twice (wwhat)
+                    relax(&layers[i + 1], s.moved(to: s.node, edit: doubled ? config.doubledInsertionCost : config.insertionCost))
+                }
                 for child in lexicon.children(s.node) {
                     let char = lexicon.char(child)
                     if let cost = matchCost(char, taps[i], spatial) {

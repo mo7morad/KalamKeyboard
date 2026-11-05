@@ -429,3 +429,49 @@ miss   [real-word: substitution] فات: typed فدت -> فدت (top فات)
 miss   [substitution] خلصت: typed ملصع -> ملصع (top كان)
 miss   [real-word: substitution] كل: typed كب -> كب (top كل)
 ```
+
+## 2026-11-05 · Phase 17: better autocorrect (real-word fix, post-correction, double taps)
+
+Working tree on `b177f18`, real klex (unchanged, EN `b98ee2a1…`, AR `d729d2df…`), all 3 chats, built `-c release`. Benchmark as in Phase 16, both sigmas, bias-y −0.13, seed 1, `--autocorrect normal`, `--fold all`.
+
+**Re-baseline.** The Phase 16 table ran on one chat only (1469 messages, israa-elayashy). With all 3 chats (3759 messages) the baseline is:
+
+| Sigma | EN words / mistyped | EN fix / top-1 | AR words / mistyped | AR fix / top-1 |
+|---|---|---|---|---|
+| 0.2 | 797 / 188 | 47.3% (89) / 72.3% | 13373 / 3218 | 20.7% (667) / 52.1% |
+| 0.35 | 797 / 527 | 49.5% (261) / 74.4% | 13373 / 9498 | 25.3% (2401) / 51.4% |
+
+Wrong change 0 in both (by construction). Real-word misses at 0.2: EN 52 of 99, AR 1441 of 2551. By the literal's wordfreq zipf (EN / AR): 2 to 3: 20 / 360, 3 to 4: 16 / 280, 4+: 16 / 322, under 2 (AR clitic forms): 479. In about 60% of them the intended word already ranks first.
+
+**Guards** for any rule that lets autocorrect touch valid words: normal `eval-personal` "autocorrect changes" over the 10 folds (key-centre taps of Moe's text; post-correction simulated too), diffed against the baseline (EN 14, AR 48 in normal; AR 29 in gentle) and judged by hand; synthetic FA ≤ 0.5% (baseline EN 48.8 / 0.01, AR normal 29.6 / 0.00, AR gentle 20.2 / 0.00).
+
+Kept, cumulative (fix rate EN / AR):
+
+| Change | σ 0.2 | σ 0.35 | Synthetic AC / FA (EN; AR normal; AR gentle) |
+|---|---|---|---|
+| Baseline | 47.3 / 20.7 | 49.5 / 25.3 | 48.8 / 0.01; 29.6 / 0.00; 20.2 / 0.00 |
+| A. Real-word fix: a valid literal changes when c* (a full word) wins by θ + `realWordMarginEN` 4 / `realWordMarginAR` 10; never to the same AR stem with another suffix | 56.9 / 25.7 | 65.7 / 30.3 | 64.4 / 0.04; 31.8 / 0.00; 20.4 / 0.00 |
+| B. + Post-correction with the next word, `postCorrectionMaxCost` 3 | 59.6 / 28.2 | 66.2 / 33.6 | 65.7 / 0.04; 35.1 / 0.00; 24.5 / 0.00 |
+| C. + `doubledInsertionCost` 3 (an extra tap repeating the previous key) | **61.2 / 29.6** | **66.0 / 33.8** | 66.6 / 0.04; 35.7 / 0.00; 25.2 / 0.00 |
+
+- Final top-1 at 0.2: EN 72.9%, AR 53.4%. Real-word fixed at 0.2: EN 21 of 52, AR 223 of 1441. KS and NW unchanged (EN 38.2 / 22.5, AR 27.9 / 19.8); candidates p95 EN 1.49, AR 2.58 ms.
+- C costs one EN word at 0.35 (349 → 348 of 527); the synthetic eval (6,414 EN words at σ 0.35) gains 0.9 pp, so it's kept.
+- `--noise` wrong change, final: EN 0, AR 4 of 13373 (0.03%). All 4 are Moe's own typos that count as words (بمعلم, علبنا, نن, حير), so they are right fixes.
+- **Moe's changes, normal:** EN 14 → 14 (the same set). AR 48 → 54: none dropped, 6 added, all right: حدفت→حذفت, بمعلم→يمعلم, علبنا→علينا, نن→من, اللهبة→اللعبة, حير→خير. **Gentle:** AR 29 → 35, 6 added, all right: حدفت→حذفت, بمعلم→يمعلم, اموورك→امورك, مايون→مليون, الجاجات→الحاجات, عذزا→عذرا. So wrong changes didn't grow.
+- The benchmark gives post-correction the next word as typed right (its best case); on the device the next word is whatever committed.
+
+Dropped:
+- AR normal edit counted once (weight 0 instead of 1): AR 24.9 / 26.8, but +24 Moe changes, nearly all wrong (جوعت→جيبت, عمالين→عاملين, بيعملوه→بيعملوا). Weight 0.5: AR 22.8 / 26.0, +8 changes, all wrong. The double count stays.
+- insertionCost 4: EN 47.9 / 48.4, AR 22.2 / 25.1 (σ 0.35 worse). 4.5: 47.9 / 49.0, 21.6 / 25.2 (worse at 0.35). omissionCost 2.5: 48.4 / 49.3, 20.8 / 25.4 (noise level). transpositionCost 1.5: 46.8 / 49.1, 20.7 / 25.2. farSubstitutionCost 4: 46.8 / 48.2, 20.4 / 25.1. All rejected.
+- min-zipf 3 rebuild (both klex, with A to C): rates 63.3 / 70.8 EN, 31.0 / 37.9 AR, but only because 28 EN and 817 AR of Moe's words leave the counted set (EN fixes 112 → 105). Moe's changes 68 → 116, many wrong (yapping→tapping, gpt→got, pdfs→odds, حابب→جايب). Rejected; the klex is unchanged. A rebuild at the default zipf reproduces EN `b98ee2a1…` and its held-out file byte for byte.
+- Real-word margins: AR 9 adds مزه→مره (Moe's slang); AR 10 and 11 without the suffix rule add خيرك→خيره and يهديها→يهدينا; EN 3 makes 3 wrong changes in `--noise`. Allowing a completion for a valid literal: AR يعين→يعينك, ناقص→ناقصه and similar.
+- Post-correction with the real-word margins replaced by a lower one (2, 4, 6 for both languages): AR wrong change 126 / 65 / 27. postCorrectionMaxCost 3.5 or 4: adds يحبيبي→يحبيبتي (Moe writes يحبيبي to Mohamed). Allowing a 1-letter completion: adds انت→انتي, يجازيك→يجازيكي, يهنيك→يهنيكي, and brow fox still isn't fixed (no "brown fox" base bigram).
+- doubledInsertionCost 2: AR 30.9 / 34.0, but adds بعتتلي→بعتلي (2x), بتتعمل→بتعمل, تتعمل→تعمل, وببص→وبس. 3.5 and 4 fix fewer.
+- Space errors (item 3): not tried. NoisyTypist makes no space errors, so the benchmark can't show them.
+
+```bash
+$K eval-personal --chat <3 chats> --sender "Mohamed Morad" --klex-en $R/en.klex --klex-ar $R/ar.klex \
+  --fold all --autocorrect normal --noise 0.2      # and 0.35; --set realWordMarginAR=… etc. for the sweeps
+$K eval-personal ... --fold k --autocorrect normal --samples 100000   # k = 0..9, the changes diffed by hand
+$K suggest --klex $R/en.klex --context "the quick" --typed brow --next fox   # new: what the next word's commit does
+```

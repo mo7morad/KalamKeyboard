@@ -143,9 +143,16 @@ public struct AutocorrectUndo: Sendable {
     public let taps: [Tap]
     public let replacement: String
     public private(set) var tail = ""
+    /// A post-correction: the tail is the next word and what followed it, and the revert keeps it.
+    public private(set) var keepsTail = false
 
     public init(literal: String, taps: [Tap], replacement: String) {
         (self.literal, self.taps, self.replacement) = (literal, taps, replacement)
+    }
+
+    /// A post-correction slot (SPEC 8.5): `kept` follows the replacement and stays when it reverts.
+    public init(literal: String, replacement: String, keeping kept: String) {
+        (self.literal, self.taps, self.replacement, tail, keepsTail) = (literal, [], replacement, kept, true)
     }
 
     /// The slot after the commit's key deleted `deleting` characters of the tail (punctuation taking
@@ -160,6 +167,7 @@ public struct AutocorrectUndo: Sendable {
     /// One backspace with `before` the text before the cursor.
     public mutating func backspace(before: String) -> Step {
         guard before.hasSuffix(replacement + tail) else { return .gone }
+        if keepsTail { return .revert(delete: replacement.count + tail.count, insert: literal + tail) }
         if tail.isEmpty || tail == " " { return .revert(delete: replacement.count + tail.count, insert: literal) }
         tail.removeLast()
         return .delete

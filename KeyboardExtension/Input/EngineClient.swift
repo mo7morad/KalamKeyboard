@@ -103,6 +103,17 @@ final class EngineClient {
         }
     }
 
+    /// SPEC 8.5 post-correction of the word `previous` asked about, now that `next` followed it.
+    /// Runs on the queue; `apply` gets the replacement on main, and only if there is one.
+    func postCorrect(_ previous: Request, next: String, apply: @escaping (Suggestion) -> Void) {
+        queue.async { [self] in
+            let input = InputState(context: previous.context, taps: previous.taps)
+            guard let fix = engine(previous.lang).postCorrection(input, next: next, traits: previous.traits, settings: previous.settings,
+                                                                 inToken: previous.inToken) else { return }
+            DispatchQueue.main.async { apply(fix) }
+        }
+    }
+
     private func compute(_ request: Request, generation: Int) -> Result {
         #if DEBUG
         let interval = signposter.beginInterval("suggest")

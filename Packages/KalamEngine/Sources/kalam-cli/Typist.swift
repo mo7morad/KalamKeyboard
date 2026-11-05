@@ -33,13 +33,24 @@ func centerTapper(_ lang: Lang) -> (String) -> [Tap] {
 }
 
 /// What Moe ends up with when he commits these taps with a space (the autocorrect, else the
-/// literal), and the top-ranked candidate.
-func committed(_ taps: [Tap], context: [String], engine: Engine, settings: Settings = Settings(),
+/// literal, which the post-correction may replace once `next` commits), and the top-ranked candidate.
+func committed(_ taps: [Tap], context: [String], next: String? = nil, engine: Engine, settings: Settings = Settings(),
                latency: Latencies = Latencies()) -> (word: String, top: String?) {
     let input = InputState(context: context, taps: taps)
     let ranked = latency.time(\.candidates) { engine.candidates(input) }
     let fix = engine.autocorrection(input, ranked: ranked, traits: FieldTraits(), settings: settings)
+        ?? next.flatMap { engine.postCorrection(input, next: $0, traits: FieldTraits(), settings: settings) }
     return (fix?.ident ?? ident(input.literal, kind: engine.lang == .en ? .en : .ar), ranked.first?.ident)
+}
+
+/// contextualWords, each with the word after it in the same run (the post-correction's right context;
+/// typed right, so this is the best case for it).
+func wordsWithNext(_ text: String) -> [(token: Token, context: [String], next: String?)] {
+    let words = contextualWords(text)
+    return words.indices.map { i in
+        let follows = i + 1 < words.count && words[i + 1].context.last == words[i].token.ident
+        return (words[i].token, words[i].context, follows ? words[i + 1].token.surface : nil)
+    }
 }
 
 /// Settings with `--autocorrect off|gentle|normal` applied to both languages; nil on a bad value.

@@ -40,6 +40,8 @@ final class InputController {
     /// or a repeat follows, and the words the swipe deleted, most recent last.
     private var swipeRestore: String?
     private var swipeDeleted: [String] = []
+    /// The last word committed as typed, with the text before it: the next word's commit may post-correct it (SPEC 8.5).
+    private var previous: (request: EngineClient.Request, literal: String, prefix: String)?
 
     init(proxy: UITextDocumentProxy, client: EngineClient) {
         self.proxy = proxy
@@ -116,9 +118,15 @@ final class InputController {
                 undo = nil
                 delete(length)
                 insert(text)
-                taps = slot.taps
-                restoredLiteral = text
-                client.undoAutocorrect()
+                if slot.keepsTail {  // a post-correction: the next word stays where it was
+                    let prefix = String(before.dropLast(text.count))
+                    taps = resyncedTaps([], to: currentWord(before: before))
+                    client.revertAutocorrect(slot.literal, replacement: slot.replacement, lang: lang, context: contextWords(before: prefix))
+                } else {
+                    taps = slot.taps
+                    restoredLiteral = text
+                    client.undoAutocorrect()
+                }
                 refresh()
                 return
             case .delete:
@@ -237,6 +245,7 @@ final class InputController {
     /// Rebuilds the current word from the text before the cursor (also on appear).
     func resync() {
         dropUndo()
+        previous = nil
         autoSpace = false
         lastKeyWasSpace = false
         restoredLiteral = nil
@@ -277,6 +286,10 @@ final class InputController {
         let literal = literal, taps = taps
         let context = contextWords(before: before)
         let prefix = String(before.dropLast(literal.count))
+        let request = EngineClient.Request(lang: lang, context: context, taps: taps, traits: traits, settings: settings,
+                                           inToken: insideNonWordToken(before: before))
+        let last = previous
+        previous = nil
         self.taps = []
         defer { (restoredLiteral, pastedWord) = (nil, nil) }
         guard literal != restoredLiteral, literal != pastedWord else {  // already learned, or pasted
@@ -292,6 +305,8 @@ final class InputController {
         guard let target = client.resultForCommit()?.autocorrect else {
             trace("commitWord \(literal.debugDescription) delete 0")
             learn(literal, context: context, how: .typed, taps: taps)
+            if let last, prefix == last.prefix + last.literal + " " { postCorrect(last, next: literal) }
+            previous = (request, literal, prefix)
             return nil
         }
         let replacement = cased(target.text, literalCasing(literal))
@@ -302,6 +317,25 @@ final class InputController {
         undo = AutocorrectUndo(literal: literal, taps: taps, replacement: replacement)
         recent.add(literal: literal, replacement: replacement, before: prefix)
         return replacement
+    }
+
+    /// Asks to post-correct `last` now that `next` committed right after it (SPEC 8.5). The fix applies
+    /// only while the text is still that word, the next one and what the commit added (no letters),
+    /// and the next backspace undoes it, keeping the next word.
+    private func postCorrect(_ last: (request: EngineClient.Request, literal: String, prefix: String), next: String) {
+        let head = last.prefix + last.literal + " " + next
+        client.postCorrect(last.request, next: next) { [weak self] fix in
+            guard let self, taps.isEmpty, undo == nil, before.hasPrefix(head),
+                  !before.dropFirst(head.count).contains(where: { $0.isLetter || $0.isNumber }) else { return }
+            let kept = String(before.dropFirst(last.prefix.count + last.literal.count))
+            let replacement = cased(fix.text, literalCasing(last.literal))
+            trace("postCorrect \(last.literal.debugDescription) -> \(replacement.debugDescription)")
+            delete(last.literal.count + kept.count)
+            insert(replacement + kept)
+            undo = AutocorrectUndo(literal: last.literal, replacement: replacement, keeping: kept)
+            recent.add(literal: last.literal, replacement: replacement, before: last.prefix)
+            refresh()
+        }
     }
 
     /// Ends the undo slot and the revert offer. Once backspace took its punctuation the cursor is back

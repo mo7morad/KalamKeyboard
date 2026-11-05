@@ -132,6 +132,12 @@ func autocorrectUndoStepsBackThroughItsTail(tails: [String], deleting: Int, text
     }
 }
 
+@Test func postCorrectionUndoPutsTheLiteralBackAndKeepsTheNextWord() {
+    var slot = AutocorrectUndo(literal: "brow", replacement: "brown", keeping: " fox ")
+    #expect(slot.backspace(before: "the brown fox ") == .revert(delete: 10, insert: "brow fox "))
+    #expect(slot.backspace(before: "the brown fix ") == .gone)
+}
+
 @Test func autocorrectUndoSlotEndsWhenTheKeyDeletesPastItsTail() {
     let slot = AutocorrectUndo(literal: "teh", taps: [], replacement: "the")
     #expect(slot.typed(",", deleting: 1) == nil)

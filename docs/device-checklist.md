@@ -290,3 +290,15 @@ The round 5 trace found the lost taps: iOS only delivers a keyboard extension's 
 - [ ] The bar: tap between suggestions and beside the clipboard and emoji buttons; the emoji panel: tap between emoji ____.
 - [ ] Then the report: `python3 Tools/touch-report/touch_report.py --device 00008150-0002199602E1401C`. "Key touch-downs between rows" is above 0 now (each of those would have been lost before) ____, and "Most fingers down at once" is 2 or more (multi-touch up to the window) ____.
 - [ ] Then switch day-to-day typing to Release (Edit Scheme > Run > Build Configuration > Release) ____.
+
+## Phase 17: better autocorrect
+
+Three changes (SPEC 8.2, 8.5): a typo that is itself a rare dictionary entry now gets fixed when the right word wins by far (rhe → the, افله → الله); a key tapped twice costs less (خلاصص → خلاص); and once the next word is typed, the word before it can still be fixed with both neighbours in view (one near-key slip or a swap at most), with the next backspace undoing that. Autocorrect normal in both languages, as you have it. Test in Notes. Each example below was checked on the Mac with your 3 chats imported.
+
+- [ ] Fox: type "rhe quick briwn fox" with a space after each word. rhe becomes the (new), briwn becomes brown ____. Then "the quick brow fox": brow stays brow (expected: brown is a completion of brow, and the base data has no "brown fox") ____.
+- [ ] Arabic 1: "ان شاء افله" with a space at the end: افله becomes الله (new) ____. One backspace right after puts افله back ____.
+- [ ] Arabic 2: "خلاصص كده": خلاصص becomes خلاص (new) ____.
+- [ ] Arabic 3: "ربنا يخلبك": يخلبك becomes يخليك (as before) ____.
+- [ ] Your own words stay as typed: "خير يحبيبي", "بعتتلي الصورة", "الله يهنيك يحبيبتي" ____.
+- [ ] A fix of the previous word (the word before the cursor changes after you type the next one and a space): if you see one, one backspace right after puts it back and keeps the word you just typed ____. Wrong ones, with the sentence: ____.
+- [ ] A day of normal typing: wrong changes you had to undo, roughly how many ____, and typos it now fixes that it used to leave ____.

@@ -160,12 +160,12 @@ public struct Engine {
     }
 
     /// The base word id when it's a valid word; an invalid variant scores as unknown (SPEC 8.2).
-    private func validWord(_ word: Int?) -> Int? {
+    func validWord(_ word: Int?) -> Int? {
         guard let lexicon, let word, lexicon.isValid(word) else { return nil }
         return word
     }
 
-    private func ranked(_ suggestions: [Suggestion]) -> [Suggestion] {
+    func ranked(_ suggestions: [Suggestion]) -> [Suggestion] {
         suggestions.sorted { $0.score != $1.score ? $0.score > $1.score : $0.text < $1.text }
     }
 

@@ -352,7 +352,7 @@ Search runs over the base trie and a small in-memory personal trie. A search sta
 | Transition | Rule | Cost |
 |---|---|---|
 | **Match** | Child letter x whose key center, moved by its tap offset (below), is within R = 1.5 key units of the tap point | `(dx² + dy²) / (2σ²)`, with σx = σy = 0.45. Point-less taps allow the exact char only, at cost 0. |
-| **Insertion** (extra tap) | i + 1, same node | 5.0 |
+| **Insertion** (extra tap) | i + 1, same node | 5.0; 3.0 if the tap repeats the previous tap's key (a double tap: wwhat) |
 | **Omission** (missed letter) | Child x, same i | 3.0; 1.5 if x repeats the previous letter (doubled letters); 1.2 for ء |
 | **Transposition** | Taps i and i+1 match x and y in swapped order | 2.0 |
 | **Far substitution** | Key outside R | 5.0; 2.5 for a learned confusion pair (below) |
@@ -409,9 +409,9 @@ P(w | a,b) = λ3·Pu(w|a,b) + λ2·[ μb·Pu(w|b) + (1−μb)·PB(w|b) ] + λ1·
 Replace the literal ℓ with the top candidate c* only if all of the following hold:
 
 1. Autocorrect is on for this language, `autocorrectionType != .no`, `keyboardType` is not `.URL` or `.emailAddress`, and `textContentType` is not `.password` or `.oneTimeCode`.
-2. ℓ is not known: it's neither a `valid` base variant nor a `known` personal word.
+2. ℓ is not known: it's not a `known` personal word, and a `valid` base variant changes only as a **real-word fix**: c* is a full word (no completion), θ grows by `realWordMarginEN` / `realWordMarginAR` (4.0 / 10.0), and in AR c* isn't ℓ's stem with another of the suffixes below (خيرك → خيره; context can't tell them apart). Junk wordfreq entries (rhe, tge, pne) then lose to the word they look like; real rare words keep their protection, since c* rarely wins by that much (eval-log Phase 17).
    - Nor a word Moe used: its raw `uses + imports` is below `protectMinUses` (2), unless corrections holds a non-rejected pair with ℓ as `typed` (a recorded typo). This is one store read, made only when a correction would otherwise happen. The variant fix keeps its own rule (Moe kept ℓ 2 or more times).
-   - In AR, a known word plus one clitic counts as known too (Egyptian forms the MSA base lacks). Prefixes: و ف ب ل ك ه ح ال لل ي (a fused يا). Suffixes: ه ها هم ك كم ني نا ي ش لي له لك لها لهم لنا وا. The stem has at least 2 letters. The negation م…ش around a known stem counts too, when the word has at least 5 letters.
+   - In AR, a known word plus one clitic counts as a valid base variant too (Egyptian forms the MSA base lacks). Prefixes: و ف ب ل ك ه ح ال لل ي (a fused يا). Suffixes: ه ها هم ك كم ني نا ي ش لي له لك لها لهم لنا وا. The stem has at least 2 letters. The negation م…ش around a known stem counts too, when the word has at least 5 letters.
 3. ℓ is not a special token and contains no digits. In EN, it has no capital after its first letter (OMG, LLMs, iOS).
    - ℓ is not inside a non-word token: the whitespace-delimited run that ends at the cursor has no `@ / . : \` or emoji before ℓ's last letters (www.goo, a/b, e.g, x@y). The keyboard decides this from the text before the cursor and sends it with the request.
    - ℓ doesn't mix Arabic-script and other letters.
@@ -431,6 +431,14 @@ Replace the literal ℓ with the top candidate c* only if all of the following h
 - `P_LM(c*|ctx) ≥ 5 · P_LM(ℓ|ctx)`.
 - Moe hasn't kept ℓ 2 or more times.
 - In EN, ℓ is not one of the ambiguous lazy spellings of D8 (its, were, ill, well, hell, id, shell, wed, shed, lets).
+
+**Post-correction** (Gboard, iOS; Phase 17)
+
+- When the next word commits after a single space, the previous word, if it committed as typed (no autocorrect, not restored, retyped or pasted), is re-scored with that word as its right context: each of its top `postCorrectionPool` (8) candidates and the literal gets `log P(next | b, c)` added to its LM score, and rules 1 to 6 run again on that list.
+- c* must be one cheap edit: no completion, and spatial + edit cost ≤ `postCorrectionMaxCost` (3.0), which allows a near-key slip, a swap or a doubled letter, not an omission (يحبيبي → يحبيبتي was the one wrong change an omission let through).
+- It runs on the engine queue, off the commit path. The keyboard applies it only while the text is still the previous word, a space, the next word and what its commit added (no letters), with no autocorrect undo slot pending; it replaces the word and keeps the rest.
+- The very next backspace undoes it in one go: the literal comes back, the next word stays, and the rejection is recorded with ℓ learned as an explicit accept. It also enters the revert memory like an autocorrect.
+- The benchmark gives it the next word as typed right (its best case). "quick brow fox" is still not fixed: brown is a completion of brow, and fox isn't among brown's base bigrams.
 
 **Undo**
 

@@ -12,6 +12,7 @@ struct AutocorrectFacts {
     var bestRejected: Bool  // Moe undid literal -> best before
     var inToken = false  // the literal ends a URL, path, domain, email or emoji run (rule 3)
     var sentenceStart = true  // the context is a sentence start
+    var postCorrection = false  // re-scoring a committed word with the next word as right context
     /// The literal's raw uses + imports, and whether corrections holds it as a typo (rule 2). Called
     /// only for a correction about to happen, since it reads the store.
     var usage: () -> (uses: Int, recordedTypo: Bool) = { (0, false) }
@@ -37,8 +38,10 @@ func autocorrectTarget(literal: String, ranked: [Suggestion], facts: Autocorrect
     let addedLetters = bestKey.unicodeScalars.count - typedKey.unicodeScalars.count
     // Gentle fixes slips only: neighbour keys (spatial cost), plus edits up to one omission or swap.
     guard best.completion == 0 || addedLetters <= config.autocorrectMaxAddedLetters,  // goin -> going, not يحبيب -> يحبيبتي
-          facts.mode != .gentle || best.edits <= config.gentleMaxEditCost
+          facts.mode != .gentle || best.edits <= config.gentleMaxEditCost,
+          !facts.postCorrection || (best.completion == 0 && best.spatial + best.edits <= config.postCorrectionMaxCost)  // one cheap edit
     else { return nil }
+    var realWordMargin = 0.0
     if sameKey {
         // Variant fix: replaces rule 2 for spellings of one key, valid or not (D8 keeps AR variants off).
         // Lazy spellings only: an apostrophe or hamza that normalization would drop or map was typed on purpose.
@@ -46,15 +49,19 @@ func autocorrectTarget(literal: String, ranked: [Suggestion], facts: Autocorrect
         guard facts.variantFix, lazySpelling, !(lang == .en && ambiguousContractions.contains(typedKey)),
               exp(best.lm) >= config.variantFixRatio * exp(typed.lm), facts.keptCount < config.variantFixMaxKept
         else { return nil }
-    } else if facts.literalValid {
-        return nil  // rule 2, base half
-    } else if lang == .en, literal.first?.isUppercase == true, !facts.sentenceStart {
-        return nil  // rule 3: Moe pressed shift mid-sentence, so it's a name
+    } else {
+        guard !(lang == .en && literal.first?.isUppercase == true && !facts.sentenceStart) else { return nil }  // rule 3: shift mid-sentence, a name
+        if facts.literalValid {
+            // Rule 2, base half: a real word changes only to a full word that wins by far (rhe -> the),
+            // and never to the same stem with another suffix, which context can't tell apart (خيرك -> خيره).
+            guard best.completion == 0, !(lang == .ar && tradesSuffix(typedKey, bestKey)) else { return nil }
+            realWordMargin = config.realWordMargin(lang)
+        }
     }
     // AR normal counts c*'s edit cost twice: in Moe's chats an extra tap, a far key or a swap is more often a dialect word than a slip.
     let normal = config.autocorrectThresholdNormal + (lang == .ar ? best.edits : 0)
     let short = (1...3).contains(typedKey.unicodeScalars.count) ? config.autocorrectShortWordMargin : 0
-    let threshold = (facts.mode == .gentle ? config.autocorrectThresholdGentle : normal) + short
+    let threshold = (facts.mode == .gentle ? config.autocorrectThresholdGentle : normal) + short + realWordMargin
     let share = 1 / ranked.reduce(0) { $0 + exp($1.score - best.score) }  // softmax share of best
     guard best.score - typed.score >= threshold, share >= config.autocorrectMinShare else { return nil }  // rule 5
     if !sameKey {
@@ -62,6 +69,13 @@ func autocorrectTarget(literal: String, ranked: [Suggestion], facts: Autocorrect
         if usage.uses >= config.protectMinUses, !usage.recordedTypo { return nil }
     }
     return best
+}
+
+/// AR: b is a's stem with another of the clitic suffixes (يهديها, يهدينا).
+func tradesSuffix(_ a: String, _ b: String) -> Bool {
+    arabicSuffixes.contains { s in
+        a.hasSuffix(s) && arabicSuffixes.contains { t in t != s && b.hasSuffix(t) && a.dropLast(s.count) == b.dropLast(t.count) }
+    }
 }
 
 /// Rule 3: a word with both Arabic-script and other letters.
@@ -74,7 +88,7 @@ extension Engine {
     /// The autocorrect for a commit (SPEC 8.5), from the request's full candidate list.
     /// `inToken`: the keyboard's insideNonWordToken for the text before the literal.
     public func autocorrection(_ input: InputState, ranked: [Suggestion], traits: FieldTraits, settings: Settings,
-                               inToken: Bool = false) -> Suggestion? {
+                               inToken: Bool = false, postCorrection: Bool = false) -> Suggestion? {
         let literal = input.literal
         let literalIdent = ident(literal, kind: kind)
         guard let best = ranked.first else { return nil }
@@ -85,7 +99,7 @@ extension Engine {
             literalKnown: personal?.isKnown(lang, literalIdent) ?? false,
             keptCount: sameKey && !best.isLiteral ? personal?.uses(lang, literalIdent) ?? 0 : 0,
             bestRejected: personal?.hasCorrection(lang, typed: literalIdent, chosen: best.ident, rejected: true) ?? false,
-            inToken: inToken, sentenceStart: input.context.last.map { $0 == sentenceStart } ?? true,
+            inToken: inToken, sentenceStart: input.context.last.map { $0 == sentenceStart } ?? true, postCorrection: postCorrection,
             usage: { [personal, lang] in personal?.usage(lang, literalIdent) ?? (0, false) })
         return autocorrectTarget(literal: literal, ranked: ranked, facts: facts, config: config)
     }

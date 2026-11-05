@@ -4,6 +4,7 @@ public struct EngineConfig: Sendable {
     public var matchRadius = 1.5  // key units
     public var sigma = 0.45  // key units, same on both axes
     public var insertionCost = 5.0
+    public var doubledInsertionCost = 3.0  // an extra tap that repeats the previous tap's key (wwhat; eval-log Phase 17)
     public var omissionCost = 3.0
     public var doubledOmissionCost = 1.5
     public var hamzaOmissionCost = 1.2
@@ -54,6 +55,12 @@ public struct EngineConfig: Sendable {
     public var variantFixRatio = 5.0  // P_LM(c*) >= ratio * P_LM(literal)
     public var variantFixMaxKept = 2  // no variant fix once Moe kept the literal this often
     public var protectMinUses = 2  // rule 2: a literal with this many raw uses + imports is never corrected, unless a recorded typo
+    // Added to theta when the literal is a valid base word (or an AR clitic form): it changes only when c* wins by far.
+    public var realWordMarginEN = 4.0
+    public var realWordMarginAR = 10.0
+    func realWordMargin(_ lang: Lang) -> Double { lang == .en ? realWordMarginEN : realWordMarginAR }
+    public var postCorrectionMaxCost = 3.0  // post-correction: c*'s spatial + edit cost, one near-key slip or swap (eval-log Phase 17)
+    public var postCorrectionPool = 8  // candidates re-scored with the right context
     public var autocorrectShortWordMargin = 1.0  // added to theta for literals of 1 to 3 letters (eval-log Phase 11)
 
     // 8.6 Predictions
@@ -75,7 +82,7 @@ public struct EngineConfig: Sendable {
     public init() {}
 
     private static let doubles: [String: WritableKeyPath<EngineConfig, Double>] = [
-        "matchRadius": \.matchRadius, "sigma": \.sigma, "insertionCost": \.insertionCost,
+        "matchRadius": \.matchRadius, "sigma": \.sigma, "insertionCost": \.insertionCost, "doubledInsertionCost": \.doubledInsertionCost,
         "omissionCost": \.omissionCost, "doubledOmissionCost": \.doubledOmissionCost,
         "hamzaOmissionCost": \.hamzaOmissionCost, "transpositionCost": \.transpositionCost,
         "farSubstitutionCost": \.farSubstitutionCost, "learnedConfusionCost": \.learnedConfusionCost,
@@ -85,7 +92,7 @@ public struct EngineConfig: Sendable {
         "personalCorpusPrior": \.personalCorpusPrior, "correctionBoost": \.correctionBoost,
         "explicitCharBoost": \.explicitCharBoost, "decayHalfLifeDays": \.decayHalfLifeDays,
         "autocorrectThresholdNormal": \.autocorrectThresholdNormal, "autocorrectThresholdGentle": \.autocorrectThresholdGentle,
-        "autocorrectMinShare": \.autocorrectMinShare, "autocorrectShortWordMargin": \.autocorrectShortWordMargin, "gentleMaxEditCost": \.gentleMaxEditCost, "variantFixRatio": \.variantFixRatio,
+        "autocorrectMinShare": \.autocorrectMinShare, "autocorrectShortWordMargin": \.autocorrectShortWordMargin, "realWordMarginEN": \.realWordMarginEN, "realWordMarginAR": \.realWordMarginAR, "postCorrectionMaxCost": \.postCorrectionMaxCost, "gentleMaxEditCost": \.gentleMaxEditCost, "variantFixRatio": \.variantFixRatio,
         "learnerFlushSeconds": \.learnerFlushSeconds, "manualCorrectionSeconds": \.manualCorrectionSeconds,
         "undatedImportAgeDays": \.undatedImportAgeDays, "typoNeighbourRatio": \.typoNeighbourRatio,
     ]
@@ -94,7 +101,7 @@ public struct EngineConfig: Sendable {
         "shortLiteralLength": \.shortLiteralLength, "noFarSubstitutionLength": \.noFarSubstitutionLength,
         "beamWidth": \.beamWidth, "maxCompletions": \.maxCompletions, "personalTrieCap": \.personalTrieCap, "keyOffsetMaxSamples": \.keyOffsetMaxSamples,
         "learnedConfusionMinCorrections": \.learnedConfusionMinCorrections,
-        "variantFixMaxKept": \.variantFixMaxKept, "protectMinUses": \.protectMinUses, "autocorrectMaxAddedLetters": \.autocorrectMaxAddedLetters, "predictionPoolSize": \.predictionPoolSize,
+        "variantFixMaxKept": \.variantFixMaxKept, "protectMinUses": \.protectMinUses, "autocorrectMaxAddedLetters": \.autocorrectMaxAddedLetters, "predictionPoolSize": \.predictionPoolSize, "postCorrectionPool": \.postCorrectionPool,
         "knownMinUses": \.knownMinUses, "knownMinSessions": \.knownMinSessions, "knownMinImports": \.knownMinImports,
         "manualCorrectionMaxDistance": \.manualCorrectionMaxDistance, "storeBusyTimeoutMs": \.storeBusyTimeoutMs,
     ]
