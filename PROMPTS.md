@@ -378,3 +378,45 @@ Scope (KeyboardExtension/Views/SuggestionBar.swift, behaviour unchanged):
 Update SPEC §5.4. Done when: the extension builds, simulator screenshots sit next to Apple's frames in
 docs/reference/kalam/, and docs/device-checklist.md has a Phase 19 section.
 ```
+
+---
+
+## Phase 20: Apple's key sizes again (Moe, 2026-11-05)
+
+Round 5 (e17f515) made the keys bigger to test whether size caused the dropped taps. It didn't: the cause was
+single-touch delivery and the undrawn gaps (round 6). Moe wants Apple's sizes back.
+
+```
+Phase 20. Read CLAUDE.md, SPEC §2, §3, §5.2, §10 and docs/reference/apple/README.md (measured geometry).
+Undo only the geometry part of e17f515 (keep its feedback-before-rollover change and the Debug trace):
+- KeyGeometry: capGap 6, capTop 6.1, capShortfall 11.2 (Apple's 42.8 pt cap at 54).
+- KeyboardHeight row pitch: compact 50, default 54, tall 58 (default is Apple's).
+- Keep round 6's touch surface and multi-touch as they are. Re-check the touch bands (topRowReach, bottomInset,
+  BarBand) still line up at the new heights.
+Tap points stay in key units, so the spatial model and learned offsets keep working; check the KeyGeometry and
+key-offset tests. Update SPEC §5.2 and §10. Done when: swift test passes, the extension builds, simulator
+screenshots of the EN and AR letters pages match docs/reference/apple/en-letters-light.png and
+ar-letters-light.png key for key (save Kalam's to docs/reference/kalam/), and docs/device-checklist.md has a Phase 20 section.
+```
+
+## Phase 21: an underline on the corrected word (spike first)
+
+A keyboard extension can't style the host's text, so Apple's blue underline is out of reach. The one host-drawn
+underline a keyboard controls is marked text (UITextDocumentProxy.setMarkedText / unmarkText, the IME
+composition underline). Hosts handle marked text differently, so this is a spike with a hard go / no-go.
+
+```
+Phase 21. Read CLAUDE.md, SPEC §2, §3, §5.4, §8.5 and docs/reference/apple/README.md (autocorrect frames).
+Step 1, spike in the simulator (no shipping code yet): after an autocorrect on space, show the replacement as
+marked text for about 2 s or until the next key, then unmarkText. Find an order of calls that keeps the text
+exactly right (the auto-space, the next letter, backspace undo, punctuation, the cursor moving, the keyboard
+hiding) in Notes, Messages, Safari's address and a web text field, Mail, and a plain UITextField / UITextView in
+the screenshot harness. Capture frames of the underline and compare with Apple's autocorrect frames.
+Go only if every host keeps the text exactly right in every case. Otherwise stop, log why in
+docs/research/, and propose the best in-keyboard alternative (for example the corrected word briefly
+highlighted in the bar) without building it.
+Step 2 (only on go): ship it behind a setting "Underline corrections" (default on), with the marked text always
+cleared before any other edit, on resync, on viewWillDisappear and on any host text change. Never crash or lose
+text on any host (hard rule 9). Update SPEC §5.4 and §8.5. Done when: swift test passes, the extension builds,
+and docs/device-checklist.md has a Phase 21 section listing WhatsApp, Instagram, Telegram, Notes and Messages.
+```
