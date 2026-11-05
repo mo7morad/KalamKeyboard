@@ -36,14 +36,18 @@ private func suggestion(_ text: String, literal: Bool = false) -> Suggestion {
     #expect(barSlots([], autocorrect: nil, literal: "", lang: .en, casing: .none) == [nil, nil, nil])
 }
 
-@Test func revertTakesThePrimaryAsTheQuotedLiteral() {
+@Test func revertTakesAlt1AsTheUnquotedLiteral() {
     let ranked = [suggestion("the", literal: true), suggestion("then"), suggestion("they")]
-    for lang in [Lang.en, .ar] {
+    for (lang, alt1) in [(Lang.en, 0), (.ar, 2)] {
         let slots = barSlots(ranked, autocorrect: nil, literal: "the", lang: lang, casing: .none, revert: "teh")
-        #expect(slots[1]?.label == "\u{201C}teh\u{201D}")
-        #expect(slots[1]?.word == "teh")
-        #expect(slots[1]?.isRevert == true && slots[1]?.isLiteral == true)
+        #expect(slots[alt1]?.label == "teh")
+        #expect(slots[alt1]?.word == "teh")
+        #expect(slots[alt1]?.isRevert == true && slots[alt1]?.isLiteral == true)
+        #expect(slots[1]?.label == "the")
     }
+    // The revert wins alt1 over the Arabic variant slot.
+    let variant = [suggestion("انا", literal: true), suggestion("أنا")]
+    #expect(barSlots(variant, autocorrect: nil, literal: "انا", lang: .ar, casing: .none, revert: "انى")[2]?.isRevert == true)
 }
 
 @Test func rescueTakesAlt2OrAlt1WhenAnEmojiHoldsAlt2() {
@@ -66,7 +70,7 @@ private func suggestion(_ text: String, literal: Bool = false) -> Suggestion {
     #expect(barSlots(shown, autocorrect: nil, literal: "انا", lang: .ar, casing: .none).map { $0?.label } == ["انت", "انا", "أنا"])
     // A pending autocorrect keeps its quoted literal, and English has no variant slot.
     let pending = barSlots(ranked, autocorrect: ranked[1], literal: "انا", lang: .ar, casing: .none)
-    #expect(pending.map { $0?.label } == ["انها", "انت", "\u{201C}انا\u{201D}"])
+    #expect(pending.map { $0?.label } == ["انها", "انت", "\"انا\""])
     let english = [suggestion("dont", literal: true), suggestion("done"), suggestion("dot"), suggestion("don't")]
     #expect(barSlots(english, autocorrect: nil, literal: "dont", lang: .en, casing: .none).map { $0?.label } == ["done", "dont", "dot"])
 }

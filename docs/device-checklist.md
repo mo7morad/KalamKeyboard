@@ -302,3 +302,13 @@ Three changes (SPEC 8.2, 8.5): a typo that is itself a rare dictionary entry now
 - [ ] Your own words stay as typed: "خير يحبيبي", "بعتتلي الصورة", "الله يهنيك يحبيبتي" ____.
 - [ ] A fix of the previous word (the word before the cursor changes after you type the next one and a space): if you see one, one backspace right after puts it back and keeps the word you just typed ____. Wrong ones, with the sentence: ____.
 - [ ] A day of normal typing: wrong changes you had to undo, roughly how many ____, and typos it now fixes that it used to leave ____.
+
+## Phase 19: autocorrect that looks like Apple's
+
+The bar now matches frames of Apple's own keyboard (`docs/reference/apple/autocorrect-*`, Kalam's next to them in `docs/reference/kalam/`): a pending autocorrect sits on a light capsule (grey in dark mode) in darker, normal-weight text instead of bold, the dividers hide while it shows, the Arabic literal gets straight quotes ("السلان"), and the tap-to-revert offer moved from the middle slot to the literal's slot (left in English, right in Arabic), unquoted, as Apple shows it. The slot text fades in 0.2 s on each change. Apple's underline and popover on a corrected word in the text are out of reach for a keyboard extension. Test in Notes, light and dark.
+
+- [ ] Type "teh": "the" on the capsule, “teh” on the left, no dividers. Compare with Apple's keyboard typing the same: capsule size, colour and text weight look the same ____.
+- [ ] Space: the capsule goes at once and the predictions fade in. Typing fast, the fade never makes the bar feel late or blurry ____.
+- [ ] Type "ok ", tap right after "the": "teh" shows unquoted in the left slot; a tap puts "teh" back ____.
+- [ ] Arabic, autocorrect normal: "السلان" shows السلام on the capsule and "السلان" in straight quotes on the right; after the space, tapping back to the end of السلام offers السلان on the right ____.
+- [ ] Dark mode: the capsule is a mid grey with white text, like Apple's ____.

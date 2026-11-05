@@ -8,6 +8,9 @@ import UIKit
 /// SPEC 5.6 adds the emoji button right of it, shown always; the emoji panel hides the slots.
 /// SPEC 5.2: touch-down on a slot with something in it highlights it like a key and plays the key
 /// feedback (`onPress`); the pick still fires on release.
+/// Phase 19 matches Apple's autocorrect frames (docs/reference/apple/autocorrect-*): a pending
+/// autocorrect sits on a capsule over the primary slot, in darker regular-weight text, with the
+/// dividers hidden; the slot text cross-fades on each change.
 final class SuggestionBar: UIView {
     var onPick: ((BarSlot) -> Void)?
     var onBlock: ((BarSlot) -> Void)?
@@ -20,6 +23,10 @@ final class SuggestionBar: UIView {
     var onPress: (() -> Void)?
 
     private let labels = (0..<3).map { _ in UILabel() }
+    /// Holds the labels so one fade per change covers all three slots, not the capsule.
+    private let slotsView = UIView()
+    /// Apple's pending-autocorrect capsule behind the primary slot.
+    private let capsule = UIView()
     private let dividers = (0..<2).map { _ in UIView() }
     private let banner = UILabel()
     private let blockButton = UIButton(type: .system)
@@ -78,7 +85,9 @@ final class SuggestionBar: UIView {
 
     var palette = Palette.light {
         didSet {
-            (labels + [banner]).forEach { $0.textColor = palette.barText }
+            banner.textColor = palette.barText
+            capsule.backgroundColor = palette.barCapsule
+            render()  // the slot text colours
             blockButton.setTitleColor(palette.barText, for: .normal)
             clipboardButton.tintColor = palette.barText
             emojiButton.tintColor = palette.barText
@@ -100,14 +109,18 @@ final class SuggestionBar: UIView {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        capsule.isHidden = true
+        addSubview(capsule)
         labels.forEach {
             $0.font = KeyFont.bar
             $0.textAlignment = .center
             $0.lineBreakMode = .byTruncatingMiddle
             $0.layer.cornerRadius = 8
             $0.layer.cornerCurve = .continuous
-            addSubview($0)
+            slotsView.addSubview($0)
         }
+        slotsView.isUserInteractionEnabled = false
+        addSubview(slotsView)
         dividers.forEach { addSubview($0) }
         banner.text = "Turn on Full Access for learning, haptics and sounds"
         banner.font = .systemFont(ofSize: 13)
@@ -157,7 +170,11 @@ final class SuggestionBar: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         let start = slotsStart, slot = slotWidth
+        slotsView.frame = bounds
         for (i, label) in labels.enumerated() { label.frame = CGRect(x: start + CGFloat(i) * slot + 4, y: 0, width: slot - 8, height: bounds.height) }
+        // Apple's capsule: the slot's width less 0.5 pt a side, 36 pt tall, centred on the text.
+        capsule.frame = CGRect(x: start + CGFloat(Self.primary) * slot + 0.5, y: bounds.midY - 18, width: slot - 1, height: 36)
+        capsule.layer.cornerRadius = capsule.bounds.height / 2
         for (i, divider) in dividers.enumerated() { divider.frame = CGRect(x: start + CGFloat(i + 1) * slot - 0.5, y: bounds.midY - 12, width: 1, height: 24) }
         clipboardButton.frame = CGRect(x: 4, y: 6, width: Self.buttonWidth - 8, height: bounds.height - 12)
         emojiButton.frame = CGRect(x: slotsStart - Self.buttonWidth + 4, y: 6, width: Self.buttonWidth - 8, height: bounds.height - 12)
@@ -168,17 +185,29 @@ final class SuggestionBar: UIView {
         blockButton.frame = bounds
     }
 
+    /// The primary slot holds a pending autocorrect (`bold` marks it), not the clip chip.
+    private var isPending: Bool { chip == nil && slots[Self.primary]?.bold == true }
+
+    /// Apple shows the capsule and hides the dividers at once, and cross-fades the slot text:
+    /// one fade on the labels' container per change (Apple staggers it per letter over ~0.4 s).
     private func render() {
+        let texts = labels.map(\.text)
         for (i, (label, slot)) in zip(labels, slots).enumerated() {
             if i == Self.primary, let chip {
                 label.text = "\u{1F4CB} " + (chip.split(whereSeparator: \.isNewline).first.map(String.init) ?? chip)
-                label.font = KeyFont.bar
                 label.lineBreakMode = .byTruncatingTail
             } else {
                 label.text = slot?.label
-                label.font = slot?.bold == true ? KeyFont.barBold : KeyFont.bar
                 label.lineBreakMode = .byTruncatingMiddle
             }
+            label.textColor = i == Self.primary && isPending ? palette.barPendingText : palette.barText
+        }
+        showSlots()
+        if labels.map(\.text) != texts, window != nil {
+            let fade = CATransition()
+            fade.type = .fade
+            fade.duration = 0.2
+            slotsView.layer.add(fade, forKey: "fade")
         }
     }
 
@@ -261,6 +290,9 @@ final class SuggestionBar: UIView {
     }
 
     private func showSlots() {
-        (labels + dividers).forEach { $0.isHidden = !hasFullAccess || isPanelOpen || isEmojiOpen || blocking != nil }
+        let hidden = !hasFullAccess || isPanelOpen || isEmojiOpen || blocking != nil
+        labels.forEach { $0.isHidden = hidden }
+        dividers.forEach { $0.isHidden = hidden || isPending }
+        capsule.isHidden = hidden || !isPending
     }
 }

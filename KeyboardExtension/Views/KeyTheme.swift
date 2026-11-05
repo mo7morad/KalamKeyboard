@@ -12,20 +12,27 @@ struct Palette {
     let stripSelection: UIColor
     let barText: UIColor
     let barDivider: UIColor
+    /// Apple's pending-autocorrect capsule and the text on it (Phase 19 captures).
+    let barCapsule: UIColor
+    let barPendingText: UIColor
 
     static let light = Palette(
         key: .white, keyPressed: UIColor(white: 0xDC / 255, alpha: 1), label: .black,
         secondaryLabel: UIColor(white: 0x8E / 255, alpha: 1), bubble: .white, strip: .white,
         stripSelection: UIColor(red: 0xE3 / 255, green: 0xE4 / 255, blue: 0xE6 / 255, alpha: 1),
         barText: UIColor(red: 0x4A / 255, green: 0x4A / 255, blue: 0x4C / 255, alpha: 1),
-        barDivider: UIColor(red: 0xD3 / 255, green: 0xD4 / 255, blue: 0xD9 / 255, alpha: 1))
+        barDivider: UIColor(red: 0xD3 / 255, green: 0xD4 / 255, blue: 0xD9 / 255, alpha: 1),
+        barCapsule: UIColor(red: 0xEB / 255, green: 0xED / 255, blue: 0xF0 / 255, alpha: 1),
+        barPendingText: UIColor(red: 0x2C / 255, green: 0x2E / 255, blue: 0x31 / 255, alpha: 1))
 
     static let dark = Palette(
         key: UIColor(white: 0x44 / 255, alpha: 1), keyPressed: UIColor(white: 0x67 / 255, alpha: 1), label: .white,
         secondaryLabel: UIColor(white: 0x9A / 255, alpha: 1), bubble: UIColor(white: 0x56 / 255, alpha: 1),
         strip: UIColor(white: 0x35 / 255, alpha: 1), stripSelection: UIColor(white: 0x56 / 255, alpha: 1),
         barText: UIColor(white: 0xA2 / 255, alpha: 1),
-        barDivider: UIColor(red: 0x31 / 255, green: 0x31 / 255, blue: 0x33 / 255, alpha: 1))
+        barDivider: UIColor(red: 0x31 / 255, green: 0x31 / 255, blue: 0x33 / 255, alpha: 1),
+        barCapsule: UIColor(white: 0x73 / 255, alpha: 1),
+        barPendingText: .white)
 }
 
 /// Label sizes in points, matched to the captures by ink height.

@@ -234,6 +234,38 @@ The file was rescaled at 2.9453 px/pt and compared with `en-shifted-dark`.
 2. Moe's host app (Claude) draws its own dark UI above the keyboard. That doesn't affect the keyboard.
 3. The bar text is slightly lighter on the device (`#AFAFAF` vs `#A2A2A2`). This is probably resampling, and possibly the device's bar text weight.
 
+## Autocorrect in the bar (Phase 19)
+
+Captured on 2026-11-05 on the same iPhone 17 simulator and host field with `Tools/screenshot-harness/UITests/Autocorrect.swift` (`AppleAutocorrect`), light and dark. The field starts with auto-shift on, so the English words are capitalised. The animation sheets are cut from a 60 fps `simctl io recordVideo` of the light run.
+
+| File | Shows |
+|---|---|
+| `autocorrect-en-pending` | "Teh" typed: “Teh” on the left, "The" on the capsule |
+| `autocorrect-en-corrected` | After the space: "The " in the field, three plain predictions |
+| `autocorrect-en-undo` | One backspace after that: "The" with the cursor at its end. The bar shows “The” quoted plus They, There: no offer (see below) |
+| `autocorrect-en-undo-offer-bar-light` | The bar only, from an earlier identical run: here the backspace offered "Teh" in the left slot, unquoted, no capsule |
+| `autocorrect-en-recieve-pending` | “Recieve” left, "Receive" on the capsule, "Received" right |
+| `autocorrect-en-recieve-corrected` | After the space |
+| `autocorrect-en-recieve-undo` | One backspace: plain slots “Receive”, Received, Receives (no offer) |
+| `autocorrect-en-recieve-revert` | Cursor tapped back to the end of "Receive": Received, Receives, Receiver (no offer) |
+| `autocorrect-ar-pending` | "السلان" typed: السلام on the capsule, the literal with straight quotes on the right ("السلان"), السلامة on the left |
+| `autocorrect-ar-corrected` | After the space: predictions |
+| `autocorrect-ar-undo` | One backspace: السلان (unquoted) in the right slot, السلامة in the middle, left empty |
+| `autocorrect-ar-revert` | After typing عليكم and tapping back to the end of السلام: the same offer, السلان unquoted in the right slot |
+| `autocorrect-anim-pending-light` | 15 frames at 30 fps while "h" turns "Te" into a pending "The" |
+| `autocorrect-anim-space-light` | 15 frames at 30 fps after the space that commits "The" |
+
+What Apple does:
+
+- **Pending autocorrect:** the primary (middle) slot gets a **capsule** behind it: the slot's full width (x 134.7 to 267 pt on a 134 pt slot) and 36.3 pt tall (y 552.7 to 589, the bar being 546 to 590), fully rounded (radius = half the height), centred on the text (text ink 564.7 to 576.7, centre 570.7). Fill `#EBEDF0` light, `#737373` dark.
+- **Text on the capsule** is the same size and **regular weight** as the other slots (stem widths 5 to 6 px in both), only darker: `#2C2E31` light, `#FFFFFF` dark (other slots stay `#4A4A4C` / `#A2A2A2`). It is not bold.
+- **Both slot dividers disappear** while the capsule shows, and come back with the plain slots.
+- **The literal is quoted:** “ ” curly quotes in English, straight " " in Arabic, in the normal slot colour. Its slot is alt1 (left in EN, right in AR). Alt2 holds the next candidate or stays empty.
+- **Undo and revert offer:** when Apple offers the original after a correction (one backspace right after it, or the cursor put back at the end of the corrected word), it shows the literal **unquoted, in the literal's slot** (alt1), with no capsule and the dividers on; the field keeps the corrected word until the slot is tapped. The offer was reliable in Arabic and showed once in English ("Teh"); in the other English runs the bar showed plain candidates instead, so its timing is Apple's own (it seems to expire quickly).
+- **In the text field** Apple also underlines a corrected word and opens a popover on tap. A keyboard extension can't draw in the host's text, so that part is out of reach.
+- **Animation:** the capsule appears and disappears in one frame (no fade, no grow), and the dividers hide and show at once. The slot **text cross-fades**, staggered letter by letter from left to right, about 0.4 s in all; on the space, the capsule goes in the first frame and the new predictions fade in over about 0.5 s.
+- A tap on a word that the cursor is already at the end of only brings up the edit menu (Select, Select All, AutoFill), which is why `autocorrect-en-revert` isn't kept.
+
 ## Not captured, and why
 
 - **Device-only:** the key-press/alternates timing, haptics and sounds can't be seen in screenshots.

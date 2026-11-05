@@ -16,10 +16,11 @@ public struct BarSlot: Equatable, Sendable {
 }
 
 /// The three bar slots in visual left-to-right order: EN [alt1] [primary] [alt2], AR mirrored.
-/// With a pending autocorrect, the primary is it, in bold, and alt1 is the quoted literal;
-/// otherwise the slots hold the first three candidates (or predictions). An emoji for the word
-/// takes alt2, as Apple's does (SPEC 5.6). `revert`, the original of the corrected word around the
-/// cursor, takes the primary, quoted (SPEC 5.4). `rescue`, the other language's word for the same
+/// With a pending autocorrect, the primary is it, marked `bold` (the bar draws it on Apple's capsule), and alt1 is the quoted literal;
+/// otherwise the slots hold the first three candidates (or predictions). Apple quotes the literal
+/// with “ ” in English and straight " " in Arabic. An emoji for the word takes alt2, as Apple's
+/// does (SPEC 5.6). `revert`, the original of the corrected word around the cursor, takes alt1,
+/// unquoted, as Apple's revert offer does (SPEC 5.4). `rescue`, the other language's word for the same
 /// spots (SPEC 5.4), takes alt2, or alt1 when the emoji holds alt2. In Arabic with no pending
 /// autocorrect, the best other spelling of the literal's key takes alt1 when no slot shows it.
 /// Candidates and the rescue are shown in `casing` (SPEC 8.6; all caps in caps lock, 5.4).
@@ -35,14 +36,12 @@ public func barSlots(_ candidates: [Suggestion], autocorrect: Suggestion?, liter
     var primary: BarSlot?, alt1: BarSlot?, alt2: BarSlot?
     if let autocorrect, let typed = unique.first(where: \.isLiteral) {
         primary = slot(autocorrect, bold: true)
-        alt1 = BarSlot(word: literal, label: "\u{201C}\(literal)\u{201D}", ident: typed.ident, bold: false, isLiteral: true)
+        let quoted = lang == .en ? "\u{201C}\(literal)\u{201D}" : "\"\(literal)\""
+        alt1 = BarSlot(word: literal, label: quoted, ident: typed.ident, bold: false, isLiteral: true)
         alt2 = unique.first { !$0.isLiteral && $0.ident != autocorrect.ident }.map { slot($0) }
     } else {
         let top = unique.prefix(3).map { slot($0) }
         (primary, alt1, alt2) = (top.first, top.dropFirst().first, top.dropFirst(2).first)
-    }
-    if let revert {
-        primary = BarSlot(word: revert, label: "\u{201C}\(revert)\u{201D}", ident: revert, bold: false, isLiteral: true, isRevert: true)
     }
     if let emoji {
         alt2 = BarSlot(word: emoji, label: emoji, ident: emoji, bold: false, isLiteral: false, isEmoji: true)
@@ -57,6 +56,9 @@ public func barSlots(_ candidates: [Suggestion], autocorrect: Suggestion?, liter
        let variant = unique.first(where: { !$0.isLiteral && normalize($0.ident, lang: lang) == literalKey }),
        ![primary, alt1, alt2].contains(where: { $0?.ident == variant.ident }) {
         alt1 = slot(variant)
+    }
+    if let revert {
+        alt1 = BarSlot(word: revert, label: revert, ident: revert, bold: false, isLiteral: true, isRevert: true)
     }
     return lang == .en ? [alt1, primary, alt2] : [alt2, primary, alt1]
 }

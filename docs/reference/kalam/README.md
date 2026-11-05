@@ -30,3 +30,15 @@ They come from `Tools/screenshot-harness/UITests/Phase5.swift` (`testTypoUndoAra
 They come from `Tools/screenshot-harness/UITests/Clipboard.swift`: `testAllowPaste` sets Settings › Apps › Kalam › Paste from Other Apps to Allow (without it, iOS's "Allow Paste" prompt blocks the keyboard), and `testChipThenPanel` checks the chip paste, a tile paste with the panel staying open, Pin and Delete.
 
 - `clip-panel-image-light.png`: an image clip's tile, its thumbnail filling the tile. From `testImage`, which also taps the tile, checks that the pasteboard holds `public.png` again and pastes it into the field (launched with `-images`, so it takes images).
+
+## Autocorrect in the bar (Phase 19, Debug build)
+
+The same states as `../apple/autocorrect-*`, light and dark, from `Tools/screenshot-harness/UITests/Autocorrect.swift` (`KalamAutocorrect`; it deletes nothing itself, so delete `personal.sqlite*` in the App Group container before each run, and set `autocorrectAR` to normal). Each word starts on a fresh launch, lowercase (shift tapped off).
+
+- `autocorrect-en-pending`, `-en-recieve-pending`, `-ar-pending`: the capsule behind the primary slot, its text darker and regular weight, the dividers hidden, the literal quoted in alt1 (“teh”, "السلان" with straight quotes in Arabic).
+- `autocorrect-*-corrected`: after the space, plain predictions with the dividers back.
+- `autocorrect-*-revert`: "ok " typed after the corrected word, then the cursor tapped back to its end. The original sits unquoted in alt1 (left in EN, right in AR), as Apple's offer does; a tap puts it back.
+- `autocorrect-*-undo`: the typo typed again, space, one backspace. Kalam's backspace puts the literal back in the field (SPEC 8.5), so the bar shows the literal's plain candidates. Apple instead keeps the correction and offers the literal in alt1; that difference is behaviour, left as it is.
+- `autocorrect-anim-pending-dark.png`: 16 frames at 60 fps while "e" makes "the" pending: the capsule and dividers switch in one frame, the slot text cross-fades over 0.2 s.
+
+Differences from Apple's frames: Kalam's bar starts after its clipboard and emoji buttons, so its slots are 119 pt wide (Apple's 134), and the capsule follows the slot. Apple staggers the text fade letter by letter over about 0.4 s; Kalam fades the three slots together in 0.2 s (one layer animation).
