@@ -8,6 +8,8 @@ __pycache__/
 .pytest_cache/
 .venv/
 Tools/lexicon-builder/corpora/
-Tools/data/
+Tools/data/*
+!Tools/data/egyptian-words.tsv
+Tools/egyptian-lexicon/data/
 KeyboardExtension/Resources/*.klex
 .claude/worktrees/

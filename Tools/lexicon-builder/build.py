@@ -1,7 +1,9 @@
 """Builds a real base lexicon (SPEC 7.1): python3 build.py en|ar [--corpora DIR] [--out FILE] ...
 
 Unigrams come from wordfreq; bigrams and the EN casing table from the Leipzig sentence files,
-minus a deterministic 5% held-out split that is written out for kalam-cli eval."""
+minus a deterministic 5% held-out split that is written out for kalam-cli eval. AR also adds the
+generated Egyptian forms of Tools/data/egyptian-words.tsv and trains bigrams on corpora/egyptian/masri.txt,
+each when present (PROMPTS Phase 18)."""
 import argparse
 import json
 import math
@@ -11,11 +13,12 @@ import time
 import urllib.request
 import zlib
 from collections import Counter
+from itertools import chain
 from pathlib import Path
 
 import wordfreq
 
-from klex import PREFERRED, SENTENCE_START, VALID, write_klex
+from klex import CANDIDATE, PREFERRED, SENTENCE_START, VALID, write_klex
 from normalize import normalize
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -35,6 +38,8 @@ APOSTROPHES = str.maketrans("’‘ʼ", "'''")
 CASED_WORD_RE = re.compile(r"[A-Za-z]+(?:'[A-Za-z]+)*")
 I_FORMS = ("i", "i'm", "i'll", "i'd", "i've")
 CASING_MIN_SHARE = 0.9  # below it, news title case (Street, King) and split forms (OK / ok) stay lowercase
+GENERATED_FREQ = 1e-8  # zipf 1: generated Egyptian forms rank below every attested word
+EGYPTIAN_SENTENCES = "egyptian/masri.txt"  # the dataflare Masri slice; the YouTube comments only seed stems (eval-log Phase 18)
 MISSPELLINGS_URL = (
     "https://en.wikipedia.org/w/api.php?action=parse&format=json&formatversion=2&prop=wikitext"
     "&page=Wikipedia:Lists_of_common_misspellings/For_machines"
@@ -56,8 +61,9 @@ def prune_variants(lang: str, freqs: dict) -> dict:
     return {w: f for w, f in freqs.items() if f >= MIN_VARIANT_SHARE * totals[normalize(w, lang)]}
 
 
-def flag_words(lang: str, freqs: dict, misspellings=frozenset(), min_zipf: float = MIN_ZIPF) -> dict:
-    """surface -> (frequency, flags), with the validity and preferred-spelling rules of SPEC 7.1."""
+def flag_words(lang: str, freqs: dict, misspellings=frozenset(), min_zipf: float = MIN_ZIPF, generated=frozenset()) -> dict:
+    """surface -> (frequency, flags), with the validity and preferred-spelling rules of SPEC 7.1.
+    Generated forms are candidates, never valid."""
     groups = {}
     for surface, freq in freqs.items():
         groups.setdefault(normalize(surface, lang), []).append(surface)
@@ -69,8 +75,16 @@ def flag_words(lang: str, freqs: dict, misspellings=frozenset(), min_zipf: float
         preferred = marked[0] if lang == "ar" and marked else group[0]
         for s in group:
             valid = math.log10(freqs[s]) + 9 >= min_zipf and s not in misspellings
-            words[s] = (freqs[s], (VALID if valid else 0) | (PREFERRED if s == preferred else 0))
+            kind = CANDIDATE if s in generated else VALID if valid else 0
+            words[s] = (freqs[s], kind | (PREFERRED if s == preferred else 0))
     return words
+
+
+def generated_forms(path: Path, freqs: dict) -> set:
+    """The surfaces of Tools/data/egyptian-words.tsv (Tools/egyptian-lexicon) that wordfreq lacks."""
+    if not path.exists():
+        return set()
+    return {line.split("\t", 1)[0] for line in path.read_text(encoding="utf-8").splitlines()} - freqs.keys()
 
 
 def is_heldout(sentence: str) -> bool:
@@ -161,18 +175,31 @@ def load_misspellings(path: Path) -> set:
     return parse_misspellings(path.read_text(encoding="utf-8"))
 
 
-def build(lang: str, corpora: Path, heldout: Path) -> tuple:
-    """(words, bigrams, casing) for write_klex, with words still unflagged."""
-    words = prune_variants(lang, unigrams(lang, wordfreq.get_frequency_dict(lang, wordlist="large")))
+def build(lang: str, corpora: Path, heldout: Path, egyptian: Path) -> tuple:
+    """(words, bigrams, casing, generated) for write_klex, with words still unflagged."""
+    words = unigrams(lang, wordfreq.get_frequency_dict(lang, wordlist="large"))
+    generated = generated_forms(egyptian, words) if lang == "ar" else set()
+    words = prune_variants(lang, words | dict.fromkeys(generated, GENERATED_FREQ))
+    generated &= words.keys()
+    masri = corpora / EGYPTIAN_SENTENCES
+    extra = [masri] if lang == "ar" and masri.exists() else []
     vocab = sorted(words)
     paths = sorted(corpora.glob(f"{LEIPZIG_PREFIX[lang]}*/*-sentences.txt"))
     if not paths:
         sys.exit(f"no {LEIPZIG_PREFIX[lang]}*/*-sentences.txt under {corpora}")
     heldout.parent.mkdir(parents=True, exist_ok=True)
     with heldout.open("w", encoding="utf-8") as heldout_out:
-        bigrams, casing = count_corpus(lang, training_sentences(paths, heldout_out), vocab)
-    print(f"{lang}: {len(words)} words, {len(bigrams)} bigrams, {len(casing)} casings from {[p.name for p in paths]}")
-    return words, bigrams, casing
+        bigrams, casing = count_corpus(lang, chain(training_sentences(paths, heldout_out), lines(extra)), vocab)
+    sources = [p.name for p in paths + extra]
+    print(f"{lang}: {len(words)} words ({len(generated)} generated), {len(bigrams)} bigrams, {len(casing)} casings from {sources}")
+    return words, bigrams, casing, generated
+
+
+def lines(paths: list):
+    """Every line of the Egyptian corpus: one text each, all for training (none enters the held-out file)."""
+    for path in paths:
+        with path.open(encoding="utf-8") as texts:
+            yield from (line.rstrip("\n") for line in texts)
 
 
 def main():
@@ -183,12 +210,15 @@ def main():
     parser.add_argument("--heldout", type=Path, help="default: Tools/data/heldout/<lang>.txt")
     parser.add_argument("--misspellings", type=Path, default=ROOT / "Tools/data/misspellings.wikitext")
     parser.add_argument("--min-zipf", type=float, default=MIN_ZIPF)
+    parser.add_argument("--egyptian", type=Path, default=ROOT / "Tools/data/egyptian-words.tsv",
+                        help="AR only, its forms are added when the file exists (Tools/egyptian-lexicon)")
     args = parser.parse_args()
     started = time.monotonic()
     misspellings = load_misspellings(args.misspellings) if args.lang == "en" else set()
     out = args.out or ROOT / f"KeyboardExtension/Resources/{args.lang}.klex"
-    words, bigrams, casing = build(args.lang, args.corpora, args.heldout or ROOT / f"Tools/data/heldout/{args.lang}.txt")
-    blob = write_klex(args.lang, flag_words(args.lang, words, misspellings, args.min_zipf), bigrams, casing)
+    heldout = args.heldout or ROOT / f"Tools/data/heldout/{args.lang}.txt"
+    words, bigrams, casing, generated = build(args.lang, args.corpora, heldout, args.egyptian)
+    blob = write_klex(args.lang, flag_words(args.lang, words, misspellings, args.min_zipf, generated), bigrams, casing)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(blob)
     print(f"wrote {out} ({len(blob):,} bytes) in {time.monotonic() - started:.1f} s")

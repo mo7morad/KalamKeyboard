@@ -79,7 +79,7 @@ public struct Engine {
         var results: [Suggestion] = paths.compactMap { ident, path in
             guard ident == literalIdent || personal?.isBlocked(lang, ident) != true else { return nil }
             let word = path.word ?? lexicon?.wordID(ident: ident)
-            let lmWord = validWord(word)
+            let lmWord = candidateWord(word)
             // SPEC 8.5 rule 2: an invalid base variant isn't a word, so it's only ever the literal (or one Moe knows).
             let isWord = word == nil || lmWord != nil || personal?.isKnown(lang, ident) == true
             guard ident == literalIdent || isWord else { return nil }
@@ -93,7 +93,7 @@ public struct Engine {
         }
         if paths[literalIdent] == nil {
             results.append(Suggestion(text: literal, ident: literalIdent, isLiteral: true,
-                                      lm: lmLogProb(literalIdent, word: validWord(lexicon?.wordID(ident: literalIdent)), context),
+                                      lm: lmLogProb(literalIdent, word: candidateWord(lexicon?.wordID(ident: literalIdent)), context),
                                       spatial: 0, edits: 0, completion: 0, boosts: 0))
         }
         results += tokenCandidates(literal)
@@ -110,7 +110,7 @@ public struct Engine {
             guard ident != previous, ident != sentenceStart, personal?.isBlocked(lang, ident) != true else { return nil }
             let word = word ?? lexicon?.wordID(ident: ident)
             // A personal continuation that is still pending (a one-off typo) isn't a word yet.
-            guard validWord(word) != nil || personal?.isKnown(lang, ident) == true else { return nil }
+            guard candidateWord(word) != nil || personal?.isKnown(lang, ident) == true else { return nil }
             return Suggestion(text: display(ident, word), ident: ident, isLiteral: false, lm: lmLogProb(ident, word: word, context),
                               spatial: 0, edits: 0, completion: 0, boosts: 0)
         }
@@ -159,9 +159,9 @@ public struct Engine {
         return pool
     }
 
-    /// The base word id when it's a valid word; an invalid variant scores as unknown (SPEC 8.2).
-    func validWord(_ word: Int?) -> Int? {
-        guard let lexicon, let word, lexicon.isValid(word) else { return nil }
+    /// The base word id when it's a candidate (valid or generated); an invalid variant scores as unknown (SPEC 8.2).
+    func candidateWord(_ word: Int?) -> Int? {
+        guard let lexicon, let word, lexicon.isCandidate(word) else { return nil }
         return word
     }
 

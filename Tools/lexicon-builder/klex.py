@@ -16,7 +16,7 @@ BIGRAM = struct.Struct("<IHxx")  # w2 word id, q
 CASING = struct.Struct("<IIHxx")  # word id, string offset, string length
 HEADER_SIZE = HEADER.size + 7 * SECTION.size
 NO_KEY = 0xFFFFFFFF
-VALID, PREFERRED = 1, 2
+VALID, PREFERRED, CANDIDATE = 1, 2, 4  # CANDIDATE: offered, but never blocks autocorrect
 TOP_BIGRAMS = 32
 SENTENCE_START = "<s>"
 

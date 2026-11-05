@@ -14,7 +14,7 @@ def build_fixtures(source: Path) -> dict:
     return {
         lang: write_klex(
             lang,
-            flag_words(lang, spec["words"]),
+            flag_words(lang, spec["words"], generated=set(spec.get("generated", []))),
             {tuple(pair.split(" ")): p for pair, p in spec["bigrams"].items()},
             spec["casing"],
         )

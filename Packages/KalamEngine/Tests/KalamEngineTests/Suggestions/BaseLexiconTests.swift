@@ -7,6 +7,7 @@ private struct FixtureSource: Decodable {
     let words: [String: Double]
     let bigrams: [String: Double]  // "w1 w2" -> P(w2 | w1)
     let casing: [String: String]
+    let generated: [String]?
 }
 
 private func source(_ lang: Lang) throws -> FixtureSource {
@@ -26,6 +27,7 @@ func roundTripsTheFixtureSource(_ lang: Lang) throws {
         #expect(lexicon.surface(id) == surface)
         #expect(abs(lexicon.logProb(id) - log(freq)) < 0.001, "\(surface)")
         #expect(lexicon.isValid(id) == (log10(freq) + 9 >= 2), "\(surface)")
+        #expect(lexicon.isCandidate(id) == (lexicon.isValid(id) || src.generated?.contains(surface) == true), "\(surface)")
     }
     for (pair, p) in src.bigrams {
         let words = try pair.split(separator: " ").map { try #require(lexicon.wordID(ident: String($0))) }

@@ -475,3 +475,48 @@ $K eval-personal --chat <3 chats> --sender "Mohamed Morad" --klex-en $R/en.klex 
 $K eval-personal ... --fold k --autocorrect normal --samples 100000   # k = 0..9, the changes diffed by hand
 $K suggest --klex $R/en.klex --context "the quick" --typed brow --next fox   # new: what the next word's commit does
 ```
+
+## 2026-11-05 · Phase 18: Egyptian Arabic in the AR base (dialect bigrams, CAMeL-generated forms)
+
+Working tree on `01d4aa0`, all 3 chats, built `-c release`, benchmark and guards as in Phase 17 (AR, `--autocorrect normal`, `--fold all`, both sigmas, seed 1). A rebuild at defaults (no TSV, no `corpora/egyptian/`) still gives AR `d729d2df…` and the same held-out file, byte for byte.
+
+**Step 0 spike.** Moe's AR words (3 chats, sender Mohamed Morad, 3766 messages): 4007 types, 13432 tokens. Missing from the AR klex (normalized key): **987 types, 1449 tokens**. Corpora: the Masri slice of dataflare/arabic-dialect-corpus (90,166 texts, 2.7M words; transcripts) and the EG label of fr3on/arabic-dialect-corpus (764,307 YouTube comments, 10.3M words); together 12.4M tokens, 535k types. Egyptian markers (مش, عايز, ده, كده, ...) per 1000 words: Masri 38, fr3on EG 16, fr3on SA 2, dataflare Khaleeji 4, so both slices are Egyptian, fr3on less purely.
+- Of the 987: in the corpus at all 645 (count >= 5: 397, 701 tokens; >= 30: 130); calima-egy-r13 analyzes 725 (985 tokens), 371 of them below count 5 in the corpus and 181 absent. But calima-egy is generous: it analyzes many of Moe's typos too (مقيش, يحاجه).
+- As a generator (clitic forms of the 20k corpus words seen 50+ times), CAMeL reaches only **30** of the 987. So CAMeL adds little coverage over the corpus; it was still worth measuring as a candidate source (below).
+
+Changes are judged against the Phase 17 sets (normal 54, gentle 35). "Same set" re-runs the noise benchmark on the baseline's counted words (new `eval-personal --count-klex-ar <baseline klex>`), so fixes compare on one word set; the full-set count moves when words enter the base (Phase 17's min-zipf lesson).
+
+| Run (AR) | Same set fix σ 0.2 / 0.35 | Full set words, fix σ 0.2 / 0.35 | Moe changes normal / gentle | Verdict |
+|---|---|---|---|---|
+| Baseline | 29.6 (952) / 33.8 (3213) | 13373, same | 54 / 35 | |
+| Corpus words (count >= 5 analyzable or >= 30), wordfreq-scaled, valid at zipf >= 2, + all Egyptian bigrams | 29.9 / 34.9 | 13565, 28.3 / 34.2 | −4 right +3 right / −3 right +5 right | rejected: corpus words protect Moe's typos (عايكي, دولقت, الجاجات) |
+| + Moe's own words (source moe) | 29.9 / 35.0 | 13605, 28.6 / 34.6 | | rejected: nothing over corpus (they're personal words already) and leaks the held-out folds |
+| + generated forms (Moe and corpus stems) | 30.2 / 35.3 | 13605, 28.8 / 34.9 | 51 / | rejected with the corpus words |
+| Corpus words with no CAMeL filter (count >= 5) | 29.5 / 34.6 | | | rejected: the filter helps (+0.4 / +0.3) |
+| Corpus count >= 3 / >= 10 / >= 20 / >= 40 (analyzable only), all bigrams | 29.3 / 34.6; 30.4 / 35.2; 30.5 / 35.2; 30.6 / 35.2 | | >= 10, 20, 40 add الفيديوز→الفيديو (wrong) | rejected: higher counts only approach bigrams-only |
+| Corpus >= 20 words, no Egyptian bigrams | 29.4 / 33.7 | | | rejected: the words alone don't help, the bigrams do |
+| **Egyptian bigrams only** (Masri + comments) | 30.7 (988) / 35.3 (3355) | 13373 | +4 (الفيديوز→الفيديو wrong) / +5 right | rejected: the YouTube comments teach شوفت الفيديو |
+| Masri bigrams only / comments bigrams only | 30.2 / 34.8; 30.4 / 35.1 | 13373 | comments add الفيديوز→الفيديو | |
+| Both bigrams + generated forms (corpus stems) | 31.0 (999) / 35.7 (3387) | 13373 | +5 incl. الفيديوز / +6 right | rejected for الفيديوز |
+| Both bigrams + generated + corpus words as candidates (never valid) | 31.0 / 35.1 | 13360 | +23 −1, many wrong (جيبت→حسيت, هشتري→نشتري, سايبين→جايبين) | rejected |
+| **Kept: Masri bigrams + generated forms (corpus stems)** | **30.6 (984) / 35.1 (3332)** | **13373, same** | **57 / 38** | kept |
+| Kept + lemma filter (form shares a calima lemma with its stem, stems >= 3 letters; 130k forms) | 30.5 / 34.9 | 13373 | 57 / 38 | rejected: drops odd forms (حالله, منلهم) but fixes fewer |
+| Kept with generated floor 1e-6 instead of 1e-8 | 30.3 / 34.8 | 13373 | 56 / 37 | rejected |
+
+Kept, in detail:
+- **Bigrams:** `corpora/egyptian/masri.txt` joins the AR bigram training, all lines, none held out (bigrams 1,020,009 → 1,098,624 stored). The fr3on comments only feed the generator's stem counts.
+- **Generated forms:** `Tools/egyptian-lexicon/egyptian_words.py` → `Tools/data/egyptian-words.tsv`: 141,344 forms from 17,686 stems (corpus words seen 50+ times that calima-egy analyzes; up to 12 forms each, analyzable, absent from both corpora). `build.py` adds the 137,191 that wordfreq lacks and that survive variant pruning at 1e-8 with the new klex `candidate` flag (4): offered and scored, never valid, so they never block autocorrect and never count as a clitic stem.
+- Benchmark, kept vs baseline: AR fix 29.6 → **30.6%** (σ 0.2), 33.8 → **35.1%** (σ 0.35); top-1 53.4 → 53.9, 51.8 → 52.5; wrong change 4 → 4 of 13373; real-word fixed 223 → 248, 732 → 796. The counted word set is unchanged (13373), since generated forms are never words. EN unchanged (61.2 / 66.0).
+- Moe's changes, normal 54 → 57: none dropped, 3 added: الحنسية→الجنسية (right), كبيورد→كيبورد (right), الانترن→الإنترنت (**wrong**: Moe typed "الانترن شيب", internship with a stray space; every variant with Egyptian bigrams makes it, none without them gains anything). Gentle 35 → 38: none dropped, 3 added, all right: بتلظبط→بالظبط, يحبيبتب→يحبيبتي, كبيورد→كيبورد.
+- Synthetic AR (500 sentences, seed 1): normal AC 35.7 → 35.6, FA 0.00 → 0.00, NW 19.8 → 19.9, KS 27.9 → 27.9; gentle AC 25.2 → 25.1, FA 0.00. Candidates latency p50/p95/p99 normal 0.31 / 2.58 / 3.04 → 0.31 / 2.68 / 3.14 ms (+3.9% p95), gentle 2.55 → 2.67 (+4.7%), within the 10% guard. EN synthetic unchanged: 66.6 / 0.04 / 22.5 / 38.2, p95 1.42 ms.
+- ar.klex: 22,911,780 → **31,695,728 bytes**, trie nodes 327,503 → **491,406**, keys 219,616 → 342,412, variants 242,983 → 380,174; sha256 `5f8b662d6fe81dc22339e2d4a9ece682682ab3bfa850c543beaea4751e79cc7d`, `kalam-cli verify` OK. Mmapped, so the size is clean pages; real memory and latency on the phone are device-only.
+
+```bash
+cd Tools/lexicon-builder/corpora && # download the two parquet files, then (pyarrow once, via uv, in no requirements file):
+uv run --no-project --python 3.11 --with pyarrow python ../../egyptian-lexicon/corpus_text.py
+cd ../../egyptian-lexicon && uv venv --python 3.11 .venv && uv pip install --python .venv/bin/python -r requirements.txt
+mkdir -p data && CAMELTOOLS_DATA=$PWD/data .venv/bin/camel_data -i morphology-db-egy-r13
+CAMELTOOLS_DATA=$PWD/data .venv/bin/python egyptian_words.py         # writes Tools/data/egyptian-words.tsv
+cd ../lexicon-builder && .venv/bin/python build.py ar                 # reads the TSV and corpora/egyptian/masri.txt
+$K eval-personal ... --fold all --autocorrect normal --noise 0.2 --count-klex-ar <baseline ar.klex>   # same word set
+```

@@ -7,7 +7,7 @@ extension Engine {
     public func postCorrection(_ input: InputState, next: String, traits: FieldTraits, settings: Settings,
                                inToken: Bool = false) -> Suggestion? {
         let next = ident(next, kind: kind)
-        let word = validWord(lexicon?.wordID(ident: next))
+        let word = candidateWord(lexicon?.wordID(ident: next))
         let all = candidates(input)
         let pool = all.prefix(config.postCorrectionPool) + all.dropFirst(config.postCorrectionPool).filter(\.isLiteral)
         let rescored = pool.map { c in

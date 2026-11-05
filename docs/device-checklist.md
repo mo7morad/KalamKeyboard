@@ -312,3 +312,14 @@ The bar now matches frames of Apple's own keyboard (`docs/reference/apple/autoco
 - [ ] Type "ok ", tap right after "the": "teh" shows unquoted in the left slot; a tap puts "teh" back ____.
 - [ ] Arabic, autocorrect normal: "السلان" shows السلام on the capsule and "السلان" in straight quotes on the right; after the space, tapping back to the end of السلام offers السلان on the right ____.
 - [ ] Dark mode: the capsule is a mid grey with white text, like Apple's ____.
+
+## Phase 18: Egyptian Arabic in the base
+
+Two changes to the Arabic dictionary (SPEC 7.1): it now learns which word follows which from 90k Egyptian texts (not only MSA news), and it knows 137k Egyptian word forms built from common words plus their prefixes and endings (هنعرفلك, فاخدها, جاوبكم). Those forms are offered, but they never stop a typo from being fixed. Autocorrect normal, as you have it. Test in Notes, a space after each word. Each example was checked on the Mac (1, 2 and 4 with your chats).
+
+- [ ] 1: "مش بيدوا الحنسية بسهوله": الحنسية becomes الجنسية (new) ____.
+- [ ] 2: "كبيورد الماك": كبيورد becomes كيبورد (new) ____.
+- [ ] 3: type "هنعرفل" and stop: the bar shows هنعرفلك or هنعرفلنا (new forms) ____.
+- [ ] 4: "تخيل اروح فعلا الانترن شيب": on the Mac, الانترن becomes الإنترنت (the one wrong change found, a word split by a space). One backspace puts it back ____. Does it bother you ____?
+- [ ] 5: your own Egyptian: "احنا لسه بنجربه ومبنجربش حاجة تانية" stays as typed ____.
+- [ ] A day of Arabic typing: wrong changes you undid, roughly how many ____; odd words in the bar (made-up forms like حالله) ____; the keyboard feels as fast as before ____.

@@ -309,6 +309,13 @@ Required tests:
 - Hold out 5% of the sentences (deterministic hash split) for evaluation. These must never enter the lexicon.
 - **Casing table (EN):** for each lowercase word, use its most common non-sentence-initial casing in the raw sentences, but only if that casing holds at least 90% of those forms. Below that, news title case (Street, King) and split forms (OK / ok) stay lowercase. Force `i` → `I`, and capitalize the I in the i-contractions (i'm, i'll, i'd, i've).
 
+**Egyptian Arabic (Phase 18, eval-log)**
+
+- **Bigrams:** the Masri slice of [dataflare/arabic-dialect-corpus](https://huggingface.co/datasets/dataflare/arabic-dialect-corpus) (90k texts, 2.7M words) joins the AR bigram training as `corpora/egyptian/masri.txt`, one text per line, `<s>` at each line start, none held out. The Egyptian YouTube comments (fr3on, label EG) stay out of the bigrams: they teach "the video" contexts (شوفت الفيديو) that change Moe's own words.
+- **Generated forms:** `Tools/egyptian-lexicon` (its own venv, camel-tools with calima-egy-r13, offline) writes `Tools/data/egyptian-words.tsv` (committed, so a normal build needs no CAMeL). For each word seen 50+ times in both Egyptian corpora that calima-egy analyzes, it tries one prefix (و ف ب ح ه) and/or one suffix (ه ها هم ك كم ني نا ش لي له لك لها لهم لنا) and the negation م…ش, and keeps up to 12 forms per stem that calima-egy analyzes and neither corpus contains (141k forms from 18k stems).
+- `build.py ar` adds the forms wordfreq lacks at frequency 1e-8 (zipf 1) with the `candidate` flag, never `valid` (8.2), so a typo that happens to be a generated form still corrects.
+- Corpus words themselves are not added: as valid words they protected typos and cost fixes; as candidates they made wrong changes (eval-log Phase 18).
+
 **Validity, pruning and preferred spellings**
 
 - **Validity flag:** a variant is `valid` (counts as a real word and blocks autocorrect) iff zipf ≥ 2.0 (tunable) and it isn't in the EN misspellings list. The list is an optional download: Wikipedia, "Lists of common misspellings/For machines".
@@ -375,6 +382,7 @@ Search runs over the base trie and a small in-memory personal trie. A search sta
 - **Personal trie:** built at launch from PersonalStore and updated each time the learner writes its batch (at most every 5 s, and on dismiss). Capped at 30k known words, with LRU eviction by decayed count.
 - The **literal is always a candidate**, with cost 0. Its LM score is its own if it's known; otherwise `unknownLogProb`: −21 for EN, −15.5 for AR (Arabic unknowns are often real dialect words).
 - An **invalid base variant** scores as unknown and is never offered as a candidate or prediction, except as the literal or when Moe knows it.
+- A **candidate variant** (a generated Egyptian form, 7.1) is offered and scored like a valid one, but it is not a word: it never blocks autocorrect (rule 2), never counts as a stem, and is never a prediction.
 - **Wrong-layout rescue** (`Suggestions/WrongLayout.swift`, for 5.4): a tap point maps to the other letters page by physical position. Both pages span the same width with the same side insets and share the row pitch, so y stays and x scales by the widest rows: x_other = x · widestRow(other) / widestRow(this) (EN 10, AR 11). Each mapped point types the other page's nearest char key. Apple's iPhone Arabic page is not the PC one: السلام by position on the EN page is "gfafgk", not "hgsghl".
   - Condition: the literal has 3+ letters, every tap has a point (a point-less tap can't be placed), it isn't a valid base word, a known word or an AR clitic form, no edit-free candidate's key starts with its key (a same-key variant, or a word being typed), and it has no autocorrect target.
   - Then the other language's engine searches the mapped taps with the same context. Its top candidate is offered when it is a valid base or known word, with no completion and an edit cost within `gentleMaxEditCost` (a slip, not a different word).

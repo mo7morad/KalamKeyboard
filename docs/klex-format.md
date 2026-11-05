@@ -20,7 +20,7 @@ One file per language. Written by `Tools/lexicon-builder/klex.py`, read by `Kala
 |---|---|---|---|
 | 0 | nodes | 16 | u32 first child, u32 key id (0xFFFFFFFF = not terminal), u16 child count, u16 char (UTF-16 unit), u16 max-subtree q, 2 pad |
 | 1 | keys | 8 | u32 first variant, u32 variant count |
-| 2 | variants | 12 | u32 surface offset, u16 surface length (UTF-8 bytes, in the string pool), u16 q, u8 flags (1 = valid, 2 = preferred), 3 pad |
+| 2 | variants | 12 | u32 surface offset, u16 surface length (UTF-8 bytes, in the string pool), u16 q, u8 flags (1 = valid, 2 = preferred, 4 = candidate: a generated Egyptian form, offered and scored but never valid), 3 pad |
 | 3 | bigram index | 8 | u32 first bigram, u32 bigram count; one record per word id, plus a last one for `<s>` (so count = variants + 1) |
 | 4 | bigrams | 8 | u32 w2 word id, u16 q of P(w2 given w1), 2 pad; top 32 per w1, most probable first |
 | 5 | casing | 12 | u32 word id, u32 display offset, u16 display length, 2 pad; sorted by word id |

@@ -113,6 +113,8 @@ public final class BaseLexicon {
     public func logProb(_ word: Int) -> Double { dequantize(field(variantTable, word, 6, UInt16.self)) }
     public func isValid(_ word: Int) -> Bool { field(variantTable, word, 8, UInt8.self) & 1 != 0 }
     public func isPreferred(_ word: Int) -> Bool { field(variantTable, word, 8, UInt8.self) & 2 != 0 }
+    /// A word the engine offers and scores: valid, or a generated Egyptian form (4), which never blocks autocorrect.
+    public func isCandidate(_ word: Int) -> Bool { field(variantTable, word, 8, UInt8.self) & 5 != 0 }
 
     /// The id bigrams use for <s>.
     public var sentenceStartID: Int { variantTable.count }

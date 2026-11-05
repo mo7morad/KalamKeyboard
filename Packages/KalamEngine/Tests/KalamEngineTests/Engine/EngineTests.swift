@@ -41,6 +41,12 @@ func correctsTypo(_ typed: String, _ expected: String) throws {
     #expect(!suggestions(engine, "alo", limit: 10).contains("alot"))
 }
 
+@Test func generatedFormIsACandidateButNotAWord() throws {
+    let engine = try fixtureEngine(.ar)
+    #expect(suggestions(engine, "مبيعرفس", limit: 10).contains("مبيعرفش"))
+    #expect(!engine.isWord("مبيعرفش"))  // so a typo that happens to be a generated form still corrects
+}
+
 @Test func knownLiteralMergesWithItsWord() throws {
     let results = try fixtureEngine(.en).suggest(InputState(context: [], taps: taps("the")), limit: 10)
     let first = try #require(results.first)

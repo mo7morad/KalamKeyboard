@@ -8,13 +8,14 @@ from build import (
     casing_table,
     count_corpus,
     flag_words,
+    generated_forms,
     is_heldout,
     parse_misspellings,
     prune_variants,
     training_sentences,
     unigrams,
 )
-from klex import PREFERRED, VALID
+from klex import CANDIDATE, PREFERRED, VALID
 
 
 def test_unigram_filters_keep_only_words_of_the_language(monkeypatch):
@@ -96,3 +97,16 @@ def test_pruning_drops_variants_under_three_percent_of_their_key():
 def test_arabic_preferred_spelling(freqs, preferred):
     words = flag_words("ar", freqs)
     assert [w for w, (_, flags) in words.items() if flags & PREFERRED] == [preferred]
+
+
+def test_generated_forms_are_the_tsv_surfaces_wordfreq_lacks(tmp_path):
+    tsv = tmp_path / "egyptian-words.tsv"
+    tsv.write_text("مبنجربش\tبنجرب\nفيه\tفي\n", encoding="utf-8")
+    assert generated_forms(tsv, {"فيه": 1e-3}) == {"مبنجربش"}
+    assert generated_forms(tmp_path / "missing.tsv", {}) == set()
+
+
+def test_generated_forms_are_candidates_never_valid():
+    words = flag_words("ar", {"مبنجربش": 1e-2, "مش": 1e-2}, generated={"مبنجربش"})
+    assert words["مبنجربش"][1] & (VALID | CANDIDATE) == CANDIDATE
+    assert words["مش"][1] & (VALID | CANDIDATE) == VALID
