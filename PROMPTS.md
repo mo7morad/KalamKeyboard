@@ -283,3 +283,57 @@ Scope (geometry and settings in the engine with tests; the keyboard and the host
 - Tap points stay in the letters page's key units, whatever the height or number row, so the spatial model and learned offsets keep working.
 Update SPEC §5.1, §5.2, §10. Done when: engine tests pass (geometry for each height, key units with and without the number row) and docs/device-checklist.md has a Phase 15 section.
 ```
+
+---
+
+## Phase 16: a benchmark that looks like Moe's typing (autocorrect, both languages)
+
+Why: Moe says autocorrect is weak in both languages. Today's evals can't show it. `eval` only scores words that are valid base words (so Egyptian words such as بنجربه or مفيش are never scored), and `eval-personal` taps key centres, so it only measures wrong changes, never fixes. The fox trace shows the misses: brow (valid word, context says brown), fo, حاخالص (extra tap), وفمقيش (swap plus extra tap), كويسك ه (stray space).
+
+```
+Phase 16. Read CLAUDE.md, SPEC §2, §3, §8.2, §8.3, §8.5, §12 and docs/eval-log.md (last two entries).
+Scope (kalam-cli only; no engine behaviour change):
+- eval-personal --noise: types each held-out word of Moe's chats with NoisyTypist (sigma, bias and the
+  omission / extra-tap / swap rates as in eval, Moe-like bias-y -0.13), with the personal model trained on the
+  other 90%. A word counts when it's a valid base word or known in the trained personal model.
+  Report per language: fix rate (noisy taps -> intended word), wrong-change rate (clean taps -> anything else),
+  top-1 rate, and a breakdown of misses by error kind (substitution, omission, extra tap, swap, real-word).
+- --samples N prints misses and wrong changes with their taps' error kind.
+- A real-word case: a noisy result that is itself another valid word (brow for brown) is counted separately.
+Log a baseline on the real klex + Moe's 3 chats, 10 folds, normal mode, in docs/eval-log.md.
+Done when: swift test passes and the baseline is logged. This baseline is the bar Phase 17 must beat.
+```
+
+## Phase 17: better autocorrect, measured (EN + AR)
+
+```
+Phase 17. Read CLAUDE.md, SPEC §2, §3, §8.2, §8.3, §8.5, docs/eval-log.md (Phase 16 baseline).
+Work from the Phase 16 miss breakdown, biggest bucket first. Each change is its own eval run (10 folds,
+both languages) logged in docs/eval-log.md. Keep it only if the fix rate rises and the wrong-change rate
+doesn't (wrong changes stay at or under the baseline; FA <= 0.5% on the synthetic eval).
+Candidates, in expected order of value:
+1. Re-tune the edit costs and AR's double-counted edit cost on the new benchmark (insertion 5.0 makes
+   حاخالص -> خالص impossible; the AR rule adds c*'s edits to theta).
+2. Real-word errors: allow correcting a valid literal when the context LM strongly prefers a one-edit
+   neighbour (brow -> brown before fox). Tunables: a log-prob margin and a max edit cost, in EngineConfig.
+3. AR clitic candidates: a known stem plus one clitic (بنجرب+ه) as a candidate, not only as a protected literal.
+4. A stray space inside a word (كويسك ه): only if the benchmark shows it matters.
+All tunables in EngineConfig. Update SPEC §8.2, §8.5. Done when: swift test passes, every kept change has its
+eval line, and docs/device-checklist.md has a Phase 17 section (the fox sentence and 3 Arabic sentences).
+```
+
+## Phase 18: autocorrect that looks like Apple's (visuals only)
+
+A keyboard extension can't draw in the host app's text, so Apple's underline on a corrected word and its popover are out of reach. Everything Apple shows in the bar is in reach.
+
+```
+Phase 18. Read CLAUDE.md, SPEC §2, §3, §5.3, §5.4, §8.5 and Moe's screen recording of Apple's keyboard in
+docs/reference/apple/ (autocorrect-*.png frames).
+Scope (KeyboardExtension/Views/SuggestionBar.swift, behaviour unchanged):
+- Match Apple's pending-autocorrect look frame by frame: the primary slot's highlight (shape, colour,
+  light and dark), the quoted literal, text weight, and how the slots animate in and out as Moe types.
+- After a commit, the bar's revert state and the backspace undo look like Apple's.
+- No main-thread work beyond today's (one layer animation per change, no repaint per keystroke).
+Update SPEC §5.4. Done when: the extension builds, simulator screenshots sit next to Apple's frames in
+docs/reference/kalam/, and docs/device-checklist.md has a Phase 18 section.
+```
