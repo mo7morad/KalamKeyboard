@@ -138,6 +138,14 @@ func autocorrectUndoStepsBackThroughItsTail(tails: [String], deleting: Int, text
     #expect(slot.backspace(before: "the brown fix ") == .gone)
 }
 
+@Test func aTapOnTheRevertOfferPutsTheLiteralBackAndKeepsTheTail() {
+    let comma = AutocorrectUndo(literal: "teh", taps: [], replacement: "the").typed(" ")?.typed(", ", deleting: 1)
+    #expect(comma?.tapped(before: "so the, ") == .revert(delete: 5, insert: "teh, "))
+    #expect(comma?.tapped(before: "so they, ") == .gone)
+    let post = AutocorrectUndo(literal: "brow", replacement: "brown", keeping: " fox ")
+    #expect(post.tapped(before: "the brown fox ") == .revert(delete: 10, insert: "brow fox "))
+}
+
 @Test func autocorrectUndoSlotEndsWhenTheKeyDeletesPastItsTail() {
     let slot = AutocorrectUndo(literal: "teh", taps: [], replacement: "the")
     #expect(slot.typed(",", deleting: 1) == nil)

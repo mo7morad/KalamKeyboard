@@ -333,3 +333,15 @@ Round 5's bigger keys are undone: rows are 54 pt at the Default Keyboard Height 
 - [ ] Top row: taps right under the bar still type the letter mid-typing, and a suggestion still picks after a pause ____.
 - [ ] Bottom row: taps aimed low on space and return (where Apple's sit) still type ____.
 - [ ] Settings > Keyboard Height: Compact is smaller than Apple's, Tall bigger, and the number row still fits ____.
+
+## Phase 22: the correction shows in the bar
+
+Right after Kalam corrects a word (on space, punctuation, return, or when the next word fixes the one before it), the left slot (right in Arabic) shows what you typed, unquoted, for up to 3 s. Tap it to get your word back: the space or punctuation after it stays, and Kalam won't make that change again. The next letter, another space, or moving the cursor makes it go. One backspace still undoes as before. Test in Notes, WhatsApp and Messages, light and dark.
+
+- [ ] "teh ": "teh" shows on the left right after the space and fades after about 3 s ____.
+- [ ] Tap it at once: the text reads "teh " with the cursor after the space; type "teh " again later and it stays ____.
+- [ ] "teh," then tap the offer: "teh, " ____.
+- [ ] Typing the next word at once: the offer is gone with the first letter, never in the way of a fast tap on the predictions ____.
+- [ ] A post-correction (the next word fixes the one before it; rare, so note it when you see one): the offer shows the earlier word, a tap puts it back and keeps the next word ____.
+- [ ] Arabic, autocorrect normal: "السلان " offers السلان on the right; a tap puts it back ____.
+- [ ] One backspace right after a correction still undoes it in one go ____.

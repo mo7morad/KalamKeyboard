@@ -166,11 +166,18 @@ public struct AutocorrectUndo: Sendable {
 
     /// One backspace with `before` the text before the cursor.
     public mutating func backspace(before: String) -> Step {
+        if keepsTail { return tapped(before: before) }
         guard before.hasSuffix(replacement + tail) else { return .gone }
-        if keepsTail { return .revert(delete: replacement.count + tail.count, insert: literal + tail) }
         if tail.isEmpty || tail == " " { return .revert(delete: replacement.count + tail.count, insert: literal) }
         tail.removeLast()
         return .delete
+    }
+
+    /// A tap on the bar's revert offer (SPEC 5.4) with `before` the text before the cursor: the literal
+    /// goes back in place of the replacement, and the tail stays.
+    public func tapped(before: String) -> Step {
+        guard before.hasSuffix(replacement + tail) else { return .gone }
+        return .revert(delete: replacement.count + tail.count, insert: literal + tail)
     }
 }
 

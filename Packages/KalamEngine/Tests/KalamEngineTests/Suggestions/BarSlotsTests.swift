@@ -50,6 +50,14 @@ private func suggestion(_ text: String, literal: Bool = false) -> Suggestion {
     #expect(barSlots(variant, autocorrect: nil, literal: "انا", lang: .ar, casing: .none, revert: "انى")[2]?.isRevert == true)
 }
 
+@Test func revertOfferAfterACommitTakesAlt1AndTheOthersKeepThePredictions() {
+    let predictions = [suggestion("is"), suggestion("was"), suggestion("of")]
+    let en = barSlots(predictions, autocorrect: nil, literal: "", lang: .en, casing: .none, revert: "teh")
+    #expect(en.map { $0?.label } == ["teh", "is", "of"] && en[0]?.isRevert == true)
+    let ar = barSlots(predictions, autocorrect: nil, literal: "", lang: .ar, casing: .none, revert: "انى")
+    #expect(ar.map { $0?.label } == ["of", "is", "انى"] && ar[2]?.isRevert == true)
+}
+
 @Test func rescueTakesAlt2OrAlt1WhenAnEmojiHoldsAlt2() {
     let ranked = [suggestion("gfafgk", literal: true), suggestion("gfa")]
     let rescue = suggestion("السلام", literal: true)  // the other engine's literal: here it's no quoted literal

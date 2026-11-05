@@ -81,12 +81,21 @@ final class KalamAutocorrect: KalamField {
     func type(_ keys: [(CGFloat, Int)], units: CGFloat = 10) { for (u, row) in keys { tap(u, row, units: units) } }
     func press(_ key: (CGFloat, Int, CGFloat)) { tap(key.0, key.1, units: key.2) }
 
-    /// Pending, corrected, the revert offer with the cursor back after the word, then the undo.
+    /// Phase 22: alt1 (left in EN, right in AR) holds the revert offer right after a correction.
+    /// The slots start after the clipboard and emoji buttons (88 pt) and share the rest (402 pt wide).
+    var alt1: XCUICoordinate {
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: pageID.hasPrefix("ar") ? 350 : 140, dy: keyTop - 22))
+    }
+
+    /// Pending, the revert offer right after the space and after it times out, the offer with the
+    /// cursor back after the word, then the undo.
     func run(_ typo: [(CGFloat, Int)], _ tag: String, units: CGFloat = 10, ok: [(CGFloat, Int)], wordEnd: CGVector) {
         type(typo, units: units)
         step("\(tag)-pending")
         press(space)
-        step("\(tag)-corrected")
+        step("\(tag)-offer")
+        sleep(3)
+        step("\(tag)-offer-expired")
         type(ok, units: units)
         press(space)
         // Twice: a tap sometimes only brings up the edit menu; one on the caret leaves it in place.
@@ -116,6 +125,25 @@ final class KalamAutocorrect: KalamField {
         // السلان, then عليكم; RTL, so the word ends on its left. Needs autocorrectAR = normal (Moe's setting).
         run([(5.5, 1), (4.5, 1), (1.5, 1), (4.5, 1), (5.5, 1), (7.5, 1)], "ar", units: 11,
             ok: [(6.5, 0), (4.5, 1), (2.5, 1), (9.5, 1), (8.5, 1)], wordEnd: CGVector(dx: -45, dy: 20))
+        tap(2.0625, 3, units: 11)  // back to EN
+    }
+
+    /// Phase 22: a tap on the offer right after the space puts the literal back, keeping the space.
+    /// Records the rejection, so run it on its own store (not before `testAutocorrect`).
+    func testOfferTap() {
+        launchKalam()
+        type([(4.5, 0), (2.5, 0), (6.0, 1)])  // teh
+        press(space)
+        sleep(1)
+        alt1.tap()
+        step("en-offer-tapped")
+        tap(1.875, 3)  // EN/AR
+        sleep(1)
+        type([(5.5, 1), (4.5, 1), (1.5, 1), (4.5, 1), (5.5, 1), (7.5, 1)], units: 11)  // السلان
+        press(space)
+        sleep(1)
+        alt1.tap()
+        step("ar-offer-tapped")
         tap(2.0625, 3, units: 11)  // back to EN
     }
 }

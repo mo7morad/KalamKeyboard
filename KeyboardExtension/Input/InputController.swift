@@ -31,6 +31,11 @@ final class InputController {
     /// revert while the cursor is in or right after its replacement (SPEC 5.4).
     private var recent = RecentAutocorrects()
     private var revertOffer: RecentAutocorrects.Entry?
+    /// Runs for `freshOfferSeconds` after an autocorrect or a post-correction commits: meanwhile the
+    /// bar offers its literal while the undo slot lasts (SPEC 5.4 revert offer, Apple's undo offer).
+    private var freshOfferTimer: Timer?
+    private static let freshOfferSeconds = 3.0
+    private var freshCorrection: AutocorrectUndo? { freshOfferTimer == nil ? nil : undo }
     /// The word a paste ended on; committing it unchanged neither corrects nor learns it (SPEC 5.5).
     private var pastedWord: String?
     /// The text before the cursor after our last edit, to tell our edits from the host's.
@@ -189,6 +194,7 @@ final class InputController {
     /// auto-space, unless text follows the word. A revert slot puts back an autocorrect's literal
     /// and rejects the autocorrect (SPEC 5.4).
     func accept(_ slot: BarSlot) {
+        if slot.isRevert, let fresh = freshCorrection { return revert(fresh) }
         let offer = revertOffer
         dropUndo()
         let context = contextWords(before: before)
@@ -211,6 +217,23 @@ final class InputController {
         restoredLiteral = taps.isEmpty ? nil : literal
         pastedWord = nil
         autoSpace = !followed
+        refresh()
+    }
+
+    /// A tap on the offer right after a correction: the literal goes back in place of the replacement,
+    /// what followed it stays, and the correction is rejected (SPEC 5.4 tap to revert).
+    private func revert(_ fresh: AutocorrectUndo) {
+        let wasAutoSpace = autoSpace
+        dropUndo()
+        guard case .revert(let length, let text) = fresh.tapped(before: before) else { return refresh() }
+        delete(length)
+        insert(text)
+        autoSpace = wasAutoSpace
+        let prefix = String(before.dropLast(text.count))
+        if let entry = recent.retyped(fresh.literal, before: prefix) { recent.remove(entry) }
+        taps = resyncedTaps([], to: currentWord(before: before))
+        restoredLiteral = taps.isEmpty ? nil : literal
+        client.revertAutocorrect(fresh.literal, replacement: fresh.replacement, lang: lang, context: contextWords(before: prefix))
         refresh()
     }
 
@@ -273,7 +296,8 @@ final class InputController {
         // A literal retyped where it was autocorrected commits as typed, so it shows no pending autocorrect.
         let retyping = recent.retyped(literal, before: String(before.dropLast(literal.count))) != nil
         onSlots?(barSlots(result.candidates, autocorrect: retyping ? nil : result.autocorrect, literal: literal, lang: lang,
-                          casing: casing, emoji: result.emoji, revert: revertOffer?.literal, rescue: result.rescue))
+                          casing: casing, emoji: result.emoji, revert: freshCorrection?.literal ?? revertOffer?.literal,
+                          rescue: result.rescue))
     }
 
     // MARK: Commit
@@ -316,6 +340,7 @@ final class InputController {
         learn(replacement, context: context, how: .autocorrect(from: literal), taps: taps)
         undo = AutocorrectUndo(literal: literal, taps: taps, replacement: replacement)
         recent.add(literal: literal, replacement: replacement, before: prefix)
+        startFreshOffer()
         return replacement
     }
 
@@ -334,7 +359,19 @@ final class InputController {
             insert(replacement + kept)
             undo = AutocorrectUndo(literal: last.literal, replacement: replacement, keeping: kept)
             recent.add(literal: last.literal, replacement: replacement, before: last.prefix)
+            startFreshOffer()
             refresh()
+        }
+    }
+
+    /// The offer leaves when the timer ends, with the bar's usual fade; a letter, another key that ends
+    /// the undo slot, or a host change ends it sooner.
+    private func startFreshOffer() {
+        freshOfferTimer?.invalidate()
+        freshOfferTimer = Timer.scheduledTimer(withTimeInterval: Self.freshOfferSeconds, repeats: false) { [weak self] _ in
+            guard let self else { return }
+            freshOfferTimer = nil
+            if undo != nil { redrawBar() }
         }
     }
 

@@ -36,7 +36,9 @@ They come from `Tools/screenshot-harness/UITests/Clipboard.swift`: `testAllowPas
 The same states as `../apple/autocorrect-*`, light and dark, from `Tools/screenshot-harness/UITests/Autocorrect.swift` (`KalamAutocorrect`; it deletes nothing itself, so delete `personal.sqlite*` in the App Group container before each run, and set `autocorrectAR` to normal). Each word starts on a fresh launch, lowercase (shift tapped off).
 
 - `autocorrect-en-pending`, `-en-recieve-pending`, `-ar-pending`: the capsule behind the primary slot, its text darker and regular weight, the dividers hidden, the literal quoted in alt1 (“teh”, "السلان" with straight quotes in Arabic).
-- `autocorrect-*-corrected`: after the space, plain predictions with the dividers back.
+- `autocorrect-*-offer` (Phase 22): right after the space, the original sits unquoted in alt1 (left in EN, right in AR) as the revert offer; primary and alt2 keep the predictions, the dividers are back.
+- `autocorrect-*-offer-expired`: 3 s later, the offer has faded to the plain predictions.
+- `autocorrect-en-offer-tapped`, `-ar-offer-tapped`: the offer tapped right after the space (`testOfferTap`, on its own fresh store since it records a rejection): the field reads "teh " and "teh السلان ", the space kept.
 - `autocorrect-*-revert`: "ok " typed after the corrected word, then the cursor tapped back to its end. The original sits unquoted in alt1 (left in EN, right in AR), as Apple's offer does; a tap puts it back.
 - `autocorrect-*-undo`: the typo typed again, space, one backspace. Kalam's backspace puts the literal back in the field (SPEC 8.5), so the bar shows the literal's plain candidates. Apple instead keeps the correction and offers the literal in alt1; that difference is behaviour, left as it is.
 - `autocorrect-anim-pending-dark.png`: 16 frames at 60 fps while "e" makes "the" pending: the capsule and dividers switch in one frame, the slot text cross-fades over 0.2 s.

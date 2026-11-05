@@ -1,6 +1,6 @@
 import XCTest
 
-let base = "/private/tmp/claude-501/-Users-mohamedmorad-Developer-Extras-myKeyboard/8701a34a-f0c6-491e-9052-3cc4a54dfb6e/scratchpad/capture"
+let base = "/private/tmp/claude-501/kalam-phase22-capture"
 
 /// Asks the shell watcher for a screenshot after `delay` s and blocks until it is taken.
 func shot(_ name: String, delay: Double = 0.8) {
