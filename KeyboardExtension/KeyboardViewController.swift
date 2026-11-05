@@ -154,13 +154,16 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         TouchSpy.attach(to: view.window)
         MemoryProbe.logFootprint()
         #endif
+        // A second finger reaches the keys only if no view up to the window limits touches to one
+        // (device round 6: 93 touch-downs, none while another finger was down; the other thumb's tap was lost).
+        for view in sequence(first: view as UIView, next: \.superview) { view.isMultipleTouchEnabled = true }
     }
 
     #if DEBUG
     /// The view chain up to the window, with each gesture recognizer as iOS set it up (device rounds).
     private func traceViewChain() {
         for view in sequence(first: view as UIView, next: \.superview) {
-            trace("frame \(type(of: view)) \(view.frame) in window \(view.convert(view.bounds, to: nil))")
+            trace("frame \(type(of: view)) \(view.frame) in window \(view.convert(view.bounds, to: nil)) multitouch \(view.isMultipleTouchEnabled)")
             for recognizer in view.gestureRecognizers ?? [] {
                 trace("gesture \(type(of: view)) \(type(of: recognizer)) delaysTouchesBegan \(recognizer.delaysTouchesBegan) "
                       + "delaysTouchesEnded \(recognizer.delaysTouchesEnded) cancelsTouchesInView \(recognizer.cancelsTouchesInView)")

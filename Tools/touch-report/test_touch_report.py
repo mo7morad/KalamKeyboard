@@ -6,7 +6,7 @@ GATE = "_UISystemGestureGateGestureRecognizer"
 TRACE = f"""\
 1000.0 frame UIInputView (0.0, 0.0, 402.0, 274.4) in window (0.0, 0.0, 402.0, 274.4)
 1001.0 spy began at 30.0,120.0 in KeyboardView lag 1.0 ms id 0xold recognizers {GATE}:0
-5000.0 frame UIInputView (0.0, 0.0, 402.0, 274.4) in window (0.0, 0.0, 402.0, 274.4)
+5000.0 frame UIInputView (0.0, 0.0, 402.0, 274.4) in window (0.0, 0.0, 402.0, 274.4) multitouch false
 5000.5 gesture UIWindow {GATE} delaysTouchesBegan true delaysTouchesEnded false cancelsTouchesInView true
 5100.0 spy began at 30.0,120.0 in KeyboardView lag 2.0 ms id 0xa recognizers {GATE}:0,KeyTouchRecognizer:0
 5100.4 touch began h at 5.50,0.40 lag 2.4 ms id 0xa
@@ -39,6 +39,8 @@ def test_report_covers_the_last_appearance_and_finds_the_lost_touch():
     assert f"Recognizers that began or recognized on a touch: {GATE} x1" in text
     assert "Cancelled by the system: 1; dropped on reset: 0" in text
     assert "Typed: he " in text
+    assert "Most fingers down at once: 2" in text  # 0xc never lifts before 0xd lands
+    assert "Views that had multi-touch off: UIInputView" in text
     assert "Autocorrects: he -> He" in text
 
 

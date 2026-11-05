@@ -82,6 +82,7 @@ class Session:
     typed: list = field(default_factory=list)
     autocorrects: list = field(default_factory=list)
     gestures: list = field(default_factory=list)
+    single_touch: list = field(default_factory=list)  # views in the chain that had multi-touch off
     cancelled: int = 0
     dropped: int = 0
 
@@ -139,6 +140,8 @@ def parse(text, everything=False):
             session.typed.append({"space": " ", "return": "⏎"}.get(m.group(1), ""))
         elif m := AUTOCORRECT.match(text):
             session.autocorrects.append((unescape(m.group(1)), unescape(m.group(2))))
+        elif text.startswith("frame ") and text.endswith(" multitouch false"):
+            session.single_touch.append(text.split()[1])
         elif text.startswith("gesture "):
             session.gestures.append(text[len("gesture "):])
         elif text.startswith("dropped "):
@@ -158,6 +161,15 @@ def match(session):
         else:
             unmatched.append(spy)
     return unmatched
+
+
+def most_down(session):
+    """From the window's begins and ends: 1 means no finger ever landed while another was down."""
+    down, most = set(), 0
+    for spy in session.spies:
+        (down.add if spy.phase == "began" else down.discard)(spy.id)
+        most = max(most, len(down))
+    return most
 
 
 def percentile(values, fraction):
@@ -191,6 +203,9 @@ def report(session):
     between = [k for k in session.keys if not CAP_ROWS[0] <= k.y % 1 <= CAP_ROWS[1]]
     out.append(f"Key touch-downs between rows (iOS dropped these before round 6): {len(between)}")
     out.append(f"Cancelled by the system: {session.cancelled}; dropped on reset: {session.dropped}")
+    out.append(f"Most fingers down at once: {most_down(session)}")
+    if session.single_touch:
+        out.append("Views that had multi-touch off: " + ", ".join(session.single_touch))
     lags = [k.lag for k in session.keys]
     if lags:
         out.append(f"Delay from finger to Kalam (ms): median {statistics.median(lags):.1f}, "
