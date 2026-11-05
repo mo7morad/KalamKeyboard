@@ -1,8 +1,8 @@
 import CoreGraphics
 
-/// Key frames in points for one page at a given width: Apple's iPhone 17 layout
-/// (docs/reference/apple/README.md), with bigger caps and rows than Apple's (device round 4: Moe asked
-/// for bigger keys). Hit frames tile each row with no gaps; caps are the drawn keys.
+/// Key frames in points for one page at a given width, from Apple's iPhone 17 metrics
+/// (docs/reference/apple/README.md), tuned so the rendered caps land on Apple's pixels. Hit frames tile
+/// each row with no gaps; caps are the drawn keys.
 public struct KeyGeometry: Sendable {
     public struct Frame: Sendable {
         public let key: Layout.Key
@@ -14,24 +14,24 @@ public struct KeyGeometry: Sendable {
 
     /// Hit area inset from the left and right edges.
     static let sideInset: CGFloat = 3.4
-    /// Space between neighbouring caps (Apple's is 6).
-    static let capGap: CGFloat = 4
+    /// Space between neighbouring caps.
+    static let capGap: CGFloat = 6
     /// Key area top to the first hit row.
     static let topInset: CGFloat = 2
-    /// The default keyboard height's row pitch (SPEC 5.2).
+    /// The default keyboard height's row pitch, Apple's (SPEC 5.2).
     public static let rowPitch = CGFloat(KeyboardHeight.default.rowPitch)
-    /// Hit row top to its caps. Moe's taps land about 7 pt above the caps' centers, so a cap's center
-    /// sits only 0.5 pt below its hit band's (device round 2 trace).
-    static let capTop: CGFloat = 5.1
-    /// The pitch minus the cap height (48.8 at 58; Apple's is 11.2).
-    static let capShortfall: CGFloat = 9.2
+    /// Hit row top to its caps. Moe's taps land about 7 pt above the caps' centers, so each row's
+    /// hit band starts 5 pt above where Apple's gaps would put it (device round 2 trace).
+    static let capTop: CGFloat = 6.1
+    /// The pitch minus the cap height (Apple's 42.8 at 54).
+    static let capShortfall: CGFloat = 11.2
     /// SPEC 5.2: with the number row on, the letters page's pitch shrinks this much.
     static let numberRowShrink: CGFloat = 4
     /// Touch band under the bottom row's caps (it maps to the bottom row). Without it, taps aimed
     /// where Apple's lower space bar sits fall into iOS's globe strip and are lost (device round 2).
     static let bottomInset: CGFloat = 4.5
-    /// Height of the key area at the default setting, excluding the suggestion bar (Apple's is 226,
-    /// and a third-party keyboard gets a 17 pt taller globe strip below it on iOS 27).
+    /// Height of the key area at the default setting, excluding the suggestion bar. Apple's is 226; a
+    /// third-party keyboard gets a 17 pt taller globe strip below it on iOS 27, so the area is as short as it can be.
     public static let height = height(rows: 4, pitch: rowPitch)
 
     /// SPEC 5.2: the key area's height at a setting, the same on every page.

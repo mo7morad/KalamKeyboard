@@ -5,11 +5,11 @@ Each sheet shows four screenshots, left to right: Apple light, Kalam light, Appl
 What to look for:
 
 - Keys, gaps, corners, colors and label sizes match Apple's within about 1 pt.
-- The panel tops match (y=546 pt). iOS 27 gives third-party keyboards a 75 pt globe strip at the bottom (Apple's own is 58 pt), so Kalam's rows can't go as low as Apple's: its bottom-row caps end at 798.7 pt against Apple's 803.0 (the cap tops at 756.3 and 760.0, so 3.7 pt higher). Kalam's bar is 40 pt and its key area ends at the bottom row's caps to get there (device round 1; before, the panel top was at 538.6 and the rows 7.1 pt higher).
+- iOS 27 gives third-party keyboards a 75 pt globe strip at the bottom (Apple's own is 58 pt), and Kalam keeps a 4.5 pt touch band under its bottom row (device round 2), so Kalam's rows can't go as low as Apple's: in Phase 20's captures its cap rows start at 590.3 / 644.3 / 698.3 / 752.3 pt against Apple's 598.7 / 652.7 / 706.7 / 760.7, 8.4 pt higher with the same 54 pt pitch.
 - Kalam's bar is empty for now (Phase 5 fills it), the EN/AR key replaces the emoji key, and the top row carries small digit hints.
 - Popups can't rise above the keyboard in a third-party keyboard, so top-row popups (`popup-e`, `keypress-q`) are pushed down over the top row. `keypress-q` shows Kalam's long-press strip, because the capture held q long enough to open it.
 
-`en-letters.png` and `ar-letters.png` were retaken in device round 1 with a Debug build (Debug overlay off). `popup-tashkeel-light.png` is Kalam's tashkeel strip, to compare with `../apple/popup-tashkeel-light.png` (`Tools/screenshot-harness/UITests/Round1.swift`).
+The seven page sheets (`en-letters`, `en-shifted`, `en-123`, `en-symbols`, `ar-letters`, `ar-123`, `ar-symbols`) were retaken in Phase 20 (Apple's key sizes back) with a Release build. Measured from the PNGs: every cap is within 0.7 pt of Apple's in x, caps are the same height and the row pitch is 54 pt, and the whole keyboard sits 8.4 pt higher than Apple's (the taller globe strip plus the bottom touch band). The bar shows base predictions, since Phase 5 filled it. `popup-tashkeel-light.png` is Kalam's tashkeel strip, to compare with `../apple/popup-tashkeel-light.png` (`Tools/screenshot-harness/UITests/Round1.swift`).
 
 To recapture, use `Tools/screenshot-harness/UITests/Kalam.swift` with the harness described in `../apple/README.md` (`testEnableFullAccess` once, then `testPages` per appearance).
 

@@ -2,21 +2,20 @@ import CoreGraphics
 import Testing
 @testable import KalamEngine
 
-/// Apple's iPhone 17 layout (docs/reference/apple/README.md) with 4 pt cap gaps (Apple's are 6) and
-/// 58 pt rows (device round 4: bigger keys).
-@Test func englishCapPositions() throws {
+/// Apple's iPhone 17 cap positions from docs/reference/apple/README.md, within 1 pt.
+@Test func englishCapsMatchApple() throws {
     let geometry = KeyGeometry(layout: try #require(Layout.bundled("en-letters")), width: 402)
     func cap(_ id: String) throws -> CGRect { try #require(geometry.frames.first { $0.key.id == id }).cap }
     let expected: [(String, CGFloat, CGFloat)] = [
-        ("q", 5.4, 40.92), ("p", 361.08, 396.6), ("a", 25.16, 60.68), ("shift", 5.4, 52.78),
-        ("z", 64.68, 100.2), ("backspace", 349.22, 396.6), ("numbers", 5.4, 50.8),
-        ("lang", 54.8, 100.2), ("space", 104.2, 297.8), ("return", 301.8, 396.6),
+        ("q", 7.0, 40.0), ("p", 362.3, 395.3), ("a", 26.7, 59.5), ("shift", 7.0, 51.7),
+        ("z", 66.0, 99.0), ("backspace", 350.3, 395.3), ("numbers", 7.0, 49.7),
+        ("lang", 56.3, 99.0), ("space", 105.7, 296.3), ("return", 303.0, 395.3),
     ]
     for (id, minX, maxX) in expected {
-        #expect(abs(try cap(id).minX - minX) < 0.01, "\(id) minX")
-        #expect(abs(try cap(id).maxX - maxX) < 0.01, "\(id) maxX")
+        #expect(abs(try cap(id).minX - minX) < 1, "\(id) minX")
+        #expect(abs(try cap(id).maxX - maxX) < 1, "\(id) maxX")
     }
-    #expect(abs(try cap("q").height - 48.8) < 1e-9)
+    #expect(abs(try cap("q").height - 42.3) < 1)
     #expect(abs(try cap("a").minY - cap("q").minY - KeyGeometry.rowPitch) < 1e-9)
 }
 
@@ -24,7 +23,7 @@ import Testing
     let geometry = KeyGeometry(layout: try #require(Layout.bundled("ar-letters")), width: 402)
     #expect(abs(geometry.unit - 35.9) < 0.05)
     let backspace = try #require(geometry.frames.first { $0.key.id == "backspace" })
-    #expect(abs(backspace.cap.maxX - 396.6) < 0.01)
+    #expect(abs(backspace.cap.maxX - 395.3) < 1)
 }
 
 @Test func nearestKeyCoversEdgesAndGaps() throws {
@@ -50,7 +49,7 @@ import Testing
 
 @Test func keyAreaHeightPerSetting() {
     #expect(abs(KeyGeometry.height(.default, numberRow: false) - KeyGeometry.height) < 1e-9)
-    let expected: [(KeyboardHeight, CGFloat, CGFloat)] = [(.compact, 218.4, 252.4), (.default, 234.4, 272.4), (.tall, 250.4, 292.4)]
+    let expected: [(KeyboardHeight, CGFloat, CGFloat)] = [(.compact, 201.4, 231.4), (.default, 217.4, 251.4), (.tall, 233.4, 271.4)]
     for (setting, off, on) in expected {
         #expect(abs(KeyGeometry.height(setting, numberRow: false) - off) < 1e-9)
         #expect(abs(KeyGeometry.height(setting, numberRow: true) - on) < 1e-9)
@@ -71,7 +70,7 @@ func rowsTileTheKeyArea(_ setting: KeyboardHeight, _ numberRow: Bool) throws {
         #expect(abs(tops[0] - (40 + 2)) < 1e-9)
         for frame in geometry.frames {
             #expect(frame.hit.height == pitch)
-            #expect(abs(frame.cap.height - (pitch - 9.2)) < 1e-9)
+            #expect(abs(frame.cap.height - (pitch - 11.2)) < 1e-9)
         }
         for (a, b) in zip(tops, tops.dropFirst()) { #expect(abs(b - a - pitch) < 1e-9) }
         let lowestCap = try #require(geometry.frames.map(\.cap.maxY).max())

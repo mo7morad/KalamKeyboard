@@ -323,3 +323,13 @@ Two changes to the Arabic dictionary (SPEC 7.1): it now learns which word follow
 - [ ] 4: "تخيل اروح فعلا الانترن شيب": on the Mac, الانترن becomes الإنترنت (the one wrong change found, a word split by a space). One backspace puts it back ____. Does it bother you ____?
 - [ ] 5: your own Egyptian: "احنا لسه بنجربه ومبنجربش حاجة تانية" stays as typed ____.
 - [ ] A day of Arabic typing: wrong changes you undid, roughly how many ____; odd words in the bar (made-up forms like حالله) ____; the keyboard feels as fast as before ____.
+
+## Phase 20: Apple's key sizes again
+
+Round 5's bigger keys are undone: rows are 54 pt at the Default Keyboard Height (Compact 50, Tall 58) and caps are 42.8 pt tall, 6 pt apart, as Apple's. Round 5's buzz-before-rollover, round 6's touch surface and multi-touch stay. Tap points are in key units, so the learned key offsets carry over.
+
+- [ ] Keys look the same size as Apple's keyboard (switch with the globe and compare) ____.
+- [ ] In Notes, type a few fast sentences with two thumbs, EN and AR. Taps dropped ____ (round 6 should hold at the smaller size too).
+- [ ] Top row: taps right under the bar still type the letter mid-typing, and a suggestion still picks after a pause ____.
+- [ ] Bottom row: taps aimed low on space and return (where Apple's sit) still type ____.
+- [ ] Settings > Keyboard Height: Compact is smaller than Apple's, Tall bigger, and the number row still fits ____.
