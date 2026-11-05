@@ -317,22 +317,58 @@ Candidates, in expected order of value (docs/research/06-autocorrect-leaders.md)
 2. Post-correction (Gboard, iOS): when the next word commits, re-score the previous word with context on
    both sides and replace it when the margin is large and it's one cheap edit away (brow -> brown before fox).
    Same one-backspace undo and revert memory as an autocorrect. Tunables (margin, max edit cost) in EngineConfig.
-3. Egyptian dialect data in the AR base: a Masri corpus into the AR unigrams and bigrams in
-   Tools/lexicon-builder (data only, the .klex stays mmapped). Measure footprint and the benchmark.
-4. AR clitic candidates: a known stem plus one clitic (بنجرب+ه) as a candidate, not only as a protected literal
-   (CAMeL Tools only if Moe allows the dependency).
-5. Space errors (Gboard, SwiftKey Smart Space): a stray space inside a word (كويسك ه), a missed space
+3. Space errors (Gboard, SwiftKey Smart Space): a stray space inside a word (كويسك ه), a missed space
    (thequick), only if the benchmark shows them.
 All tunables in EngineConfig. Update SPEC §8.2, §8.5. Done when: swift test passes, every kept change has its
 eval line, and docs/device-checklist.md has a Phase 17 section (the fox sentence and 3 Arabic sentences).
 ```
 
-## Phase 18: autocorrect that looks like Apple's (visuals only)
+## Phase 18: Egyptian Arabic in the base lexicon (CAMeL Tools, Moe approved 2026-11-05)
+
+Why: the AR base is MSA (wordfreq + Leipzig news), so Moe's Egyptian forms (بنجربه, مفيش, مبنجربش) are often not
+candidates at all, and autocorrect can't aim for them. Two sources fix that, both offline on the Mac:
+an Egyptian text corpus (what people write) and CAMeL Tools' Egyptian morphology (calima-egy-r13: which forms exist).
+
+Shape (keeps the heavy dependency away from the main build and the phone):
+- Tools/egyptian-lexicon/: its own uv venv (Python 3.11, camel-tools + its morphology-db-egy data),
+  own requirements.txt and pytest. Its only output is Tools/data/egyptian-words.tsv
+  (surface, count, source = corpus | moe | generated, analyzable 0/1). The TSV is committed, so a normal
+  lexicon build never needs CAMeL Tools.
+- Tools/lexicon-builder/build.py reads the TSV if present (AR only) and merges it into the unigrams; Egyptian
+  corpus sentences join the AR bigram training. Same normalization (shared vectors), same .klex format.
+
+```
+Phase 18. Read CLAUDE.md, SPEC §2, §3 (D3, D9, D10), §6.1, §7, §8.2, §8.5, docs/research/06-autocorrect-leaders.md,
+docs/eval-log.md (Phases 16 and 17).
+Step 0, a spike before building anything (log it in docs/eval-log.md):
+- Moe's AR word types (3 chats, sender Mohamed Morad): how many are missing from the AR klex; of those, how
+  many calima-egy analyzes, and how many an Egyptian corpus contains. If CAMeL adds little over the corpus,
+  stop at the corpus and say so.
+- Pick the corpus: the Masri slice of dataflare/arabic-dialect-corpus and/or fr3on/arabic-dialect-corpus
+  (docs/research/06). Download into Tools/lexicon-builder/corpora/ (git-ignored like the Leipzig files).
+Step 1, the word list (Tools/egyptian-lexicon):
+- Corpus words: Arabic-letters only, normalized as SPEC 6.1, count >= a min count (tunable).
+- CAMeL as a filter: a corpus word that calima-egy can't analyze needs a higher count to enter (typos in
+  comments).
+- CAMeL as a generator: for stems Moe uses (his chats) and frequent corpus stems, generate the common clitic
+  forms (ب/ح/ه tense prefixes, و/ف, object and لـ pronoun suffixes, negation م…ش). Cap the forms per stem.
+Step 2, the merge (build.py): corpus and Moe words get a frequency scaled to wordfreq's; generated forms get a
+low floor probability. Valid flag (blocks autocorrect): only attested words at zipf >= min-zipf; generated
+forms are candidates, never valid (SPEC 7.1 rule, so a typo that happens to be a generated form still corrects).
+Step 3, measure: rebuild ar.klex, then the Phase 16 benchmark (AR fix rate up, wrong changes not up), the
+synthetic AR eval (FA <= 0.5%), request latency (kalam-cli eval's p95 must stay within 10% of before), the
+klex size and trie node count. Keep only what wins. Log in docs/eval-log.md.
+Update SPEC §3 D10 (camel-tools allowed, offline only), §7.1, and CLAUDE.md hard rule 7. Done when: both
+pytest suites and swift test pass, ar.klex is rebuilt and verified (kalam-cli verify), and
+docs/device-checklist.md has a Phase 18 section (5 Egyptian sentences Moe types).
+```
+
+## Phase 19: autocorrect that looks like Apple's (visuals only)
 
 A keyboard extension can't draw in the host app's text, so Apple's underline on a corrected word and its popover are out of reach. Everything Apple shows in the bar is in reach.
 
 ```
-Phase 18. Read CLAUDE.md, SPEC §2, §3, §5.3, §5.4, §8.5 and Moe's screen recording of Apple's keyboard in
+Phase 19. Read CLAUDE.md, SPEC §2, §3, §5.3, §5.4, §8.5 and Moe's screen recording of Apple's keyboard in
 docs/reference/apple/ (autocorrect-*.png frames).
 Scope (KeyboardExtension/Views/SuggestionBar.swift, behaviour unchanged):
 - Match Apple's pending-autocorrect look frame by frame: the primary slot's highlight (shape, colour,
@@ -340,5 +376,5 @@ Scope (KeyboardExtension/Views/SuggestionBar.swift, behaviour unchanged):
 - After a commit, the bar's revert state and the backspace undo look like Apple's.
 - No main-thread work beyond today's (one layer animation per change, no repaint per keystroke).
 Update SPEC §5.4. Done when: the extension builds, simulator screenshots sit next to Apple's frames in
-docs/reference/kalam/, and docs/device-checklist.md has a Phase 18 section.
+docs/reference/kalam/, and docs/device-checklist.md has a Phase 19 section.
 ```

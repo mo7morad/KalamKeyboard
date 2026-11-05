@@ -28,11 +28,11 @@ Morphology: [CAMeL Tools](https://camel-tools.readthedocs.io/en/stable/api/morph
 
 Still no (see 04 §2): about 1% gain at Google scale, CoreML memory risk in the extension, too little Egyptian text to train. Revisit only if the n-gram work plateaus.
 
-## 4. What this adds to the plan (Phase 17)
+## 4. What this adds to the plan (Phases 17 and 18)
 
 In expected order of value for Moe, each gated on the Phase 16 benchmark:
 1. Edit-cost and AR-threshold re-tune (already planned).
 2. **Post-correction of the previous word** (new): on the next word's commit, re-score the previous word with both neighbours; replace it only when the margin is large and it's one cheap edit away. Same undo and revert memory as an autocorrect. Covers brow -> brown.
-3. **Egyptian dialect data in the AR base** (new): a Masri corpus into the AR unigrams and bigrams.
-4. AR clitic candidates (already planned), with CAMeL Tools if Moe allows it.
-5. **Space errors** (new): stray space inside a word (كويسك ه) and a missed space, if the benchmark shows them.
+3. **Space errors** (new): stray space inside a word (كويسك ه) and a missed space, if the benchmark shows them.
+
+Phase 18 (its own phase): Egyptian corpus + CAMeL Tools word forms into the AR base, approved by Moe on 2026-11-05.

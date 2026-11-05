@@ -59,7 +59,7 @@ Sources: dev.to "The three hard constraints of an iOS keyboard extension" (TBDS)
   - The Arabic spelling-variant auto-fix (انا→أنا) is **off** by default, but variants still appear as suggestions. In wordfreq, انا (7.9e-4) is as common as أنا (7.8e-4), and dialect الي collides with إلى.
   - The English contraction fix (dont→don't, im→I'm) is **on** by default. It never auto-applies a lazy spelling that is a common word too (its, were, ill, well, hell, id, shell, wed, shed, lets): those keep the contraction as a suggestion only (8.5).
 - **D9 Personal seed:** Moe imports his own WhatsApp messages (exported `.txt`) through the host app. This is the main way to cover Egyptian dialect, because the base Arabic data is mostly MSA.
-- **D10 No third-party dependencies** without asking. Python may use `wordfreq` and `pytest` only.
+- **D10 No third-party dependencies** without asking. Python may use `wordfreq` and `pytest`, plus `camel-tools` offline only, in its own venv (`Tools/egyptian-lexicon/`, Phase 18; Moe approved 2026-11-05). Nothing of it ships in the app.
 - **D11 Concurrency.** The engine is confined to one serial `DispatchQueue`, and the package uses Swift 5 language mode in v1 to avoid strict-concurrency churn.
 - **Names:** product "Kalam"; bundle IDs `<prefix>.kalam` and `<prefix>.kalam.keyboard`; App Group `group.<prefix>.kalam`. Rename freely in Phase 0.
 
@@ -596,6 +596,7 @@ Settings are stored in App Group `UserDefaults`:
   - `eval-personal` trains a personal store on 90% of Moe's own WhatsApp messages and evaluates on the other 10%. It reports the **personalization lift** in top-3 accuracy and keystroke savings versus base-only.
     - Messages are sorted by time; `--fold k` holds out message i when i % 10 == k.
     - **Guard:** the wrong autocorrect changes on Moe's Arabic over all 10 folds, each judged by hand, must not grow.
+    - `--noise <sigma>` (Phase 16) types each held-out word with the eval's noisy typist instead (its omission, extra-tap and swap rates; `--bias-x` / `--bias-y`, default 0 / −0.13, Moe-like), counting only words rule 2 protects (valid base, known personal, AR clitic form). Per language it reports the fix rate (noisy taps commit the intended word), top-1, the wrong-change rate (key-centre taps commit something else) and the misses by bucket: real-word (the noisy literal is itself such a word, so rule 2 keeps it), else the error kinds made (substitution, omission, extra tap, swap). `--fold all` sums the 10 folds; `--samples N` prints misses and wrong changes with their kinds. The Phase 16 baseline in `docs/eval-log.md` is the bar for autocorrect changes.
 - **Tuning log:** every tuning change reruns the eval and is logged in `docs/eval-log.md` (date, params, metrics). Guards must never regress.
 - **Device checklists:** Claude Code writes a device checklist for every phase that touches the device; Moe runs it.
 
