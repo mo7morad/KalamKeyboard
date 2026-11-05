@@ -288,5 +288,5 @@ The round 5 trace found the lost taps: iOS only delivers a keyboard extension's 
 - [ ] Aim between keys on purpose: tap the gap between g and h, between rows, under the space bar's bottom edge, just above the top row: each types a key and buzzes ____.
 - [ ] The keyboard looks the same as before, no tint visible in light or dark ____.
 - [ ] The bar: tap between suggestions and beside the clipboard and emoji buttons; the emoji panel: tap between emoji ____.
-- [ ] Then the report: `python3 Tools/touch-report/touch_report.py --device 00008150-0002199602E1401C`. "Key touch-downs between rows" is above 0 now (each of those would have been lost before) ____.
+- [ ] Then the report: `python3 Tools/touch-report/touch_report.py --device 00008150-0002199602E1401C`. "Key touch-downs between rows" is above 0 now (each of those would have been lost before) ____, and "Most fingers down at once" is 2 or more (multi-touch up to the window) ____.
 - [ ] Then switch day-to-day typing to Release (Edit Scheme > Run > Build Configuration > Release) ____.
