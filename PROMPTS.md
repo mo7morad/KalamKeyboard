@@ -420,3 +420,25 @@ cleared before any other edit, on resync, on viewWillDisappear and on any host t
 text on any host (hard rule 9). Update SPEC §5.4 and §8.5. Done when: swift test passes, the extension builds,
 and docs/device-checklist.md has a Phase 21 section listing WhatsApp, Instagram, Telegram, Notes and Messages.
 ```
+
+---
+
+## Phase 22: the correction shows in the bar (Apple's underline, the safe way)
+
+Phase 21 found the marked-text underline misplaces text when Moe taps elsewhere (docs/research/07). The bar
+can still tell him what changed and offer the undo, as Apple's underline does.
+
+```
+Phase 22. Read CLAUDE.md, SPEC §2, §3, §5.4, §8.5, docs/research/07-marked-text-underline.md (proposal) and
+docs/reference/apple/README.md (Phase 19 autocorrect frames).
+Right after an autocorrect or a post-correction commits:
+- alt1 (the literal's slot, mirrored in AR) shows the original word unquoted as a one-tap revert, like Apple's
+  revert offer; the tap reuses the existing tap-to-revert path (SPEC 5.4: restore, record the rejection, learn
+  the literal). The other slots keep the next-word predictions.
+- The offer lasts until the next letter, a host change, or about 3 s, whichever comes first; it leaves with
+  the bar's existing 0.2 s fade, no extra animation layers (hard rules 1, 2).
+- The one-backspace undo is unchanged.
+Engine: BarSlots gets the offer as an input (tests); the timer and state live in the extension.
+Update SPEC §5.4. Done when: swift test passes, the extension builds, simulator frames of the offer (EN and AR,
+light and dark) are in docs/reference/kalam/, and docs/device-checklist.md has a Phase 22 section.
+```
