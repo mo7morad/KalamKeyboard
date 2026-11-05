@@ -307,17 +307,22 @@ Done when: swift test passes and the baseline is logged. This baseline is the ba
 ## Phase 17: better autocorrect, measured (EN + AR)
 
 ```
-Phase 17. Read CLAUDE.md, SPEC §2, §3, §8.2, §8.3, §8.5, docs/eval-log.md (Phase 16 baseline).
+Phase 17. Read CLAUDE.md, SPEC §2, §3, §7, §8.2, §8.3, §8.5, docs/research/06-autocorrect-leaders.md, docs/eval-log.md (Phase 16 baseline).
 Work from the Phase 16 miss breakdown, biggest bucket first. Each change is its own eval run (10 folds,
 both languages) logged in docs/eval-log.md. Keep it only if the fix rate rises and the wrong-change rate
 doesn't (wrong changes stay at or under the baseline; FA <= 0.5% on the synthetic eval).
-Candidates, in expected order of value:
+Candidates, in expected order of value (docs/research/06-autocorrect-leaders.md):
 1. Re-tune the edit costs and AR's double-counted edit cost on the new benchmark (insertion 5.0 makes
    حاخالص -> خالص impossible; the AR rule adds c*'s edits to theta).
-2. Real-word errors: allow correcting a valid literal when the context LM strongly prefers a one-edit
-   neighbour (brow -> brown before fox). Tunables: a log-prob margin and a max edit cost, in EngineConfig.
-3. AR clitic candidates: a known stem plus one clitic (بنجرب+ه) as a candidate, not only as a protected literal.
-4. A stray space inside a word (كويسك ه): only if the benchmark shows it matters.
+2. Post-correction (Gboard, iOS): when the next word commits, re-score the previous word with context on
+   both sides and replace it when the margin is large and it's one cheap edit away (brow -> brown before fox).
+   Same one-backspace undo and revert memory as an autocorrect. Tunables (margin, max edit cost) in EngineConfig.
+3. Egyptian dialect data in the AR base: a Masri corpus into the AR unigrams and bigrams in
+   Tools/lexicon-builder (data only, the .klex stays mmapped). Measure footprint and the benchmark.
+4. AR clitic candidates: a known stem plus one clitic (بنجرب+ه) as a candidate, not only as a protected literal
+   (CAMeL Tools only if Moe allows the dependency).
+5. Space errors (Gboard, SwiftKey Smart Space): a stray space inside a word (كويسك ه), a missed space
+   (thequick), only if the benchmark shows them.
 All tunables in EngineConfig. Update SPEC §8.2, §8.5. Done when: swift test passes, every kept change has its
 eval line, and docs/device-checklist.md has a Phase 17 section (the fox sentence and 3 Arabic sentences).
 ```
