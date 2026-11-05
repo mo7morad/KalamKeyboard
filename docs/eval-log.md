@@ -351,3 +351,81 @@ Guards hold: FA ≤ 0.5% everywhere, and the wrong AR changes didn't grow (they 
 - Gentle AR loses 4 right fixes. eval-personal taps key centres, so the 7 pt offset works against it there.
 
 With Moe-like taps, the offset gains about 1 to 1.5 pp AC. Kept as is; check `kalam-cli tapmap` on a fresh device trace.
+
+## 2026-11-05 · Phase 16: the noisy personal benchmark (baseline)
+
+`eval-personal --noise <sigma>` types each held-out word of Moe's chats with NoisyTypist (the eval's omission 1.5%, extra tap 1.5%, swap 0.5%; tap bias default 0,−0.13, Moe-like), with the personal model trained on the other 90%. A word counts when `Engine.isWord` holds: a valid base word, a known personal word or an AR clitic form (the words rule 2 never corrects). `--fold all` sums the 10 folds; each fold seeds its noise with `seed + fold`.
+
+- **Fix rate:** mistyped words that commit as the intended word. **Top-1:** the intended word ranks first. **Wrong change:** the key-centre taps of a counted word commit something else.
+- **Real-word:** the noisy literal is itself a word (`Engine.isWord`), so rule 2 never corrects it. It is its own miss bucket and a subset of the fix-rate denominator. Other misses are bucketed by the error kinds the typist made (a substitution is a tap that typed another key).
+- `--samples N` prints the first N misses and wrong changes (fold 0 first) with their kinds.
+
+Baseline: working tree on `854da78`, real klex, Moe's 3 chats (1469 messages), 10 folds, `--autocorrect normal`, sigma 0.35, bias-y −0.13, seed 1.
+
+```bash
+$K eval-personal --chat <_chat.txt>... --sender "Mohamed Morad" --klex-en $R/en.klex --klex-ar $R/ar.klex \
+  --fold all --autocorrect normal --noise 0.35 --samples 20
+```
+
+| Lang | Words | Mistyped | Fix rate | Top-1 | Wrong change | Real-word (fixed) |
+|---|---|---|---|---|---|---|
+| EN | 454 | 285 | **49.1%** (140) | 77.5% | 0.0% (0) | 75 (0) |
+| AR | 5788 | 4105 | **24.2%** (993) | 50.9% | 0.0% (0) | 1586 (0) |
+
+Misses by bucket:
+- **EN (145):** real-word 75, substitution 45, substitution+extra tap 9, substitution+omission 8, substitution+extra tap+swap 2, extra tap 1, omission 1, omission+extra tap 1, substitution+omission+extra tap 1, substitution+omission+swap 1, swap 1.
+- **AR (3112):** real-word 1586, substitution 1117, substitution+extra tap 180, substitution+omission 106, extra tap 54, substitution+swap 33, omission 14, substitution+omission+extra tap 7, substitution+extra tap+swap 6, swap 6, extra tap+swap 2, substitution+omission+swap 1.
+
+What it says, for Phase 17:
+- **Real-word is the biggest bucket in both languages** (EN 52%, AR 51% of misses), and its fix rate is 0 by construction. Many of these "words" are wordfreq junk that blocks a fix: ao, rhe, tge, pne, mors, od (EN); افله, معزنا, فلكلية, فدت (AR). The top candidate is often the intended word anyway (rhe→the, tge→the, افله→الله, كب→كل).
+- **Ranked first but not applied:** top-1 minus fix rate is 28 pp in EN and 27 pp in AR. Part of it is real-word literals; the rest is the threshold, not the search: in AR normal the edit cost counts twice in θ (انل with top انا, احانل with top أحاول).
+- **Plain substitution** is next (EN 45, AR 1117). Omission, extra tap and swap alone are small at these rates.
+- **Wrong change is 0 by construction today:** every counted word is one rule 2 protects. It becomes the guard once a real-word rule lets valid literals change. Changes on words that aren't words to the engine (Moe's own typos, unknown dialect) stay in the normal `eval-personal` "autocorrect changes" column, judged by hand.
+- **The noise is heavy:** at sigma 0.35 with the −0.13 bias, 63% of EN and 71% of AR counted words come out mistyped, against Moe's 10 to 20%. For reference, sigma 0.2: EN 101 mistyped, fix 60.4%, top-1 81.2%, real-word 26 of 40 misses; AR 1401 mistyped, fix 22.0%, top-1 48.3%, real-word 572 of 1093 misses (extra tap 167 is a bigger share there). Phase 17 can check its kept changes at both sigmas.
+- **EN is small:** 454 counted words (the rest of Moe's Latin-script words aren't words to the engine), so a 1-word change is 0.35 pp of the fix rate.
+- The refactor (NoisyTypist moved to its own file, error kinds added) doesn't move the synthetic eval: EN 48.8 / 0.01 / 22.5 / 38.1, as in the previous entry.
+
+Sample misses (`--samples 20`, fold 0):
+
+```
+miss   [real-word: substitution] so: typed ao -> ao (top so)
+miss   [real-word: substitution+omission] for: typed ot -> ot (top of)
+miss   [real-word: substitution] the: typed rhe -> rhe (top the)
+miss   [real-word: substitution] warm: typed warn -> warn (top warning)
+miss   [substitution] better: typed hrrrer -> hrrrer (top herrera)
+miss   [real-word: omission] to: typed o -> o (top of)
+miss   [real-word: substitution] to: typed ti -> ti (top to)
+miss   [real-word: substitution] be: typed he -> he (top be)
+miss   [real-word: substitution] of: typed od -> od (top of)
+miss   [substitution] yours: typed yphre -> you're (top you're)
+miss   [real-word: omission] you: typed ou -> ou (top you)
+miss   [real-word: substitution] the: typed tge -> tge (top the)
+miss   [substitution+extra tap] everything: typed evreyfjibtx -> evreyfjibtx (top evreyfjibtx)
+miss   [substitution] gave: typed gqve -> have (top have)
+miss   [real-word: omission] all: typed ll -> ll (top know)
+miss   [substitution+extra tap] good: typed golps -> gold (top gold)
+miss   [substitution] wished: typed wusjed -> wish (top wish)
+miss   [real-word: substitution] more: typed mors -> mors (top more)
+miss   [real-word: substitution] one: typed pne -> pne (top one)
+miss   [substitution+extra tap] anytime: typed qnnyrime -> qnnyrime (top qnnyrime)
+miss   [real-word: substitution] الله: typed افله -> افله (top الله)
+miss   [substitution] ويسعدك: typed وطسعدك -> وطسعدك (top وطسعدك)
+miss   [substitution] اجي: typed اجث -> اجث (top لينا)
+miss   [substitution] ليه: typed لثه -> لثه (top ليهم)
+miss   [substitution+omission] وابسط: typed وتسظ -> وتسظ (top وتسظ)
+miss   [real-word: substitution+omission] ليه: typed لق -> لق (top قد)
+miss   [substitution+extra tap] ناس: typed نترس -> نترس (top مارس)
+miss   [real-word: substitution] معانا: typed معزنا -> معزنا (top معانا)
+miss   [substitution+extra tap] بتشتغل: typed بتشاتغل -> بتشاتغل (top بتشاتغل)
+miss   [real-word: omission] بارت: typed ارت -> ارت (top ارتفاع)
+miss   [substitution] احاول: typed احانل -> احانل (top أحاول)
+miss   [real-word: substitution] وافر: typed رافت -> رافت (top رأفت)
+miss   [real-word: substitution] وقت: typed نبت -> نبت (top وبتاع)
+miss   [real-word: substitution] الكلية: typed فلكلية -> فلكلية (top الكلية)
+miss   [substitution] انا: typed انل -> انل (top انا)
+miss   [real-word: substitution] الترم: typed التتم -> التتم (top الأمر)
+miss   [substitution] الي: typed اغس -> اغس (top السيشن)
+miss   [real-word: substitution] فات: typed فدت -> فدت (top فات)
+miss   [substitution] خلصت: typed ملصع -> ملصع (top كان)
+miss   [real-word: substitution] كل: typed كب -> كب (top كل)
+```

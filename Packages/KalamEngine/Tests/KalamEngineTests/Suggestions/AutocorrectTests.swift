@@ -192,3 +192,9 @@ func arabicKnownWordPlusACliticIsKept(_ typed: String, _ stem: String) throws {
 func arabicCliticForms(_ ident: String, _ isClitic: Bool) throws {
     #expect(try fixtureEngine(.ar).isCliticForm(ident) == isClitic)
 }
+
+// base word, known personal word (seen twice), clitic form, a typo seen once, a non-word
+@Test(arguments: [("عايز", true), ("بنجرب", true), ("وعايز", true), ("بنحرب", false), ("ععع", false)])
+func arabicWordsRuleTwoNeverCorrects(_ ident: String, _ isWord: Bool) throws {
+    #expect(try personalEngine(.ar, ["بنجرب", "بنجرب", "بنحرب"]).isWord(ident) == isWord)
+}

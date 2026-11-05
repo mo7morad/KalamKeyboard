@@ -17,7 +17,7 @@ import Testing
         #expect(abs(try cap(id).maxX - maxX) < 0.01, "\(id) maxX")
     }
     #expect(abs(try cap("q").height - 48.8) < 1e-9)
-    #expect(try cap("a").minY - cap("q").minY == KeyGeometry.rowPitch)
+    #expect(abs(try cap("a").minY - cap("q").minY - KeyGeometry.rowPitch) < 1e-9)
 }
 
 @Test func arabicPitchIsElevenKeysWide() throws {

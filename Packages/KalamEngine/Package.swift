@@ -12,6 +12,7 @@ let package = Package(
         .target(name: "KalamEngine", resources: [.copy("Resources/Layouts"), .copy("Resources/emoji.json")]),
         .executableTarget(name: "kalam-cli", dependencies: ["KalamEngine"]),
         .testTarget(name: "KalamEngineTests", dependencies: ["KalamEngine"], exclude: ["Fixtures"]),
+        .testTarget(name: "kalam-cliTests", dependencies: ["kalam-cli"]),
     ],
     swiftLanguageModes: [.v5]
 )

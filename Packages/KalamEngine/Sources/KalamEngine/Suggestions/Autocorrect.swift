@@ -90,6 +90,11 @@ extension Engine {
         return autocorrectTarget(literal: literal, ranked: ranked, facts: facts, config: config)
     }
 
+    /// A word rule 2 never corrects: a valid base word, a known personal word or an AR clitic form.
+    public func isWord(_ ident: String) -> Bool {
+        isValidBaseWord(ident) || personal?.isKnown(lang, ident) == true || isCliticForm(ident)
+    }
+
     /// AR rule 2: a known word plus one clitic (بكلم, افتكره) counts as a word too.
     func isCliticForm(_ ident: String) -> Bool {
         guard lang == .ar else { return false }

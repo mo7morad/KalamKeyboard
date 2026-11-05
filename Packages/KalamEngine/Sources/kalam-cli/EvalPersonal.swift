@@ -2,15 +2,23 @@ import Foundation
 import KalamEngine
 
 /// kalam-cli eval-personal --chat <_chat.txt>... [--sender <name>]... [--klex-en <path>] [--klex-ar <path>] [--fold k] [--samples N] [--autocorrect off|gentle|normal] [--set name=value]...
+///                         [--noise <sigma> [--fold all] [--bias-x X] [--bias-y Y] [--seed S]]
 /// Trains a temp personal store on 90% of the senders' messages (sorted by time, then text; message
 /// i is held out when i % 10 == fold)
 /// and reports next-word top-3, keystroke savings and the autocorrect change rate (each held-out
 /// word typed at key centers, then committed) on the rest, base-only vs personal (SPEC 12).
 /// --samples prints up to N of the changes (typed -> corrected) per setup.
+/// --noise reports the autocorrect fix rate instead (evalNoise); --fold all sums the 10 folds.
 func evalPersonal(_ args: [String]) -> Int32 {
     let flags = parseFlags(args)
-    guard let chats = flags["chat"], let config = parseConfig(flags), let settings = parseSettings(flags), let fold = Int(flags["fold"]?.last ?? "0"), (0..<10).contains(fold) else {
-        print("usage: kalam-cli eval-personal --chat <_chat.txt>... [--sender <name>]... [--klex-en <path>] [--klex-ar <path>] [--fold k] [--samples N] [--autocorrect off|gentle|normal] [--set name=value]...")
+    let noiseFlag = flags["noise"]?.last, sigma = noiseFlag.flatMap(Double.init)
+    let foldFlag = flags["fold"]?.last ?? "0"
+    guard let chats = flags["chat"], let config = parseConfig(flags), let settings = parseSettings(flags), (noiseFlag == nil) == (sigma == nil),
+          let folds = foldFlag == "all" && sigma != nil ? Array(0..<10) : Int(foldFlag).map({ [$0] }), folds.allSatisfy((0..<10).contains),
+          let biasX = Double(flags["bias-x"]?.last ?? "0"), let biasY = Double(flags["bias-y"]?.last ?? "-0.13"),
+          let seed = UInt64(flags["seed"]?.last ?? "1") else {
+        print("usage: kalam-cli eval-personal --chat <_chat.txt>... [--sender <name>]... [--klex-en <path>] [--klex-ar <path>] [--fold k] [--samples N] "
+              + "[--autocorrect off|gentle|normal] [--set name=value]... [--noise <sigma> [--fold all] [--bias-x X] [--bias-y Y] [--seed S]]")
         return 2
     }
     guard var messages = readChats(chats) else { return 1 }
@@ -18,45 +26,92 @@ func evalPersonal(_ args: [String]) -> Int32 {
     // Sorted, so the split doesn't depend on the order of the --chat files.
     messages = messages.filter { senders.contains($0.sender) }
         .sorted { ($0.date ?? .distantPast, $0.text) < ($1.date ?? .distantPast, $1.text) }
-    let test = messages.enumerated().filter { $0.offset % 10 == fold }.map(\.element)
-    let train = messages.enumerated().filter { $0.offset % 10 != fold }.map(\.element)
-    let now = messages.compactMap(\.date).max() ?? Date()  // decay as of the chat's end, not today
-
     let lexicons = [Lang.en, .ar].compactMap { lang in flags["klex-\(lang.rawValue)"]?.last.flatMap { BaseLexicon(url: URL(fileURLWithPath: $0)) } }
-    let dir = FileManager.default.temporaryDirectory.appendingPathComponent("kalam-eval-\(UUID().uuidString)")
-    defer { try? FileManager.default.removeItem(at: dir) }
-    let model: PersonalModel
-    do {
-        model = try trainedModel(train, in: dir, lexicons: lexicons, config: config, now: now)
-    } catch {
-        print("training failed: \(error)")
-        return 1
+    let sampleCount = Int(flags["samples"]?.last ?? "") ?? 0
+    print("eval-personal: \(messages.count) messages from \(senders.sorted().joined(separator: ", ")); folds \(folds.map(String.init).joined(separator: ","))")
+
+    if let sigma {
+        print("noise: sigma \(sigma), tap bias \(biasX),\(biasY), seed \(seed), params \((flags["set"] ?? []).isEmpty ? "defaults" : (flags["set"] ?? []).joined(separator: " "))")
+        var tallies = [Lang.en: NoiseTally(sampleLimit: sampleCount), .ar: NoiseTally(sampleLimit: sampleCount)]
+        for fold in folds {
+            let (train, test) = split(messages, fold: fold)
+            var rng = SplitMix64(state: seed &+ UInt64(fold))
+            let ok = withTrainedModel(train, all: messages, lexicons: lexicons, config: config) { model in
+                for lang in [Lang.en, .ar] {
+                    let engine = Engine(lang: lang, lexicon: lexicons.first { $0.lang == lang }, layout: Layout.bundled("\(lang.rawValue)-letters"), personal: model, config: config)
+                    let typist = NoisyTypist(layout: Layout.bundled("\(lang.rawValue)-letters")!, sigma: sigma, bias: Point(x: biasX, y: biasY))
+                    tallies[lang] = tallies[lang]! + evalNoise(test, engine: engine, typist: typist, settings: settings, rng: &rng, sampleLimit: sampleCount)
+                }
+            }
+            guard ok else { return 1 }
+        }
+        [Lang.en, .ar].forEach { tallies[$0]!.report($0.rawValue).forEach { print($0) } }
+        return 0
     }
 
-    print("eval-personal: \(messages.count) messages from \(senders.sorted().joined(separator: ", ")); train \(train.count), test \(test.count)")
-    let sampleCount = Int(flags["samples"]?.last ?? "") ?? 0
+    let (train, test) = split(messages, fold: folds[0])
+    print("train \(train.count), test \(test.count)")
     print("lang  words  setup       next-word top-3  keystroke savings  autocorrect changes")
-    for lang in [Lang.en, .ar] {
-        let lexicon = lexicons.first { $0.lang == lang }
-        let layout = Layout.bundled("\(lang.rawValue)-letters")
-        let words = test.flatMap { contextualWords($0.text) }.filter { $0.token.kind == (lang == .en ? .en : .ar) }
-        for (name, personal) in [("base-only", nil), ("personal", model)] {
-            let engine = Engine(lang: lang, lexicon: lexicon, layout: layout, personal: personal, config: config)
-            let tap = centerTapper(lang)
-            let typed = words.map { simulateTyping($0.token, taps: tap($0.token.surface), context: $0.context, engine: engine) }
-            let changes = words.compactMap { word -> String? in
-                let result = committed(tap(word.token.surface), context: word.context, engine: engine, settings: settings).word
-                return result == word.token.ident ? nil : "\(word.token.surface) -> \(result)"
+    let ok = withTrainedModel(train, all: messages, lexicons: lexicons, config: config) { model in
+        for lang in [Lang.en, .ar] {
+            let lexicon = lexicons.first { $0.lang == lang }
+            let layout = Layout.bundled("\(lang.rawValue)-letters")
+            let words = test.flatMap { contextualWords($0.text) }.filter { $0.token.kind == (lang == .en ? .en : .ar) }
+            for (name, personal) in [("base-only", nil), ("personal", model)] {
+                let engine = Engine(lang: lang, lexicon: lexicon, layout: layout, personal: personal, config: config)
+                let tap = centerTapper(lang)
+                let typed = words.map { simulateTyping($0.token, taps: tap($0.token.surface), context: $0.context, engine: engine) }
+                let changes = words.compactMap { word -> String? in
+                    let result = committed(tap(word.token.surface), context: word.context, engine: engine, settings: settings).word
+                    return result == word.token.ident ? nil : "\(word.token.surface) -> \(result)"
+                }
+                let top3 = Double(typed.filter(\.predicted).count) / Double(max(typed.count, 1))
+                let savings = 1 - Double(typed.reduce(0) { $0 + $1.keystrokes }) / Double(max(typed.reduce(0) { $0 + $1.baseline }, 1))
+                print(lang.rawValue.padding(toLength: 6, withPad: " ", startingAt: 0) + String(format: "%5d  ", words.count)
+                      + name.padding(toLength: 12, withPad: " ", startingAt: 0)
+                      + String(format: "%14.1f%%  %16.1f%%  %18.1f%%", top3 * 100, savings * 100, 100 * Double(changes.count) / Double(max(words.count, 1))))
+                changes.prefix(sampleCount).forEach { print("    \($0)") }
             }
-            let top3 = Double(typed.filter(\.predicted).count) / Double(max(typed.count, 1))
-            let savings = 1 - Double(typed.reduce(0) { $0 + $1.keystrokes }) / Double(max(typed.reduce(0) { $0 + $1.baseline }, 1))
-            print(lang.rawValue.padding(toLength: 6, withPad: " ", startingAt: 0) + String(format: "%5d  ", words.count)
-                  + name.padding(toLength: 12, withPad: " ", startingAt: 0)
-                  + String(format: "%14.1f%%  %16.1f%%  %18.1f%%", top3 * 100, savings * 100, 100 * Double(changes.count) / Double(max(words.count, 1))))
-            changes.prefix(sampleCount).forEach { print("    \($0)") }
         }
     }
-    return 0
+    return ok ? 0 : 1
+}
+
+/// eval-personal --noise for one fold and language: each held-out word that is a word to the engine
+/// (Engine.isWord, with the personal model trained on the rest) is typed twice: with the typist's
+/// noise (drawn up front, so the same whatever the engine does), and at key centres.
+func evalNoise(_ test: [ChatMessage], engine: Engine, typist: NoisyTypist, settings: Settings, rng: inout SplitMix64, sampleLimit: Int) -> NoiseTally {
+    var tally = NoiseTally(sampleLimit: sampleLimit)
+    let kind: Token.Kind = engine.lang == .en ? .en : .ar
+    let clean = centerTapper(engine.lang)
+    for (token, context) in test.flatMap({ contextualWords($0.text) }) where token.kind == kind && engine.isWord(token.ident) {
+        let (taps, kinds) = typist.taps(token.surface, using: &rng)
+        let literal = ident(taps.map(\.char).joined(), kind: kind)
+        let noisy = literal == token.ident ? nil : committed(taps, context: context, engine: engine, settings: settings)
+        tally.add(token.ident, noisy: noisy.map { NoisyResult(literal: literal, kinds: kinds, realWord: engine.isWord(literal), word: $0.word, top: $0.top) },
+                  clean: committed(clean(token.surface), context: context, engine: engine, settings: settings).word)
+    }
+    return tally
+}
+
+/// Message i is held out when i % 10 == fold.
+private func split(_ messages: [ChatMessage], fold: Int) -> (train: [ChatMessage], test: [ChatMessage]) {
+    (messages.enumerated().filter { $0.offset % 10 != fold }.map(\.element), messages.enumerated().filter { $0.offset % 10 == fold }.map(\.element))
+}
+
+/// Runs `body` with a personal model trained on `train` in a temp store, decayed as of the chats' end
+/// (not today); false (after printing why) when training fails.
+private func withTrainedModel(_ train: [ChatMessage], all: [ChatMessage], lexicons: [BaseLexicon], config: EngineConfig,
+                              _ body: (PersonalModel) -> Void) -> Bool {
+    let dir = FileManager.default.temporaryDirectory.appendingPathComponent("kalam-eval-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: dir) }
+    do {
+        body(try trainedModel(train, in: dir, lexicons: lexicons, config: config, now: all.compactMap(\.date).max() ?? Date()))
+        return true
+    } catch {
+        print("training failed: \(error)")
+        return false
+    }
 }
 
 func readChats(_ paths: [String]) -> [ChatMessage]? {
